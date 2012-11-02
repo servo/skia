@@ -316,8 +316,10 @@ SKIA_UTILS_CXX_SRC=\
 	$(addprefix src/utils/mac/,\
 		SkCreateCGImageRef.cpp \
 		SkStream_mac.cpp)
-else
-# FIXME
+endif
+
+ifeq ($(OSTYPE),linux)
+	CXXFLAGS += $(shell pkg-config --cflags freetype2)
 endif
 
 SKIA_SRC=\
