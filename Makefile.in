@@ -320,6 +320,22 @@ endif
 
 ifeq ($(OSTYPE),linux)
 	CXXFLAGS += $(shell pkg-config --cflags freetype2)
+
+SKIA_PORTS_CXX_SRC=\
+	$(addprefix src/ports/,\
+		SkDebug_stdio.cpp \
+		SkFontDescriptor.cpp \
+		SkFontHost_FreeType_common.cpp \
+		SkFontHost_FreeType.cpp \
+		SkFontHost_linux.cpp \
+		SkFontHost_tables.cpp \
+		SkOSFile_stdio.cpp \
+		SkThread_pthread.cpp)
+
+SKIA_UTILS_CXX_SRC=\
+	$(addprefix src/utils/,\
+		SkOSFile.cpp)
+
 endif
 
 SKIA_SRC=\
