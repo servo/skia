@@ -9,10 +9,22 @@ CXXFLAGS+=\
 	-mssse3 \
 	-I$(VPATH)/include/config \
 	-I$(VPATH)/include/core \
+	-I$(VPATH)/include/effects \
+	-I$(VPATH)/include/gpu \
 	-I$(VPATH)/include/ports \
 	-I$(VPATH)/src/core \
 	-I$(VPATH)/src/image \
+	-iquote $(VPATH)/src/gpu \
 	$(NULL)
+
+UNAME=$(shell uname)
+
+ifeq ($(UNAME),Darwin)
+    OSTYPE=darwin
+endif
+ifeq ($(UNAME),Linux)
+    OSTYPE=linux
+endif
 
 SKIA_CORE_CXX_SRC=\
 	$(addprefix src/core/,\
@@ -137,6 +149,131 @@ SKIA_CORE_CXX_SRC=\
 		SkWriter32.cpp \
 		SkXfermode.cpp)
 
+SKIA_EFFECTS_CXX_SRC=\
+	$(addprefix src/effects/,\
+		Sk1DPathEffect.cpp \
+		Sk2DPathEffect.cpp \
+		SkArithmeticMode.cpp \
+		SkAvoidXfermode.cpp \
+		SkBitmapSource.cpp \
+		SkBlendImageFilter.cpp \
+		SkBlurDrawLooper.cpp \
+		SkBlurImageFilter.cpp \
+		SkBlurMask.cpp \
+		SkBlurMaskFilter.cpp \
+		SkColorFilterImageFilter.cpp \
+		SkColorFilters.cpp \
+		SkColorMatrix.cpp \
+		SkColorMatrixFilter.cpp \
+		SkCornerPathEffect.cpp \
+		SkDashPathEffect.cpp \
+		SkDiscretePathEffect.cpp \
+		SkEmbossMask.cpp \
+		SkEmbossMaskFilter.cpp \
+		SkKernel33MaskFilter.cpp \
+		SkLayerDrawLooper.cpp \
+		SkLayerRasterizer.cpp \
+		SkLightingImageFilter.cpp \
+		SkMagnifierImageFilter.cpp \
+		SkMatrixConvolutionImageFilter.cpp \
+		SkMorphologyImageFilter.cpp \
+		SkPaintFlagsDrawFilter.cpp \
+		SkPixelXorXfermode.cpp \
+		SkPorterDuff.cpp \
+		SkSingleInputImageFilter.cpp \
+		SkStippleMaskFilter.cpp \
+		SkTableColorFilter.cpp \
+		SkTableMaskFilter.cpp \
+		SkTestImageFilters.cpp \
+		SkTransparentShader.cpp \
+		gradients/SkBitmapCache.cpp \
+		gradients/SkClampRange.cpp \
+		gradients/SkGradientShader.cpp \
+		gradients/SkLinearGradient.cpp \
+		gradients/SkRadialGradient.cpp \
+		gradients/SkSweepGradient.cpp \
+		gradients/SkTwoPointConicalGradient.cpp \
+		gradients/SkTwoPointRadialGradient.cpp)
+
+SKIA_GL_CXX_SRC=\
+	$(addprefix src/gpu/,\
+		GrAAConvexPathRenderer.cpp \
+		GrAAHairLinePathRenderer.cpp \
+		GrAARectRenderer.cpp \
+		GrAddPathRenderers_default.cpp \
+		GrAddPathRenderers_none.cpp \
+		GrAllocPool.cpp \
+		GrAtlas.cpp \
+		GrBufferAllocPool.cpp \
+		GrCacheID.cpp \
+		GrClipData.cpp \
+		GrClipMaskCache.cpp \
+		GrClipMaskManager.cpp \
+		GrContext.cpp \
+		GrDefaultPathRenderer.cpp \
+		GrDrawState.cpp \
+		GrDrawTarget.cpp \
+		GrEffect.cpp \
+		GrGeometryBuffer.cpp \
+		GrGpu.cpp \
+		GrGpuFactory.cpp \
+		GrInOrderDrawBuffer.cpp \
+		GrMatrix.cpp \
+		GrMemory.cpp \
+		GrMemoryPool.cpp \
+		GrPath.cpp \
+		GrPathRenderer.cpp \
+		GrPathRendererChain.cpp \
+		GrPathUtils.cpp \
+		GrRectanizer.cpp \
+		GrRectanizer_fifo.cpp \
+		GrRenderTarget.cpp \
+		GrResource.cpp \
+		GrResourceCache.cpp \
+		GrSWMaskHelper.cpp \
+		GrSoftwarePathRenderer.cpp \
+		GrStencil.cpp \
+		GrStencilAndCoverPathRenderer.cpp \
+		GrStencilBuffer.cpp \
+		GrSurface.cpp \
+		GrTextContext.cpp \
+		GrTextStrike.cpp \
+		GrTexture.cpp \
+		GrTextureAccess.cpp \
+		SkGpuDevice.cpp \
+		SkGr.cpp \
+		SkGrFontScaler.cpp \
+		SkGrPixelRef.cpp \
+		SkGrTexturePixelRef.cpp \
+		effects/GrConfigConversionEffect.cpp \
+		effects/GrConvolutionEffect.cpp \
+		effects/GrSingleTextureEffect.cpp \
+		effects/GrTextureDomainEffect.cpp \
+		effects/GrTextureStripAtlas.cpp \
+		gl/GrGLCaps.cpp \
+		gl/GrGLContextInfo.cpp \
+		gl/GrGLCreateNativeInterface_none.cpp \
+		gl/GrGLCreateNullInterface.cpp \
+		gl/GrGLDefaultInterface_native.cpp \
+		gl/GrGLDefaultInterface_none.cpp \
+		gl/GrGLEffect.cpp \
+		gl/GrGLIndexBuffer.cpp \
+		gl/GrGLInterface.cpp \
+		gl/GrGLPath.cpp \
+		gl/GrGLProgram.cpp \
+		gl/GrGLRenderTarget.cpp \
+		gl/GrGLSL.cpp \
+		gl/GrGLShaderBuilder.cpp \
+		gl/GrGLStencilBuffer.cpp \
+		gl/GrGLTexture.cpp \
+		gl/GrGLUniformManager.cpp \
+		gl/GrGLUtil.cpp \
+		gl/GrGLVertexBuffer.cpp \
+		gl/GrGpuGL.cpp \
+		gl/GrGpuGL_program.cpp \
+		gl/SkGLContext.cpp \
+		gl/SkNullGLContext.cpp)
+
 SKIA_IMAGE_CXX_SRC=\
 	$(addprefix src/image/,\
 		SkDataPixelRef.cpp \
@@ -152,6 +289,7 @@ SKIA_IMAGE_CXX_SRC=\
 # FIXME: This is very x86-specific.
 SKIA_OPTS_CXX_SRC=\
 	$(addprefix src/opts/,\
+		SkBitmapProcState_opts_SSE2.cpp \
 		SkBitmapProcState_opts_SSSE3.cpp \
 		SkBlitRect_opts_SSE2.cpp \
 		SkBlitRow_opts_SSE2.cpp \
@@ -159,7 +297,12 @@ SKIA_OPTS_CXX_SRC=\
 		opts_check_SSE2.cpp)
 
 ifeq ($(OSTYPE),darwin)
-CXXFLAGS+=-Iinclude/utils/mac 
+CXXFLAGS+=-I$(VPATH)/include/utils/mac 
+
+SKIA_GPU_CXX_SRC += \
+	$(addprefix src/gpu/,\
+		gl/mac/GrGLCreateNativeInterface_mac.cpp \
+		gl/mac/SkNativeGLContext_mac.cpp)
 
 SKIA_PORTS_CXX_SRC=\
 	$(addprefix src/ports/,\
@@ -179,6 +322,8 @@ endif
 
 SKIA_SRC=\
 	$(SKIA_CORE_CXX_SRC) \
+	$(SKIA_EFFECTS_CXX_SRC) \
+	$(SKIA_GL_CXX_SRC) \
 	$(SKIA_IMAGE_CXX_SRC) \
 	$(SKIA_OPTS_CXX_SRC) \
 	$(SKIA_PORTS_CXX_SRC) \
