@@ -363,8 +363,10 @@ skia.dummy:	libskia.a
 libskia.a: $(SKIA_OBJS)
 	$(AR) rcs $@ $(SKIA_OBJS)
 
-.PHONY: clean
+.PHONY: check
+check:
 
+.PHONY: clean
 clean:
 	rm -f *.o *.a */*/*.o
 
