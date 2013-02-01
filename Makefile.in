@@ -21,7 +21,6 @@ endif
 
 CXXFLAGS+=\
 	-fPIC \
-	-mssse3 \
 	-DSK_A32_SHIFT=24 -DSK_R32_SHIFT=16 -DSK_G32_SHIFT=8 -DSK_B32_SHIFT=0 \
 	-I$(VPATH)/include/config \
 	-I$(VPATH)/include/core \
@@ -43,12 +42,18 @@ ifeq ($(USE_CLANG),1)
 endif
 
 UNAME=$(shell uname)
+ifneq ($(CFG_CPUTYPE), arm)
+	CXXFLAGS += -mssse3
+endif
 
 ifeq ($(UNAME),Darwin)
     OSTYPE=darwin
 endif
 ifeq ($(UNAME),Linux)
     OSTYPE=linux
+endif
+ifeq ($(CFG_OSTYPE),linux-androideabi)
+    OSTYPE=android
 endif
 
 SKIA_CORE_CXX_SRC=\
@@ -347,7 +352,7 @@ SKIA_IMAGE_CXX_SRC=\
 		SkSurface_Raster.cpp)
 
 # FIXME: This is very x86-specific.
-SKIA_OPTS_CXX_SRC=\
+SKIA_OPTS_CXX_SRC_X86=\
 	$(addprefix src/opts/,\
 		SkBitmapProcState_opts_SSE2.cpp \
 		SkBitmapProcState_opts_SSSE3.cpp \
@@ -355,6 +360,13 @@ SKIA_OPTS_CXX_SRC=\
 		SkBlitRow_opts_SSE2.cpp \
 		SkUtils_opts_SSE2.cpp \
 		opts_check_SSE2.cpp)
+
+SKIA_OPTS_CXX_SRC_ARM=\
+        $(addprefix src/opts/,\
+		SkBitmapProcState_opts_arm.cpp \
+		SkBlitRow_opts_none.cpp \
+		SkUtils_opts_none.cpp \
+		opts_check_arm.cpp )
 
 ifeq ($(OSTYPE),darwin)
 CXXFLAGS+=-I$(VPATH)/include/utils/mac
@@ -402,16 +414,49 @@ SKIA_UTILS_CXX_SRC=\
 		SkOSFile.cpp)
 endif
 
+ifeq ($(OSTYPE),android)
+        CXXFLAGS += -I$(VPATH)/../../../platform/android/libfreetype2/include
+        CXXFLAGS += -I$(VPATH)/../../../platform/android/libexpat/expat/lib
+        CXXFLAGS += -DSK_BUILD_FOR_ANDROID
+
+SKIA_GL_CXX_SRC += \
+        $(addprefix src/gpu/,\
+                gl/GrGLCreateNativeInterface_none.cpp)
+
+SKIA_PORTS_CXX_SRC=\
+        $(addprefix src/ports/,\
+                SkDebug_android.cpp \
+                SkFontHost_FreeType_common.cpp \
+                SkFontHost_FreeType.cpp \
+                SkFontHost_android.cpp \
+                SkOSFile_stdio.cpp \
+                FontHostConfiguration_android.cpp \
+                SkThread_pthread.cpp)
+
+SKIA_UTILS_CXX_SRC=\
+        $(addprefix src/utils/,\
+                SkOSFile.cpp)
+endif
+
 SKIA_SRC=\
 	$(SKIA_CORE_CXX_SRC) \
 	$(SKIA_SFNT_CXX_SRC) \
 	$(SKIA_EFFECTS_CXX_SRC) \
 	$(SKIA_GL_CXX_SRC) \
 	$(SKIA_IMAGE_CXX_SRC) \
-	$(SKIA_OPTS_CXX_SRC) \
 	$(SKIA_PORTS_CXX_SRC) \
 	$(SKIA_UTILS_CXX_SRC) \
 	$(NULL)
+
+ifeq ($(CFG_CPUTYPE), i686)
+	SKIA_SRC += $(SKIA_OPTS_CXX_SRC_X86)
+endif
+ifeq ($(CFG_CPUTYPE), x86_64)
+	SKIA_SRC += $(SKIA_OPTS_CXX_SRC_X86)
+endif
+ifeq ($(CFG_CPUTYPE), arm)
+        SKIA_SRC += $(SKIA_OPTS_CXX_SRC_ARM)
+endif
 
 SKIA_OBJS=$(patsubst %.cpp,%.o,$(SKIA_SRC))
 
