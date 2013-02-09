@@ -201,7 +201,6 @@ SKIA_GL_CXX_SRC=\
 		GrAAHairLinePathRenderer.cpp \
 		GrAARectRenderer.cpp \
 		GrAddPathRenderers_default.cpp \
-		GrAddPathRenderers_none.cpp \
 		GrAllocPool.cpp \
 		GrAtlas.cpp \
 		GrBufferAllocPool.cpp \
@@ -252,10 +251,8 @@ SKIA_GL_CXX_SRC=\
 		effects/GrTextureStripAtlas.cpp \
 		gl/GrGLCaps.cpp \
 		gl/GrGLContextInfo.cpp \
-		gl/GrGLCreateNativeInterface_none.cpp \
 		gl/GrGLCreateNullInterface.cpp \
 		gl/GrGLDefaultInterface_native.cpp \
-		gl/GrGLDefaultInterface_none.cpp \
 		gl/GrGLEffect.cpp \
 		gl/GrGLIndexBuffer.cpp \
 		gl/GrGLInterface.cpp \
@@ -299,7 +296,7 @@ SKIA_OPTS_CXX_SRC=\
 ifeq ($(OSTYPE),darwin)
 CXXFLAGS+=-I$(VPATH)/include/utils/mac 
 
-SKIA_GPU_CXX_SRC += \
+SKIA_GL_CXX_SRC += \
 	$(addprefix src/gpu/,\
 		gl/mac/GrGLCreateNativeInterface_mac.cpp \
 		gl/mac/SkNativeGLContext_mac.cpp)
