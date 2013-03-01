@@ -318,6 +318,10 @@ endif
 ifeq ($(OSTYPE),linux)
 	CXXFLAGS += $(shell pkg-config --cflags freetype2)
 
+SKIA_GL_CXX_SRC += \
+	$(addprefix src/gpu/,\
+		gl/GrGLCreateNativeInterface_none.cpp)
+
 SKIA_PORTS_CXX_SRC=\
 	$(addprefix src/ports/,\
 		SkDebug_stdio.cpp \
