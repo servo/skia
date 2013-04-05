@@ -454,7 +454,7 @@ const GrGLInterface* GrGLCreateNullInterface() {
         interface->fReadBuffer = nullGLReadBuffer;
         interface->fReadPixels = nullGLReadPixels;
         interface->fScissor = nullGLScissor;
-        interface->fShaderSource = nullGLShaderSource;
+        interface->fShaderSource = (GrGLShaderSourceProc)nullGLShaderSource;
         interface->fStencilFunc = nullGLStencilFunc;
         interface->fStencilFuncSeparate = nullGLStencilFuncSeparate;
         interface->fStencilMask = nullGLStencilMask;
