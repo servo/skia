@@ -109,7 +109,7 @@ const GrGLInterface* GrGLCreateNativeInterface() {
         interface->fReadBuffer = glReadBuffer;
         interface->fReadPixels = glReadPixels;
         interface->fScissor = glScissor;
-        interface->fShaderSource = glShaderSource;
+        interface->fShaderSource = (GrGLShaderSourceProc)glShaderSource;
         interface->fStencilFunc = glStencilFunc;
         interface->fStencilFuncSeparate = glStencilFuncSeparate;
         interface->fStencilMask = glStencilMask;
