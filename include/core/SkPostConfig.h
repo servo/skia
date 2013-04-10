@@ -167,9 +167,10 @@
         #define SK_B32_SHIFT    8
         #define SK_A32_SHIFT    0
     #else
-        #define SK_R32_SHIFT    0
+        // fix for x86 red blue swap
+        #define SK_R32_SHIFT    16
         #define SK_G32_SHIFT    8
-        #define SK_B32_SHIFT    16
+        #define SK_B32_SHIFT    0
         #define SK_A32_SHIFT    24
     #endif
 #endif
