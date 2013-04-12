@@ -6,6 +6,7 @@
  */
 #include "CurveIntersection.h"
 #include "IntersectionUtilities.h"
+#include "QuadraticUtilities.h"
 
 /*
 Given a quadratic q, t1, and t2, find a small quadratic segment.
@@ -47,6 +48,15 @@ void sub_divide(const Quadratic& src, double t1, double t2, Quadratic& dst) {
     double cy = dst[2].y = interp_quad_coords(&src[0].y, t2);
     /* bx = */ dst[1].x = 2*dx - (ax + cx)/2;
     /* by = */ dst[1].y = 2*dy - (ay + cy)/2;
+}
+
+_Point sub_divide(const Quadratic& src, const _Point& a, const _Point& c, double t1, double t2) {
+    _Point b;
+    double dx = interp_quad_coords(&src[0].x, (t1 + t2) / 2);
+    double dy = interp_quad_coords(&src[0].y, (t1 + t2) / 2);
+    b.x = 2 * dx - (a.x + c.x) / 2;
+    b.y = 2 * dy - (a.y + c.y) / 2;
+    return b;
 }
 
 /* classic one t subdivision */

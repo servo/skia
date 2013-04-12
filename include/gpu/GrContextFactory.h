@@ -28,7 +28,7 @@
  * factory is destroyed (though the caller can always grab a ref on the returned
  * GrContext to make it outlive the factory).
  */
-class GrContextFactory  : GrNoncopyable {
+class GrContextFactory : GrNoncopyable {
 public:
     /**
      * Types of GL contexts supported.
@@ -43,29 +43,68 @@ public:
 #endif
       kNull_GLContextType,
       kDebug_GLContextType,
+
+      kLastGLContextType = kDebug_GLContextType
     };
+
+    static const int kGLContextTypeCnt = kLastGLContextType + 1;
+
+    static bool IsRenderingGLContext(GLContextType type) {
+        switch (type) {
+            case kNull_GLContextType:
+            case kDebug_GLContextType:
+                return false;
+            default:
+                return true;
+        }
+    }
+
+    static const char* GLContextTypeName(GLContextType type) {
+        switch (type) {
+            case kNative_GLContextType:
+                return "native";
+            case kNull_GLContextType:
+                return "null";
+#if SK_ANGLE
+            case kANGLE_GLContextType:
+                return "angle";
+#endif
+#if SK_MESA
+            case kMESA_GLContextType:
+                return "mesa";
+#endif
+            case kDebug_GLContextType:
+                return "debug";
+            default:
+                GrCrash("Unknown GL Context type.");
+        }
+    }
 
     GrContextFactory() {
     }
 
-    ~GrContextFactory() {
+    ~GrContextFactory() { this->destroyContexts(); }
+
+    void destroyContexts() {
         for (int i = 0; i < fContexts.count(); ++i) {
             fContexts[i].fGrContext->unref();
             fContexts[i].fGLContext->unref();
         }
+        fContexts.reset();
     }
 
     /**
-     * Get a GrContext initalized with a type of GL context.
+     * Get a GrContext initialized with a type of GL context. It also makes the GL context current.
      */
     GrContext* get(GLContextType type) {
 
         for (int i = 0; i < fContexts.count(); ++i) {
             if (fContexts[i].fType == type) {
+                fContexts[i].fGLContext->makeCurrent();
                 return fContexts[i].fGrContext;
             }
         }
-        SkAutoTUnref<SkGLContext> glCtx;
+        SkAutoTUnref<SkGLContextHelper> glCtx;
         SkAutoTUnref<GrContext> grCtx;
         switch (type) {
             case kNative_GLContextType:
@@ -111,7 +150,7 @@ public:
 
     // Returns the GLContext of the given type. If it has not been created yet,
     // NULL is returned instead.
-    SkGLContext* getGLContext(GLContextType type) {
+    SkGLContextHelper* getGLContext(GLContextType type) {
         for (int i = 0; i < fContexts.count(); ++i) {
             if (fContexts[i].fType == type) {
                 return fContexts[i].fGLContext;
@@ -124,7 +163,7 @@ public:
 private:
     struct GPUContext {
         GLContextType             fType;
-        SkGLContext*              fGLContext;
+        SkGLContextHelper*        fGLContext;
         GrContext*                fGrContext;
     };
     SkTArray<GPUContext, true> fContexts;

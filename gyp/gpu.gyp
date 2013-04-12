@@ -21,6 +21,10 @@
         'sources/': [ ['exclude', '_android.(h|cpp)$'],
         ],
       }],
+      ['skia_os != "nacl"', {
+        'sources/': [ ['exclude', '_nacl.(h|cpp)$'],
+        ],
+      }],
       [ 'skia_os == "android"', {
         'defines': [
           'GR_ANDROID_BUILD=1',
@@ -123,6 +127,7 @@
       'include_dirs': [
         '../include/config',
         '../include/core',
+        '../include/utils',
         '../src/core',
         '../include/gpu',
         '../src/gpu',
@@ -150,7 +155,7 @@
         }],
         [ 'skia_mesa and skia_os == "mac"', {
           'include_dirs': [
-             '$(SDKROOT)/usr/X11/include/',
+             '/opt/X11/include/',
           ],
         }],
         [ 'not skia_angle', {
@@ -173,6 +178,7 @@
      'include_dirs': [
         '../include/core',
         '../include/config',
+        '../include/utils',
         '../include/gpu',
         '../src/core', # SkRasterClip.h
         '../src/gpu'
@@ -201,6 +207,27 @@
             'GR_GL_USE_NV_PATH_RENDERING=1',
           ],
         }],
+        [ 'skia_stroke_path_rendering', {
+          'sources': [
+            '../experimental/StrokePathRenderer/GrStrokePathRenderer.h',
+            '../experimental/StrokePathRenderer/GrStrokePathRenderer.cpp',
+          ],
+          'defines': [
+            'GR_STROKE_PATH_RENDERING=1',
+          ],
+        }],
+        [ 'skia_android_path_rendering', {
+          'sources': [
+            '../experimental/AndroidPathRenderer/GrAndroidPathRenderer.cpp',
+            '../experimental/AndroidPathRenderer/GrAndroidPathRenderer.h',
+            '../experimental/AndroidPathRenderer/AndroidPathRenderer.cpp',
+            '../experimental/AndroidPathRenderer/AndroidPathRenderer.h',
+            '../experimental/AndroidPathRenderer/Vertex.h',
+          ],
+          'defines': [
+            'GR_ANDROID_PATH_RENDERING=1',
+          ],
+        }],
         [ 'skia_os == "linux"', {
           'sources!': [
             '../src/gpu/gl/GrGLDefaultInterface_none.cpp',
@@ -209,7 +236,15 @@
           'link_settings': {
             'libraries': [
               '-lGL',
+              '-lGLU',
               '-lX11',
+            ],
+          },
+        }],
+        [ 'skia_os == "nacl"', {
+          'link_settings': {
+            'libraries': [
+              '-lppapi_gles2',
             ],
           },
         }],
@@ -234,11 +269,11 @@
         [ 'skia_mesa and skia_os == "mac"', {
           'link_settings': {
             'libraries': [
-              '$(SDKROOT)/usr/X11/lib/libOSMesa.dylib',
+              '/opt/X11/lib/libOSMesa.dylib',
             ],
           },
           'include_dirs': [
-             '$(SDKROOT)/usr/X11/include/',
+             '/opt/X11/include/',
           ],
         }],
         [ 'not skia_mesa', {

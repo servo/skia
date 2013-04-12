@@ -31,8 +31,7 @@
 class ReduceNoise : public SkKernel33ProcMaskFilter {
 public:
     ReduceNoise(int percent256) : SkKernel33ProcMaskFilter(percent256) {}
-    virtual uint8_t computeValue(uint8_t* const* srcRows)
-    {
+    virtual uint8_t computeValue(uint8_t* const* srcRows) const {
         int c = srcRows[1][1];
         int min = 255, max = 0;
         for (int i = 0; i < 3; i++)
@@ -49,17 +48,27 @@ public:
     //    if (c < min) c = min;
         return c;
     }
+
+#ifdef SK_DEVELOPER
+    virtual void toString(SkString* str) const SK_OVERRIDE {
+        str->append("ReduceNoise: (");
+        this->INHERITED::toString(str);
+        str->append(")");
+    }
+#endif
+
     SK_DECLARE_PUBLIC_FLATTENABLE_DESERIALIZATION_PROCS(ReduceNoise)
 
 private:
     ReduceNoise(SkFlattenableReadBuffer& rb) : SkKernel33ProcMaskFilter(rb) {}
+
+    typedef SkKernel33ProcMaskFilter INHERITED;
 };
 
 class Darken : public SkKernel33ProcMaskFilter {
 public:
     Darken(int percent256) : SkKernel33ProcMaskFilter(percent256) {}
-    virtual uint8_t computeValue(uint8_t* const* srcRows)
-    {
+    virtual uint8_t computeValue(uint8_t* const* srcRows) const {
         int c = srcRows[1][1];
         float f = c / 255.f;
 
@@ -71,10 +80,21 @@ public:
         SkASSERT(f >= 0 && f <= 1);
         return (int)(f * 255);
     }
+
+#ifdef SK_DEVELOPER
+    virtual void toString(SkString* str) const SK_OVERRIDE {
+        str->append("Darken: (");
+        this->INHERITED::toString(str);
+        str->append(")");
+    }
+#endif
+
     SK_DECLARE_PUBLIC_FLATTENABLE_DESERIALIZATION_PROCS(Darken)
 
 private:
     Darken(SkFlattenableReadBuffer& rb) : SkKernel33ProcMaskFilter(rb) {}
+
+    typedef SkKernel33ProcMaskFilter INHERITED;
 };
 
 static SkMaskFilter* makemf() { return new Darken(0x30); }
@@ -122,10 +142,11 @@ public:
     SkPowerMode(SkScalar exponent) { this->init(exponent); }
 
     virtual void xfer16(uint16_t dst[], const SkPMColor src[], int count,
-                        const SkAlpha aa[]);
+                        const SkAlpha aa[]) const SK_OVERRIDE;
 
     typedef SkFlattenable* (*Factory)(SkFlattenableReadBuffer&);
 
+    SK_DEVELOPER_TO_STRING()
     SK_DECLARE_PUBLIC_FLATTENABLE_DESERIALIZATION_PROCS(SkPowerMode)
 
 private:
@@ -162,7 +183,7 @@ void SkPowerMode::init(SkScalar e) {
 }
 
 void SkPowerMode::xfer16(uint16_t dst[], const SkPMColor src[], int count,
-                         const SkAlpha aa[]) {
+                         const SkAlpha aa[]) const {
     for (int i = 0; i < count; i++) {
         SkPMColor c = src[i];
         int r = SkGetPackedR32(c);
@@ -174,6 +195,13 @@ void SkPowerMode::xfer16(uint16_t dst[], const SkPMColor src[], int count,
         dst[i] = SkPack888ToRGB16(r, g, b);
     }
 }
+
+#ifdef SK_DEVELOPER
+void SkPowerMode::toString(SkString* str) const {
+    str->append("SkPowerMode: exponent ");
+    str->appendScalar(fExp);
+}
+#endif
 
 static const struct {
     const char* fName;
@@ -307,10 +335,11 @@ protected:
         }
     }
 
-    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y) {
+    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y,
+                                              unsigned modi) SK_OVERRIDE {
         fClickX = x;
         this->inval(NULL);
-        return this->INHERITED::onFindClickHandler(x, y);
+        return this->INHERITED::onFindClickHandler(x, y, modi);
     }
 
     virtual bool onClick(Click* click) {
@@ -329,4 +358,3 @@ private:
 
 static SkView* MyFactory() { return new TextSpeedView; }
 static SkViewRegister reg(MyFactory);
-

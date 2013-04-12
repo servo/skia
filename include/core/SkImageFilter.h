@@ -16,8 +16,8 @@ class SkDevice;
 class SkMatrix;
 struct SkIPoint;
 struct SkIRect;
-struct SkRect;
-class GrEffect;
+class SkShader;
+class GrEffectRef;
 class GrTexture;
 
 /**
@@ -89,31 +89,39 @@ public:
      *  If effect is non-NULL, a new GrEffect instance is stored
      *  in it.  The caller assumes ownership of the stage, and it is up to the
      *  caller to unref it.
+     *
+     *  The effect can assume its vertexCoords space maps 1-to-1 with texels
+     *  in the texture.
      */
-    virtual bool asNewEffect(GrEffect** effect, GrTexture*) const;
+    virtual bool asNewEffect(GrEffectRef** effect, GrTexture*) const;
 
     /**
      *  Returns true if the filter can be processed on the GPU.  This is most
      *  often used for multi-pass effects, where intermediate results must be
      *  rendered to textures.  For single-pass effects, use asNewEffect().
-     *  The default implementation returns false.
+     *  The default implementation returns asNewEffect(NULL, NULL).
      */
     virtual bool canFilterImageGPU() const;
 
     /**
-     *  Process this image filter on the GPU.  texture is the source texture
-     *  for processing, and rect is the effect region to process.  The
-     *  function must allocate a new texture of at least rect width/height
-     *  size, and return it to the caller.  The default implementation returns
-     *  NULL.
+     *  Process this image filter on the GPU.  This is most often used for
+     *  multi-pass effects, where intermediate results must be rendered to
+     *  textures.  For single-pass effects, use asNewEffect().  src is the
+     *  source image for processing, as a texture-backed bitmap.  result is
+     *  the destination bitmap, which should contain a texture-backed pixelref
+     *  on success.  The default implementation does single-pass processing
+     *  using asNewEffect().
      */
-    virtual GrTexture* onFilterImageGPU(Proxy*, GrTexture* texture, const SkRect& rect);
+    virtual bool filterImageGPU(Proxy*, const SkBitmap& src, SkBitmap* result);
 
     /**
-     *  Returns this image filter as a color filter if possible,
-     *  NULL otherwise.
+     *  Returns whether this image filter is a color filter and puts the color filter into the
+     *  "filterPtr" parameter if it can. Does nothing otherwise.
+     *  If this returns false, then the filterPtr is unchanged.
+     *  If this returns true, then if filterPtr is not null, it must be set to a ref'd colorfitler
+     *  (i.e. it may not be set to NULL).
      */
-    virtual SkColorFilter* asColorFilter() const;
+    virtual bool asColorFilter(SkColorFilter** filterPtr) const;
 
     /**
      *  Returns the number of inputs this filter will accept (some inputs can

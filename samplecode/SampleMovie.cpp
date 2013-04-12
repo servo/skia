@@ -53,10 +53,7 @@ protected:
     }
 
 private:
-    SkRect      fClip;
-    SkIPoint*   fPoints;
     SkPath      fPath;
-    int         fPtCount;
 
     typedef SkView INHERITED;
 };
@@ -65,4 +62,3 @@ private:
 
 static SkView* MyFactory() { return new AnimGifView; }
 static SkViewRegister reg(MyFactory);
-

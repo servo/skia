@@ -41,6 +41,16 @@ SkFILE* sk_fopen(const char path[], SkFILE_Flags flags)
     return f;
 }
 
+char* sk_fgets(char* str, int size, SkFILE* f) {
+    return ::fgets(str, size, (FILE *)f);
+}
+
+
+int sk_feof(SkFILE *f) {
+    // no :: namespace qualifier because it breaks android
+    return feof((FILE *)f);
+}
+
 size_t sk_fgetsize(SkFILE* f)
 {
     SkASSERT(f);
@@ -122,7 +132,7 @@ bool sk_isdir(const char *path)
     if (0 != stat(path, &status)) {
         return false;
     }
-    return (status.st_mode & S_IFDIR);
+    return SkToBool(status.st_mode & S_IFDIR);
 }
 
 bool sk_mkdir(const char* path)

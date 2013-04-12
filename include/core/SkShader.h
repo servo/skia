@@ -18,8 +18,7 @@
 
 class SkPath;
 class GrContext;
-class GrEffect;
-class GrEffectStage;
+class GrEffectRef;
 
 /** \class SkShader
  *
@@ -139,10 +138,27 @@ public:
     /**
      *  Called once before drawing, with the current paint and device matrix.
      *  Return true if your shader supports these parameters, or false if not.
-     *  If false is returned, nothing will be drawn.
+     *  If false is returned, nothing will be drawn. If true is returned, then
+     *  a balancing call to endContext() will be made before the next call to
+     *  setContext.
+     *
+     *  Subclasses should be sure to call their INHERITED::setContext() if they
+     *  override this method.
      */
     virtual bool setContext(const SkBitmap& device, const SkPaint& paint,
                             const SkMatrix& matrix);
+
+    /**
+     *  Assuming setContext returned true, endContext() will be called when
+     *  the draw using the shader has completed. It is an error for setContext
+     *  to be called twice w/o an intervening call to endContext().
+     *
+     *  Subclasses should be sure to call their INHERITED::endContext() if they
+     *  override this method.
+     */
+    virtual void endContext();
+
+    SkDEBUGCODE(bool setContextHasBeenCalled() const { return SkToBool(fInSetContext); })
 
     /**
      *  Called for each span of the object being drawn. Your subclass should
@@ -181,14 +197,6 @@ public:
     static bool CanCallShadeSpan16(uint32_t flags) {
         return (flags & kHasSpan16_Flag) != 0;
     }
-
-    /**
-     *  Called before a session using the shader begins. Some shaders override
-     *  this to defer some of their work (like calling bitmap.lockPixels()).
-     *  Must be balanced by a call to endSession.
-     */
-    virtual void beginSession();
-    virtual void endSession();
 
     /**
      Gives method bitmap should be read to implement a shader.
@@ -310,11 +318,10 @@ public:
 
     /**
      *  If the shader subclass has a GrEffect implementation, this installs an effect on the stage.
-     *  A GrContext pointer is required since effects may need to create textures. The stage
-     *  parameter is necessary to set a texture matrix. It will eventually be removed and this
-     *  function will operate as a GrEffect factory.
+     *  The GrContext may be used by the effect to create textures. The GPU device does not call
+     *  setContext. Instead we pass the paint here in case the shader needs paint info.
      */
-    virtual bool asNewEffect(GrContext* context, GrEffectStage* stage) const;
+    virtual GrEffectRef* asNewEffect(GrContext* context, const SkPaint& paint) const;
 
     //////////////////////////////////////////////////////////////////////////
     //  Factory methods for stock shaders
@@ -332,6 +339,8 @@ public:
     */
     static SkShader* CreateBitmapShader(const SkBitmap& src,
                                         TileMode tmx, TileMode tmy);
+
+    SkDEVCODE(virtual void toString(SkString* str) const;)
 
 protected:
     enum MatrixClass {
@@ -355,7 +364,7 @@ private:
     uint8_t             fPaintAlpha;
     uint8_t             fDeviceConfig;
     uint8_t             fTotalInverseClass;
-    SkDEBUGCODE(SkBool8 fInSession;)
+    SkDEBUGCODE(SkBool8 fInSetContext;)
 
     static SkShader* CreateBitmapShader(const SkBitmap& src,
                                         TileMode, TileMode,
@@ -365,4 +374,3 @@ private:
 };
 
 #endif
-

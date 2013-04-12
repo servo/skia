@@ -12,6 +12,9 @@
 
 #include "SkDebugCanvas.h"
 #include "SkPicture.h"
+#include "SkTArray.h"
+
+class SkString;
 
 class SkDebugger {
 public:
@@ -41,8 +44,12 @@ public:
         fDebugCanvas->toggleCommand(index, isVisible);
     }
 
-    SkTDArray<SkString*>* getDrawCommands() {
+    SkTArray<SkString>* getDrawCommandsAsStrings() {
         return fDebugCanvas->getDrawCommandsAsStrings();
+    }
+
+    const SkTDArray<SkDrawCommand*>& getDrawCommands() const {
+        return fDebugCanvas->getDrawCommands();
     }
 
     void highlightCurrentCommand(bool on) {
@@ -55,19 +62,15 @@ public:
 
     void loadPicture(SkPicture* picture);
 
-    SkPicture* makePicture();
+    SkPicture* copyPicture();
 
     int getSize() {
         return fDebugCanvas->getSize();
     }
 
-    void setUserOffset(SkIPoint userOffset) {
+    void setUserMatrix(SkMatrix userMatrix) {
         // Should this live in debugger instead?
-        fDebugCanvas->setUserOffset(userOffset);
-    }
-
-    void setUserScale(float userScale) {
-        fDebugCanvas->setUserScale(userScale);
+        fDebugCanvas->setUserMatrix(userMatrix);
     }
 
     int getCommandAtPoint(int x, int y, int index) {
@@ -97,6 +100,15 @@ public:
     int index() {
         return fIndex;
     }
+
+    void setOverdrawViz(bool overDrawViz) {
+        if (NULL != fDebugCanvas) {
+            fDebugCanvas->setOverdrawViz(overDrawViz);
+        }
+    }
+
+    void getOverviewText(const SkTDArray<double>* typeTimes, double totTime,
+                         SkString* overview, int numRuns);
 
 private:
     SkDebugCanvas* fDebugCanvas;

@@ -8,7 +8,7 @@
       'utils.gyp:utils',
     ],
     'conditions': [
-      [ 'skia_arch_type == "x86"', {
+      [ 'skia_arch_type == "x86" and skia_os != "android"', {
         'component_libs': [
           'opts.gyp:opts_ssse3',
         ],
@@ -22,6 +22,11 @@
         'component_libs': [
           'gpu.gyp:gr',
           'gpu.gyp:skgr',
+        ],
+      }],
+      [ 'skia_os == "nacl"', {
+        'component_libs': [
+          'freetype.gyp:freetype',
         ],
       }],
     ],

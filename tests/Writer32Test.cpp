@@ -134,7 +134,7 @@ static void testWritePad(skiatest::Reporter* reporter, SkWriter32* writer) {
 
     SkAutoMalloc originalData(dataSize);
     {
-        SkRandom rand(0);
+        SkMWCRandom rand(0);
         uint32_t* ptr = static_cast<uint32_t*>(originalData.get());
         uint32_t* stop = ptr + (dataSize>>2);
         while (ptr < stop) {
@@ -173,7 +173,6 @@ static void Tests(skiatest::Reporter* reporter) {
     // dynamic allocator
     {
         SkWriter32 writer(256 * 4);
-        REPORTER_ASSERT(reporter, NULL == writer.getSingleBlock());
         test1(reporter, &writer);
 
         writer.reset();
@@ -183,13 +182,11 @@ static void Tests(skiatest::Reporter* reporter) {
         testWritePad(reporter, &writer);
     }
 
-    // single-block
+    // storage-block
     {
         SkWriter32 writer(0);
         uint32_t storage[256];
-        REPORTER_ASSERT(reporter, NULL == writer.getSingleBlock());
         writer.reset(storage, sizeof(storage));
-        REPORTER_ASSERT(reporter, (void*)storage == writer.getSingleBlock());
         test1(reporter, &writer);
 
         writer.reset(storage, sizeof(storage));
@@ -197,6 +194,11 @@ static void Tests(skiatest::Reporter* reporter) {
 
         writer.reset(storage, sizeof(storage));
         testWritePad(reporter, &writer);
+
+        // try overflowing the storage-block
+        uint32_t smallStorage[8];
+        writer.reset(smallStorage, sizeof(smallStorage));
+        test2(reporter, &writer);
     }
 
     // small storage
@@ -227,4 +229,3 @@ static void Tests(skiatest::Reporter* reporter) {
 
 #include "TestClassDef.h"
 DEFINE_TESTCLASS("Writer32", Writer32Class, Tests)
-

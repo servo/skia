@@ -81,13 +81,26 @@
       'skia_scalar%': 'float',
       'skia_mesa%': 0,
       'skia_nv_path_rendering%': 0,
+      'skia_stroke_path_rendering%': 0,
+      'skia_android_path_rendering%': 0,
       'skia_texture_cache_mb_limit%': 0,
       'skia_angle%': 0,
       'skia_directwrite%': 0,
-      'skia_nacl%': 0,
       'skia_gpu%': 1,
-      'skia_osx_sdkroot%': 'macosx',
+      'skia_osx_sdkroot%': '',
+      'skia_profile_enabled%': 0,
+      'skia_win_debuggers_path%': '',
     },
+
+    'conditions': [
+      [ 'skia_os == "win" and skia_arch_width == 32 or '
+        'skia_os in ["linux", "freebsd", "openbsd", "solaris", "android"] or '
+        'skia_os == "mac" and skia_arch_width == 32', {
+        'skia_warnings_as_errors%': 1,
+      }, {
+        'skia_warnings_as_errors%': 0,
+      }],
+    ],
 
     # Re-define all variables defined within the level-2 'variables' dict,
     # so that siblings of the level-1 'variables' dict can see them.
@@ -98,16 +111,19 @@
     'skia_scalar%': '<(skia_scalar)',
     'skia_mesa%': '<(skia_mesa)',
     'skia_nv_path_rendering%': '<(skia_nv_path_rendering)',
+    'skia_stroke_path_rendering%': '<(skia_stroke_path_rendering)',
+    'skia_android_path_rendering%': '<(skia_android_path_rendering)',
     'skia_texture_cache_mb_limit%': '<(skia_texture_cache_mb_limit)',
     'skia_angle%': '<(skia_angle)',
     'skia_arch_width%': '<(skia_arch_width)',
     'skia_arch_type%': '<(skia_arch_type)',
     'skia_directwrite%': '<(skia_directwrite)',
-    'skia_nacl%': '<(skia_nacl)',
     'skia_gpu%': '<(skia_gpu)',
     'skia_osx_sdkroot%': '<(skia_osx_sdkroot)',
+    'skia_profile_enabled%': '<(skia_profile_enabled)',
     'skia_static_initializers%': '<(skia_static_initializers)',
     'ios_sdk_version%': '6.0',
+    'skia_win_debuggers_path%': '<(skia_win_debuggers_path)',
 
     # These are referenced by our .gypi files that list files (e.g. core.gypi)
     #

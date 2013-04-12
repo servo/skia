@@ -32,7 +32,7 @@ protected:
         return fName.c_str();
     }
 
-    virtual void onDraw(SkCanvas* canvas) {
+    virtual void onDraw(SkCanvas*) {
         int n = SkBENCHLOOP(kLoop * this->mulLoopCount());
         for (int i = 0; i < n; i++) {
             this->performTest(fDst, fFx, fDx, kBuffer);
@@ -164,4 +164,3 @@ static BenchRegistry gReg1(M1);
 static BenchRegistry gReg2(M2);
 static BenchRegistry gReg3(M3);
 static BenchRegistry gReg4(M4);
-

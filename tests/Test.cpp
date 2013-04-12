@@ -20,7 +20,8 @@ SK_DEFINE_INST_COUNT(skiatest::Reporter)
 
 using namespace skiatest;
 
-Reporter::Reporter() {
+Reporter::Reporter()
+    : fTestCount(0) {
     this->resetReporting();
 }
 
@@ -83,26 +84,21 @@ bool Test::run() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-
-GrContext* GpuTest::GetContext() {
 #if SK_SUPPORT_GPU
-    // preserve this order, we want gGrContext destroyed after gEGLContext
-    static SkTLazy<SkNativeGLContext> gGLContext;
-    static SkAutoTUnref<GrContext> gGrContext;
+#include "GrContextFactory.h"
+GrContextFactory gGrContextFactory;
+#endif
 
-    if (NULL == gGrContext.get()) {
-        gGLContext.init();
-        if (gGLContext.get()->init(800, 600)) {
-            GrBackendContext ctx = reinterpret_cast<GrBackendContext>(gGLContext.get()->gl());
-            gGrContext.reset(GrContext::Create(kOpenGL_GrBackend, ctx));
-        }
-    }
-    if (gGLContext.get()) {
-        gGLContext.get()->makeCurrent();
-    }
-    return gGrContext.get();
+GrContextFactory* GpuTest::GetGrContextFactory() {
+#if SK_SUPPORT_GPU
+    return &gGrContextFactory;
 #else
     return NULL;
 #endif
 }
 
+void GpuTest::DestroyContexts() {
+#if SK_SUPPORT_GPU
+    gGrContextFactory.destroyContexts();
+#endif
+}

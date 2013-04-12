@@ -11,9 +11,9 @@
 #include "SkRefCnt.h"
 #include "SkString.h"
 #include "SkTRegistry.h"
+#include "SkThread.h"
 
-class GrContext;
-class SkGLContext;
+class GrContextFactory;
 
 namespace skiatest {
 
@@ -32,6 +32,7 @@ namespace skiatest {
         };
 
         void resetReporting();
+        void bumpTestCount() { sk_atomic_inc(&fTestCount); }
         int countTests() const { return fTestCount; }
         int countResults(Result r) {
             SkASSERT((unsigned)r <= kLastResult);
@@ -41,6 +42,7 @@ namespace skiatest {
         void startTest(Test*);
         void report(const char testDesc[], Result);
         void endTest(Test*);
+        virtual bool allowExtendedTest() const { return false; }
 
         // helpers for tests
         void assertTrue(bool cond, const char desc[]) {
@@ -89,6 +91,10 @@ namespace skiatest {
         const char* getName();
         bool run(); // returns true on success
 
+        static const SkString& GetTmpDir();
+
+        static const SkString& GetResourcePath();
+
     protected:
         virtual void onGetName(SkString*) = 0;
         virtual void onRun(Reporter*) = 0;
@@ -100,12 +106,9 @@ namespace skiatest {
 
     class GpuTest : public Test{
     public:
-        GpuTest() : Test() {
-            fContext = GetContext();
-        }
-        static GrContext* GetContext();
-    protected:
-        GrContext* fContext;
+        GpuTest() : Test() {}
+        static GrContextFactory* GetGrContextFactory();
+        static void DestroyContexts();
     private:
     };
 

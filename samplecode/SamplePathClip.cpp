@@ -70,7 +70,7 @@ protected:
         canvas->drawOval(oval, p);
     }
 
-    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y) {
+    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y, unsigned) SK_OVERRIDE {
         return new Click(this);
     }
 
@@ -88,4 +88,3 @@ private:
 
 static SkView* MyFactory() { return new PathClipView; }
 static SkViewRegister reg(MyFactory);
-

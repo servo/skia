@@ -7,6 +7,14 @@
  */
 
 #include "SkObjectParser.h"
+#include "SkData.h"
+#include "SkFontDescriptor.h"
+#include "SkRRect.h"
+#include "SkShader.h"
+#include "SkStream.h"
+#include "SkStringUtils.h"
+#include "SkTypeface.h"
+#include "SkUtils.h"
 
 /* TODO(chudy): Replace all std::strings with char */
 
@@ -85,26 +93,30 @@ SkString* SkObjectParser::IRectToString(const SkIRect& rect) {
 }
 
 SkString* SkObjectParser::MatrixToString(const SkMatrix& matrix) {
-    SkString* mMatrix = new SkString("SkMatrix: (");
-    for (int i = 0; i < 8; i++) {
-        mMatrix->appendScalar(matrix.get(i));
-        mMatrix->append("), (");
-    }
-    mMatrix->appendScalar(matrix.get(8));
-    mMatrix->append(")");
-    return mMatrix;
+    SkString* str = new SkString("SkMatrix: ");
+#ifdef SK_DEVELOPER
+    matrix.toString(str);
+#endif
+    return str;
 }
 
 SkString* SkObjectParser::PaintToString(const SkPaint& paint) {
-    SkColor color = paint.getColor();
-    SkString* mPaint = new SkString("SkPaint: Color: 0x");
-    mPaint->appendHex(color);
-
-    return mPaint;
+    SkString* str = new SkString;
+#ifdef SK_DEVELOPER
+    paint.toString(str);
+#endif
+    return str;
 }
 
 SkString* SkObjectParser::PathToString(const SkPath& path) {
     SkString* mPath = new SkString("Path (");
+
+    static const char* gFillStrings[] = {
+        "Winding", "EvenOdd", "InverseWinding", "InverseEvenOdd"
+    };
+
+    mPath->append(gFillStrings[path.getFillType()]);
+    mPath->append(", ");
 
     static const char* gConvexityStrings[] = {
         "Unknown", "Convex", "Concave"
@@ -152,6 +164,13 @@ SkString* SkObjectParser::PathToString(const SkPath& path) {
         }
     }
 
+    SkString* boundStr = SkObjectParser::RectToString(path.getBounds(), "    Bound: ");
+
+    if (NULL != boundStr) {
+        mPath->append(*boundStr);
+        SkDELETE(boundStr);
+    }
+
     return mPath;
 }
 
@@ -179,8 +198,15 @@ SkString* SkObjectParser::PointModeToString(SkCanvas::PointMode mode) {
     return mMode;
 }
 
-SkString* SkObjectParser::RectToString(const SkRect& rect) {
-    SkString* mRect = new SkString("SkRect: ");
+SkString* SkObjectParser::RectToString(const SkRect& rect, const char* title) {
+
+    SkString* mRect = new SkString;
+
+    if (NULL == title) {
+        mRect->append("SkRect: ");
+    } else {
+        mRect->append(title);
+    }
     mRect->append("(");
     mRect->appendScalar(rect.left());
     mRect->append(", ");
@@ -191,6 +217,50 @@ SkString* SkObjectParser::RectToString(const SkRect& rect) {
     mRect->appendScalar(rect.bottom());
     mRect->append(")");
     return mRect;
+}
+
+SkString* SkObjectParser::RRectToString(const SkRRect& rrect, const char* title) {
+
+    SkString* mRRect = new SkString;
+
+    if (NULL == title) {
+        mRRect->append("SkRRect (");
+        if (rrect.isEmpty()) {
+            mRRect->append("empty");
+        } else if (rrect.isRect()) {
+            mRRect->append("rect");
+        } else if (rrect.isOval()) {
+            mRRect->append("oval");
+        } else if (rrect.isSimple()) {
+            mRRect->append("simple");
+        } else {
+            SkASSERT(rrect.isComplex());
+            mRRect->append("complex");
+        }
+        mRRect->append("): ");
+    } else {
+        mRRect->append(title);
+    }
+    mRRect->append("(");
+    mRRect->appendScalar(rrect.rect().left());
+    mRRect->append(", ");
+    mRRect->appendScalar(rrect.rect().top());
+    mRRect->append(", ");
+    mRRect->appendScalar(rrect.rect().right());
+    mRRect->append(", ");
+    mRRect->appendScalar(rrect.rect().bottom());
+    mRRect->append(") radii: (");
+    for (int i = 0; i < 4; ++i) {
+        const SkVector& radii = rrect.radii((SkRRect::Corner) i);
+        mRRect->appendScalar(radii.fX);
+        mRRect->append(", ");
+        mRRect->appendScalar(radii.fY);
+        if (i < 3) {
+            mRRect->append(", ");
+        }
+    }
+    mRRect->append(")");
+    return mRRect;
 }
 
 SkString* SkObjectParser::RegionOpToString(SkRegion::Op op) {
@@ -249,9 +319,49 @@ SkString* SkObjectParser::ScalarToString(SkScalar x, const char* text) {
     return mScalar;
 }
 
-SkString* SkObjectParser::TextToString(const void* text, size_t byteLength) {
-    SkString* mText = new SkString(6+byteLength+1);
-    mText->append("Text: ");
-    mText->append((char*) text, byteLength);
-    return mText;
+SkString* SkObjectParser::TextToString(const void* text, size_t byteLength,
+                                       SkPaint::TextEncoding encoding) {
+
+    SkString* decodedText = new SkString();
+    switch (encoding) {
+        case SkPaint::kUTF8_TextEncoding: {
+            decodedText->append("UTF-8: ");
+            decodedText->append((const char*)text, byteLength);
+            break;
+        }
+        case SkPaint::kUTF16_TextEncoding: {
+            decodedText->append("UTF-16: ");
+            size_t sizeNeeded = SkUTF16_ToUTF8((uint16_t*)text, byteLength / 2, NULL);
+            char* utf8 = new char[sizeNeeded];
+            SkUTF16_ToUTF8((uint16_t*)text, byteLength / 2, utf8);
+            decodedText->append(utf8, sizeNeeded);
+            delete utf8;
+            break;
+        }
+        case SkPaint::kUTF32_TextEncoding: {
+            decodedText->append("UTF-32: ");
+            const SkUnichar* begin = (const SkUnichar*)text;
+            const SkUnichar* end = (const SkUnichar*)((const char*)text + byteLength);
+            for (const SkUnichar* unichar = begin; unichar < end; ++unichar) {
+                decodedText->appendUnichar(*unichar);
+            }
+            break;
+        }
+        case SkPaint::kGlyphID_TextEncoding: {
+            decodedText->append("GlyphID: ");
+            const uint16_t* begin = (const uint16_t*)text;
+            const uint16_t* end = (const uint16_t*)((const char*)text + byteLength);
+            for (const uint16_t* glyph = begin; glyph < end; ++glyph) {
+                decodedText->append("0x");
+                decodedText->appendHex(*glyph);
+                decodedText->append(" ");
+            }
+            break;
+        }
+        default:
+            decodedText->append("Unknown text encoding.");
+            break;
+    }
+
+    return decodedText;
 }

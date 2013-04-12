@@ -114,7 +114,7 @@ protected:
 
         canvas->translate(SkIntToScalar(50), SkIntToScalar(50));
 
-        SkRect r = SkRect::MakeXYWH(-50, -50, 32, 16);
+//        SkRect r = SkRect::MakeXYWH(-50, -50, 32, 16);
 //        canvas->drawRect(r, paint); return;
         canvas->drawPaint(paint);
     }
@@ -152,4 +152,3 @@ static skiagm::GMRegistry reg201(G201);
 static skiagm::GMRegistry reg011(G011);
 static skiagm::GMRegistry reg111(G111);
 static skiagm::GMRegistry reg211(G211);
-

@@ -125,11 +125,12 @@ static void test_fade(SkCanvas* canvas) {
 
 class RedFilter : public SkDrawFilter {
 public:
-    virtual void filter(SkPaint* p, SkDrawFilter::Type) SK_OVERRIDE {
+    virtual bool filter(SkPaint* p, SkDrawFilter::Type) SK_OVERRIDE {
         fColor = p->getColor();
         if (fColor == SK_ColorRED) {
             p->setColor(SK_ColorGREEN);
         }
+        return true;
     }
 
 private:
@@ -248,17 +249,18 @@ protected:
         canvas->restore();
     }
 
-    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y) {
+    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y,
+                                              unsigned modi) SK_OVERRIDE {
         this->inval(NULL);
 
-        return this->INHERITED::onFindClickHandler(x, y);
+        return this->INHERITED::onFindClickHandler(x, y, modi);
     }
 
     virtual bool onClick(Click* click) {
         return this->INHERITED::onClick(click);
     }
 
-    virtual bool handleKey(SkKey key) {
+    virtual bool handleKey(SkKey) {
         this->inval(NULL);
         return true;
     }
@@ -271,4 +273,3 @@ private:
 
 static SkView* MyFactory() { return new LayersView; }
 static SkViewRegister reg(MyFactory);
-

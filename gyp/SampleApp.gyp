@@ -5,7 +5,8 @@
       'type': 'executable',
       'mac_bundle' : 1,
       'include_dirs' : [
-        '../src/core', # needed to get SkConcaveToTriangle, maybe this should be moved to include dir?
+        '../src/core',
+        '../src/effects', #needed for BlurMask.h
         '../gm',       # needed to pull gm.h
         '../samplecode', # To pull SampleApp.h and SampleCode.h
         '../src/pipe/utils', # For TiledPipeController
@@ -36,6 +37,7 @@
         '../samplecode/SampleBitmapRect.cpp',
         '../samplecode/SampleBlur.cpp',
         '../samplecode/SampleCamera.cpp',
+        '../samplecode/SampleChart.cpp',
         '../samplecode/SampleCircle.cpp',
         '../samplecode/SampleClip.cpp',
         '../samplecode/SampleCode.h',
@@ -66,12 +68,12 @@
         '../samplecode/SampleLayers.cpp',
         '../samplecode/SampleLCD.cpp',
         '../samplecode/SampleLines.cpp',
+        '../samplecode/SampleManyRects.cpp',
         '../samplecode/SampleMeasure.cpp',
         '../samplecode/SampleMipMap.cpp',
         '../samplecode/SampleMovie.cpp',
         '../samplecode/SampleOvalTest.cpp',
         '../samplecode/SampleOverflow.cpp',
-        '../samplecode/SamplePageFlip.cpp',
         '../samplecode/SamplePatch.cpp',
         '../samplecode/SamplePath.cpp',
         '../samplecode/SamplePathClip.cpp',
@@ -82,6 +84,7 @@
         '../samplecode/SamplePolyToPoly.cpp',
         '../samplecode/SampleRegion.cpp',
         '../samplecode/SampleRepeatTile.cpp',
+        '../samplecode/SampleRotateCircles.cpp',
         '../samplecode/SampleShaders.cpp',
         '../samplecode/SampleShaderText.cpp',
         '../samplecode/SampleSkLayer.cpp',
@@ -96,8 +99,6 @@
         '../samplecode/SampleTextureDomain.cpp',
         '../samplecode/SampleTiling.cpp',
         '../samplecode/SampleTinyBitmap.cpp',
-        '../samplecode/SampleTriangles.cpp',
-        '../samplecode/SampleTypeface.cpp',
         '../samplecode/SampleUnitMapper.cpp',
         '../samplecode/SampleVertices.cpp',
         '../samplecode/SampleXfermodesBlur.cpp',
@@ -116,14 +117,6 @@
         #'../experimental/Networking/SampleNetPipeReader.cpp',
         #'../experimental/Networking/SkSockets.cpp',
         #'../experimental/Networking/SkSockets.h',
-
-        # Debugger
-        '../experimental/Debugger/DebuggerViews.h',
-        '../experimental/Debugger/DebuggerContentView.cpp',
-        '../experimental/Debugger/DebuggerCommandsView.cpp',
-        '../experimental/Debugger/DebuggerStateView.cpp',
-        '../experimental/Debugger/SkDebugDumper.cpp',
-        '../experimental/Debugger/SkDebugDumper.h',
 
         # TiledPipeController
         '../src/pipe/utils/SamplePipeControllers.h',
@@ -156,7 +149,6 @@
           'sources!': [
             # require UNIX functions
             '../samplecode/SampleEncode.cpp',
-            '../samplecode/SamplePageFlip.cpp',
           ],
         }],
         [ 'skia_os == "mac"', {
@@ -282,12 +274,17 @@
             'experimental.gyp:experimental',
           ],
           'dependencies': [
-            'android_system.gyp:SampleAppAndroid',
+            'android_deps.gyp:Android_SampleApp',
           ],
         }],
         [ 'skia_gpu == 1', {
           'include_dirs': [
             '../src/gpu', # To pull gl/GrGLUtil.h
+          ],
+        }],
+        [ 'skia_os == "nacl"', {
+          'sources': [
+            '../../nacl/src/nacl_sample.cpp',
           ],
         }],
       ],

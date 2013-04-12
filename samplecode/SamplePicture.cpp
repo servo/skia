@@ -153,11 +153,13 @@ protected:
         canvas->drawPicture(*pict);
         canvas->restore();
 
+#ifdef SK_DEVELOPER
         if (false) {
             SkDebugfDumper dumper;
             SkDumpCanvas dumpCanvas(&dumper);
             dumpCanvas.drawPicture(*pict);
         }
+#endif
 
         // test that we can re-record a subpicture, and see the results
 
@@ -194,4 +196,3 @@ private:
 
 static SkView* MyFactory() { return new PictureView; }
 static SkViewRegister reg(MyFactory);
-

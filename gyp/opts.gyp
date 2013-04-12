@@ -32,9 +32,14 @@
       'conditions': [
         [ 'skia_arch_type == "x86" and skia_os != "ios"', {
           'conditions': [
-            [ 'skia_os in ["linux", "freebsd", "openbsd", "solaris"]', {
+            [ 'skia_os in ["linux", "freebsd", "openbsd", "solaris", "nacl"]', {
               'cflags': [
                 '-msse2',
+              ],
+            }],
+            [ 'skia_os != "android"', {
+              'dependencies': [
+                'opts_ssse3',
               ],
             }],
           ],
@@ -45,18 +50,18 @@
             '../src/opts/SkBlitRect_opts_SSE2.cpp',
             '../src/opts/SkUtils_opts_SSE2.cpp',
           ],
-          'dependencies': [
-            'opts_ssse3',
-          ],
         }],
         [ 'skia_arch_type == "arm" and armv7 == 1', {
           # The assembly uses the frame pointer register (r7 in Thumb/r11 in
           # ARM), the compiler doesn't like that.
           'cflags!': [
             '-fno-omit-frame-pointer',
+            '-mapcs-frame',
+            '-mapcs',
           ],
           'cflags': [
             '-fomit-frame-pointer',
+            '-mno-apcs-frame',
           ],
           'variables': {
             'arm_neon_optional%': '<(arm_neon_optional>',
@@ -108,7 +113,7 @@
         '../src/core',
       ],
       'conditions': [
-        [ 'skia_os in ["linux", "freebsd", "openbsd", "solaris"]', {
+        [ 'skia_os in ["linux", "freebsd", "openbsd", "solaris", "nacl"]', {
           'cflags': [
             '-mssse3',
           ],
@@ -152,6 +157,10 @@
       'cflags': [
         '-mfpu=neon',
         '-fomit-frame-pointer',
+      ],
+      'ldflags': [
+        '-march=armv7-a',
+        '-Wl,--fix-cortex-a8',
       ],
       'sources': [
         '../src/opts/memset16_neon.S',

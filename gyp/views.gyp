@@ -14,12 +14,13 @@
       'include_dirs': [
         '../include/config',
         '../include/core',
-        '../include/views',
-        '../include/xml',
-        '../include/utils',
-        '../include/images',
         '../include/effects',
+        '../include/images',
+        '../include/lazy',
+        '../include/utils',
+        '../include/views',
         '../include/views/unix',
+        '../include/xml',
       ],
       'dependencies': [
         'angle.gyp:*',
@@ -32,6 +33,7 @@
         '../include/views/SkKey.h',
         '../include/views/SkOSMenu.h',
         '../include/views/SkOSWindow_Mac.h',
+        '../include/views/SkOSWindow_NaCl.h',
         '../include/views/SkOSWindow_SDL.h',
         '../include/views/SkOSWindow_Unix.h',
         '../include/views/SkOSWindow_Win.h',
@@ -97,6 +99,13 @@
           ],
         }],
         [ 'skia_os in ["linux", "freebsd", "openbsd", "solaris"]', {
+          'link_settings': {
+            'libraries': [
+              '-lGL',
+              '-lGLU',
+              '-lX11',
+            ],
+          },
         },{
           'sources!': [
             '../src/views/unix/SkOSWindow_Unix.cpp',
@@ -109,6 +118,17 @@
           'sources!': [
             '../src/views/win/SkOSWindow_win.cpp',
             '../src/views/win/skia_win.cpp',
+          ],
+        }],
+        [ 'skia_os == "nacl"', {
+          'sources!': [
+            '../src/views/unix/SkOSWindow_Unix.cpp',
+            '../src/views/unix/keysym2ucs.c',
+            '../src/views/unix/skia_unix.cpp',
+          ],
+        }, {
+          'sources!': [
+            '../src/views/nacl/SkOSWindow_NaCl.cpp',
           ],
         }],
         [ 'skia_gpu == 1', {

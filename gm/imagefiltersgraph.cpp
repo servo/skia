@@ -13,6 +13,7 @@
 #include "SkColorFilter.h"
 #include "SkColorMatrixFilter.h"
 #include "SkColorFilterImageFilter.h"
+#include "SkMergeImageFilter.h"
 #include "SkMorphologyImageFilter.h"
 
 #include "SkTestImageFilters.h"
@@ -91,5 +92,3 @@ private:
 
 static skiagm::GM* MyFactory(void*) { return new ImageFiltersGraphGM; }
 static skiagm::GMRegistry reg(MyFactory);
-
-

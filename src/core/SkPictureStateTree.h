@@ -36,7 +36,7 @@ public:
         SkMatrix* fMatrix;
         Node* fNode;
         uint32_t fOffset;
-        bool operator<(const Draw& other) { return fOffset < other.fOffset; }
+        bool operator<(const Draw& other) const { return fOffset < other.fOffset; }
     };
 
     class Iterator;
@@ -61,6 +61,13 @@ public:
     void appendRestore();
     void appendTransform(const SkMatrix& trans);
     void appendClip(uint32_t offset);
+
+    /**
+     * Call this immediately after an appendRestore call that is associated
+     * a save or saveLayer that was removed from the command stream
+     * due to a command pattern optimization in SkPicture.
+     */
+    void saveCollapsed();
 
     /**
      * Playback helper
@@ -109,6 +116,10 @@ private:
 
     SkChunkAlloc fAlloc;
     Node* fRoot;
+    // Needed by saveCollapsed() because nodes do not currently store
+    // references to their children.  If they did, we could just retrieve the
+    // last added child.
+    Node* fLastRestoredNode;
 
     // The currently active state
     Draw fCurrentState;
@@ -133,4 +144,3 @@ private:
 };
 
 #endif
-

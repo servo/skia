@@ -21,7 +21,7 @@ static const SimplifyFindNextTest::Segment* testCommon(
         int contourWinding, int spanWinding, int startIndex, int endIndex,
         SkTArray<SimplifyFindNextTest::Contour>& contours) {
     SkTDArray<SimplifyFindNextTest::Contour*> contourList;
-    makeContourList(contours, contourList);
+    makeContourList(contours, contourList, false, false);
     addIntersectTs(contourList[0], contourList[0]);
     if (contours.count() > 1) {
         SkASSERT(contours.count() == 2);
@@ -37,8 +37,7 @@ static const SimplifyFindNextTest::Segment* testCommon(
     SkTDArray<SimplifyFindNextTest::Span*> chaseArray;
     bool unsortable = false;
     SimplifyFindNextTest::Segment* next = segment.findNextWinding(chaseArray,
-            true, nextStart, nextEnd, contourWinding, spanWinding,
-            unsortable);
+            nextStart, nextEnd, unsortable);
     pts[1] = next->xyAtT(&next->span(nextStart));
     SkASSERT(pts[0] == pts[1]);
     return next;

@@ -29,6 +29,12 @@ public:
         return false;
     }
 
+#ifdef SK_DEVELOPER
+    virtual void toString(SkString* str) const SK_OVERRIDE {
+        str->append("TestLooper:");
+    }
+#endif
+
     SK_DECLARE_UNFLATTENABLE_OBJECT()
 };
 
@@ -41,7 +47,7 @@ static void test_drawBitmap(skiatest::Reporter* reporter) {
     SkBitmap dst;
     dst.setConfig(SkBitmap::kARGB_8888_Config, 10, 10);
     dst.allocPixels();
-    dst.eraseColor(0);
+    dst.eraseColor(SK_ColorTRANSPARENT);
 
     SkCanvas canvas(dst);
     SkPaint  paint;
@@ -54,7 +60,7 @@ static void test_drawBitmap(skiatest::Reporter* reporter) {
     REPORTER_ASSERT(reporter, 0xFFFFFFFF == *dst.getAddr32(5, 5));
 
     // reverify we are clear again
-    dst.eraseColor(0);
+    dst.eraseColor(SK_ColorTRANSPARENT);
     REPORTER_ASSERT(reporter, 0 == *dst.getAddr32(5, 5));
 
     // if the bitmap is clipped out, we don't draw it

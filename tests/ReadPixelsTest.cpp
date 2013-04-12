@@ -14,6 +14,7 @@
 #include "SkRegion.h"
 #if SK_SUPPORT_GPU
 #include "SkGpuDevice.h"
+#include "GrContextFactory.h"
 #endif
 
 
@@ -52,7 +53,7 @@ SkPMColor getCanvasColor(int x, int y) {
     return SkPremultiplyARGBInline(a, r, g, b);
 }
 
-SkPMColor getBitmapColor(int x, int y, int w, int h) {
+SkPMColor getBitmapColor(int x, int y, int w) {
     int n = y * w + x;
 
     U8CPU b = n & 0xff;
@@ -138,7 +139,7 @@ void fillBitmap(SkBitmap* bitmap) {
     for (int y = 0; y < h; ++y) {
         for (int x = 0; x < w; ++x) {
             SkPMColor* pixel = reinterpret_cast<SkPMColor*>(pixels + y * bitmap->rowBytes() + x * bitmap->bytesPerPixel());
-            *pixel = getBitmapColor(x, y, w, h);
+            *pixel = getBitmapColor(x, y, w);
         }
     }
 }
@@ -205,8 +206,8 @@ bool checkRead(skiatest::Reporter* reporter,
                     }
                 }
             } else if (checkBitmapPixels) {
-                REPORTER_ASSERT(reporter, getBitmapColor(bx, by, bw, bh) == pixel);
-                if (getBitmapColor(bx, by, bw, bh) != pixel) {
+                REPORTER_ASSERT(reporter, getBitmapColor(bx, by, bw) == pixel);
+                if (getBitmapColor(bx, by, bw) != pixel) {
                     return false;
                 }
             }
@@ -254,7 +255,7 @@ void init_bitmap(SkBitmap* bitmap, const SkIRect& rect, BitmapInit init) {
     }
 }
 
-void ReadPixelsTest(skiatest::Reporter* reporter, GrContext* context) {
+void ReadPixelsTest(skiatest::Reporter* reporter, GrContextFactory* factory) {
     const SkIRect testRects[] = {
         // entire thing
         DEV_RECT,
@@ -302,93 +303,112 @@ void ReadPixelsTest(skiatest::Reporter* reporter, GrContext* context) {
         SkIRect::MakeLTRB(3 * DEV_W / 4, -10, DEV_W + 10, DEV_H + 10),
     };
 
-    for (int dtype = 0; dtype < 2; ++dtype) {
-        SkAutoTUnref<SkDevice> device;
-        if (0 == dtype) {
-            device.reset(new SkDevice(SkBitmap::kARGB_8888_Config,
-                                          DEV_W,
-                                          DEV_H,
-                                          false));
-        } else {
-// GPU device known not to work in the fixed pt build.
-#if defined(SK_SCALAR_IS_FIXED) || !SK_SUPPORT_GPU
-            continue;
-#else
-            device.reset(new SkGpuDevice(context,
-                                             SkBitmap::kARGB_8888_Config,
-                                             DEV_W,
-                                             DEV_H));
-#endif
+    for (int dtype = 0; dtype < 3; ++dtype) {
+        int glCtxTypeCnt = 1;
+#if SK_SUPPORT_GPU
+        if (0 != dtype)  {
+            glCtxTypeCnt = GrContextFactory::kGLContextTypeCnt;
         }
-        SkCanvas canvas(device);
-        fillCanvas(&canvas);
-
-        static const SkCanvas::Config8888 gReadConfigs[] = {
-            SkCanvas::kNative_Premul_Config8888,
-            SkCanvas::kNative_Unpremul_Config8888,
-/**
- * There is a bug in Ganesh (http://code.google.com/p/skia/issues/detail?id=438)
- * that causes the readback of pixels from BGRA canvas to an RGBA bitmap to
- * fail. This should be removed as soon as the issue above is resolved.
- */
-#if !defined(SK_BUILD_FOR_ANDROID)
-            SkCanvas::kBGRA_Premul_Config8888,
-            SkCanvas::kBGRA_Unpremul_Config8888,
 #endif
-            SkCanvas::kRGBA_Premul_Config8888,
-            SkCanvas::kRGBA_Unpremul_Config8888,
-        };
-        for (size_t rect = 0; rect < SK_ARRAY_COUNT(testRects); ++rect) {
-            const SkIRect& srcRect = testRects[rect];
-            for (BitmapInit bmi = kFirstBitmapInit;
-                 bmi < kBitmapInitCnt;
-                 bmi = nextBMI(bmi)) {
-                for (size_t c = 0; c < SK_ARRAY_COUNT(gReadConfigs); ++c) {
-                    SkCanvas::Config8888 config8888 = gReadConfigs[c];
-                    SkBitmap bmp;
-                    init_bitmap(&bmp, srcRect, bmi);
-
-                    // if the bitmap has pixels allocated before the readPixels,
-                    // note that and fill them with pattern
-                    bool startsWithPixels = !bmp.isNull();
-                    if (startsWithPixels) {
-                        fillBitmap(&bmp);
-                    }
-                    uint32_t idBefore = canvas.getDevice()->accessBitmap(false).getGenerationID();
-                    bool success =
-                        canvas.readPixels(&bmp, srcRect.fLeft,
-                                          srcRect.fTop, config8888);
-                    uint32_t idAfter = canvas.getDevice()->accessBitmap(false).getGenerationID();
-
-                    // we expect to succeed when the read isn't fully clipped
-                    // out.
-                    bool expectSuccess = SkIRect::Intersects(srcRect, DEV_RECT);
-                    // determine whether we expected the read to succeed.
-                    REPORTER_ASSERT(reporter, success == expectSuccess);
-                    // read pixels should never change the gen id
-                    REPORTER_ASSERT(reporter, idBefore == idAfter);
-
-                    if (success || startsWithPixels) {
-                        checkRead(reporter, bmp, srcRect.fLeft, srcRect.fTop,
-                                  success, startsWithPixels, config8888);
-                    } else {
-                        // if we had no pixels beforehand and the readPixels
-                        // failed then our bitmap should still not have pixels
-                        REPORTER_ASSERT(reporter, bmp.isNull());
-                    }
+        for (int glCtxType = 0; glCtxType < glCtxTypeCnt; ++glCtxType) {
+            SkAutoTUnref<SkDevice> device;
+            if (0 == dtype) {
+                device.reset(new SkDevice(SkBitmap::kARGB_8888_Config, DEV_W, DEV_H, false));
+            } else {
+#if SK_SUPPORT_GPU
+                GrContextFactory::GLContextType type =
+                    static_cast<GrContextFactory::GLContextType>(glCtxType);
+                if (!GrContextFactory::IsRenderingGLContext(type)) {
+                    continue;
                 }
-                // check the old webkit version of readPixels that clips the
-                // bitmap size
-                SkBitmap wkbmp;
-                bool success = canvas.readPixels(srcRect, &wkbmp);
-                SkIRect clippedRect = DEV_RECT;
-                if (clippedRect.intersect(srcRect)) {
-                    REPORTER_ASSERT(reporter, success);
-                    checkRead(reporter, wkbmp, clippedRect.fLeft,
-                              clippedRect.fTop, true, false,
-                              SkCanvas::kNative_Premul_Config8888);
-                } else {
-                    REPORTER_ASSERT(reporter, !success);
+                GrContext* context = factory->get(type);
+                if (NULL == context) {
+                    continue;
+                }
+                GrTextureDesc desc;
+                desc.fFlags = kRenderTarget_GrTextureFlagBit | kNoStencil_GrTextureFlagBit;
+                desc.fWidth = DEV_W;
+                desc.fHeight = DEV_H;
+                desc.fConfig = kSkia8888_GrPixelConfig;
+                desc.fOrigin = 1 == dtype ? kBottomLeft_GrSurfaceOrigin
+                                          : kTopLeft_GrSurfaceOrigin;
+                GrAutoScratchTexture ast(context, desc, GrContext::kExact_ScratchTexMatch);
+                SkAutoTUnref<GrTexture> tex(ast.detach());
+                device.reset(new SkGpuDevice(context, tex));
+#else
+                continue;
+#endif
+            }
+            SkCanvas canvas(device);
+            fillCanvas(&canvas);
+
+            static const SkCanvas::Config8888 gReadConfigs[] = {
+                SkCanvas::kNative_Premul_Config8888,
+                SkCanvas::kNative_Unpremul_Config8888,
+/**
+    * There is a bug in Ganesh (http://code.google.com/p/skia/issues/detail?id=438)
+    * that causes the readback of pixels from BGRA canvas to an RGBA bitmap to
+    * fail. This should be removed as soon as the issue above is resolved.
+    */
+#if !defined(SK_BUILD_FOR_ANDROID)
+                SkCanvas::kBGRA_Premul_Config8888,
+                SkCanvas::kBGRA_Unpremul_Config8888,
+#endif
+                SkCanvas::kRGBA_Premul_Config8888,
+                SkCanvas::kRGBA_Unpremul_Config8888,
+            };
+            for (size_t rect = 0; rect < SK_ARRAY_COUNT(testRects); ++rect) {
+                const SkIRect& srcRect = testRects[rect];
+                for (BitmapInit bmi = kFirstBitmapInit;
+                     bmi < kBitmapInitCnt;
+                     bmi = nextBMI(bmi)) {
+                    for (size_t c = 0; c < SK_ARRAY_COUNT(gReadConfigs); ++c) {
+                        SkCanvas::Config8888 config8888 = gReadConfigs[c];
+                        SkBitmap bmp;
+                        init_bitmap(&bmp, srcRect, bmi);
+
+                        // if the bitmap has pixels allocated before the readPixels,
+                        // note that and fill them with pattern
+                        bool startsWithPixels = !bmp.isNull();
+                        if (startsWithPixels) {
+                            fillBitmap(&bmp);
+                        }
+                        uint32_t idBefore = canvas.getDevice()->accessBitmap(false).getGenerationID();
+                        bool success =
+                            canvas.readPixels(&bmp, srcRect.fLeft,
+                                              srcRect.fTop, config8888);
+                        uint32_t idAfter = canvas.getDevice()->accessBitmap(false).getGenerationID();
+
+                        // we expect to succeed when the read isn't fully clipped
+                        // out.
+                        bool expectSuccess = SkIRect::Intersects(srcRect, DEV_RECT);
+                        // determine whether we expected the read to succeed.
+                        REPORTER_ASSERT(reporter, success == expectSuccess);
+                        // read pixels should never change the gen id
+                        REPORTER_ASSERT(reporter, idBefore == idAfter);
+
+                        if (success || startsWithPixels) {
+                            checkRead(reporter, bmp, srcRect.fLeft, srcRect.fTop,
+                                      success, startsWithPixels, config8888);
+                        } else {
+                            // if we had no pixels beforehand and the readPixels
+                            // failed then our bitmap should still not have pixels
+                            REPORTER_ASSERT(reporter, bmp.isNull());
+                        }
+                    }
+                    // check the old webkit version of readPixels that clips the
+                    // bitmap size
+                    SkBitmap wkbmp;
+                    bool success = canvas.readPixels(srcRect, &wkbmp);
+                    SkIRect clippedRect = DEV_RECT;
+                    if (clippedRect.intersect(srcRect)) {
+                        REPORTER_ASSERT(reporter, success);
+                        checkRead(reporter, wkbmp, clippedRect.fLeft,
+                                  clippedRect.fTop, true, false,
+                                  SkCanvas::kNative_Premul_Config8888);
+                    } else {
+                        REPORTER_ASSERT(reporter, !success);
+                    }
                 }
             }
         }
@@ -398,4 +418,3 @@ void ReadPixelsTest(skiatest::Reporter* reporter, GrContext* context) {
 
 #include "TestClassDef.h"
 DEFINE_GPUTESTCLASS("ReadPixels", ReadPixelsTestClass, ReadPixelsTest)
-

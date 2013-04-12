@@ -7,16 +7,40 @@
 #include "CurveIntersection.h"
 #include "Intersections.h"
 #include "LineIntersection.h"
-#include <algorithm> // used for std::swap
+#include "LineUtilities.h"
 
+/* Determine the intersection point of two lines. This assumes the lines are not parallel,
+   and that that the lines are infinite.
+   From http://en.wikipedia.org/wiki/Line-line_intersection
+ */
+void lineIntersect(const _Line& a, const _Line& b, _Point& p) {
+    double axLen = a[1].x - a[0].x;
+    double ayLen = a[1].y - a[0].y;
+    double bxLen = b[1].x - b[0].x;
+    double byLen = b[1].y - b[0].y;
+    double denom = byLen * axLen - ayLen * bxLen;
+    SkASSERT(denom);
+    double term1 = a[1].x * a[0].y - a[1].y * a[0].x;
+    double term2 = b[1].x * b[0].y - b[1].y * b[0].x;
+    p.x = (term1 * bxLen - axLen * term2) / denom;
+    p.y = (term1 * byLen - ayLen * term2) / denom;
+}
+
+static int computePoints(const _Line& a, int used, Intersections& i) {
+    i.fPt[0] = xy_at_t(a, i.fT[0][0]);
+    if ((i.fUsed = used) == 2) {
+        i.fPt[1] = xy_at_t(a, i.fT[0][1]);
+    }
+    return i.fUsed;
+}
 
 /*
    Determine the intersection point of two line segments
    Return FALSE if the lines don't intersect
    from: http://paulbourke.net/geometry/lineline2d/
-*/
+ */
 
-int intersect(const _Line& a, const _Line& b, double aRange[2], double bRange[2]) {
+int intersect(const _Line& a, const _Line& b, Intersections& i) {
     double axLen = a[1].x - a[0].x;
     double ayLen = a[1].y - a[0].y;
     double bxLen = b[1].x - b[0].x;
@@ -27,101 +51,90 @@ int intersect(const _Line& a, const _Line& b, double aRange[2], double bRange[2]
              byLen  * axLen         ==  ayLen          * bxLen
              byLen  * axLen         -   ayLen          * bxLen == 0 ( == denom )
      */
-    double denom  = byLen * axLen - ayLen * bxLen;
-    if (approximately_zero(denom)) {
-       /* See if the axis intercepts match:
-                  ay - ax * ayLen / axLen  ==          by - bx * ayLen / axLen
-         axLen * (ay - ax * ayLen / axLen) == axLen * (by - bx * ayLen / axLen)
-         axLen *  ay - ax * ayLen          == axLen *  by - bx * ayLen
-        */
-        if (approximately_equal_squared(axLen * a[0].y - ayLen * a[0].x,
-                axLen * b[0].y - ayLen * b[0].x)) {
-            const double* aPtr;
-            const double* bPtr;
-            if (fabs(axLen) > fabs(ayLen) || fabs(bxLen) > fabs(byLen)) {
-                aPtr = &a[0].x;
-                bPtr = &b[0].x;
-            } else {
-                aPtr = &a[0].y;
-                bPtr = &b[0].y;
-            }
-        #if 0 // sorting edges fails to preserve original direction
-            double aMin = aPtr[0];
-            double aMax = aPtr[2];
-            double bMin = bPtr[0];
-            double bMax = bPtr[2];
-            if (aMin > aMax) {
-                std::swap(aMin, aMax);
-            }
-            if (bMin > bMax) {
-                std::swap(bMin, bMax);
-            }
-            if (aMax < bMin || bMax < aMin) {
-                return 0;
-            }
-            if (aRange) {
-                aRange[0] = bMin <= aMin ? 0 : (bMin - aMin) / (aMax - aMin);
-                aRange[1] = bMax >= aMax ? 1 : (bMax - aMin) / (aMax - aMin);
-            }
-            int bIn = (aPtr[0] - aPtr[2]) * (bPtr[0] - bPtr[2]) < 0;
-            if (bRange) {
-                bRange[bIn] = aMin <= bMin ? 0 : (aMin - bMin) / (bMax - bMin);
-                bRange[!bIn] = aMax >= bMax ? 1 : (aMax - bMin) / (bMax - bMin);
-            }
-            return 1 + ((aRange[0] != aRange[1]) || (bRange[0] != bRange[1]));
-        #else
-            assert(aRange);
-            assert(bRange);
-            double a0 = aPtr[0];
-            double a1 = aPtr[2];
-            double b0 = bPtr[0];
-            double b1 = bPtr[2];
-            double at0 = (a0 - b0) / (a0 - a1);
-            double at1 = (a0 - b1) / (a0 - a1);
-            if ((at0 < 0 && at1 < 0) || (at0 > 1 && at1 > 1)) {
-                return 0;
-            }
-            aRange[0] = std::max(std::min(at0, 1.0), 0.0);
-            aRange[1] = std::max(std::min(at1, 1.0), 0.0);
-            int bIn = (a0 - a1) * (b0 - b1) < 0;
-            bRange[bIn] = std::max(std::min((b0 - a0) / (b0 - b1), 1.0), 0.0);
-            bRange[!bIn] = std::max(std::min((b0 - a1) / (b0 - b1), 1.0), 0.0);
-            bool second = fabs(aRange[0] - aRange[1]) > FLT_EPSILON;
-            assert((fabs(bRange[0] - bRange[1]) <= FLT_EPSILON) ^ second);
-            return 1 + second;
-        #endif
-        }
-    }
+    double denom = byLen * axLen - ayLen * bxLen;
     double ab0y = a[0].y - b[0].y;
     double ab0x = a[0].x - b[0].x;
     double numerA = ab0y * bxLen - byLen * ab0x;
-    if (numerA < 0 && denom > numerA || numerA > 0 && denom < numerA) {
-        return 0;
-    }
     double numerB = ab0y * axLen - ayLen * ab0x;
-    if (numerB < 0 && denom > numerB || numerB > 0 && denom < numerB) {
+    bool mayNotOverlap = (numerA < 0 && denom > numerA) || (numerA > 0 && denom < numerA)
+            || (numerB < 0 && denom > numerB) || (numerB > 0 && denom < numerB);
+    numerA /= denom;
+    numerB /= denom;
+    if ((!approximately_zero(denom) || (!approximately_zero_inverse(numerA)
+            && !approximately_zero_inverse(numerB))) && !sk_double_isnan(numerA)
+            && !sk_double_isnan(numerB)) {
+        if (mayNotOverlap) {
+            return 0;
+        }
+        i.fT[0][0] = numerA;
+        i.fT[1][0] = numerB;
+        i.fPt[0] = xy_at_t(a, numerA);
+        return computePoints(a, 1, i);
+    }
+   /* See if the axis intercepts match:
+              ay - ax * ayLen / axLen  ==          by - bx * ayLen / axLen
+     axLen * (ay - ax * ayLen / axLen) == axLen * (by - bx * ayLen / axLen)
+     axLen *  ay - ax * ayLen          == axLen *  by - bx * ayLen
+    */
+    // FIXME: need to use AlmostEqualUlps variant instead
+    if (!approximately_equal_squared(axLen * a[0].y - ayLen * a[0].x,
+            axLen * b[0].y - ayLen * b[0].x)) {
         return 0;
     }
-    /* Is the intersection along the the segments */
-    if (aRange) {
-        aRange[0] = numerA / denom;
+    const double* aPtr;
+    const double* bPtr;
+    if (fabs(axLen) > fabs(ayLen) || fabs(bxLen) > fabs(byLen)) {
+        aPtr = &a[0].x;
+        bPtr = &b[0].x;
+    } else {
+        aPtr = &a[0].y;
+        bPtr = &b[0].y;
     }
-    if (bRange) {
-        bRange[0] = numerB / denom;
+    double a0 = aPtr[0];
+    double a1 = aPtr[2];
+    double b0 = bPtr[0];
+    double b1 = bPtr[2];
+    // OPTIMIZATION: restructure to reject before the divide
+    // e.g., if ((a0 - b0) * (a0 - a1) < 0 || abs(a0 - b0) > abs(a0 - a1))
+    // (except efficient)
+    double aDenom = a0 - a1;
+    if (approximately_zero(aDenom)) {
+        if (!between(b0, a0, b1)) {
+            return 0;
+        }
+        i.fT[0][0] = i.fT[0][1] = 0;
+    } else {
+        double at0 = (a0 - b0) / aDenom;
+        double at1 = (a0 - b1) / aDenom;
+        if ((at0 < 0 && at1 < 0) || (at0 > 1 && at1 > 1)) {
+            return 0;
+        }
+        i.fT[0][0] = SkTMax(SkTMin(at0, 1.0), 0.0);
+        i.fT[0][1] = SkTMax(SkTMin(at1, 1.0), 0.0);
     }
-    return 1;
+    double bDenom = b0 - b1;
+    if (approximately_zero(bDenom)) {
+        i.fT[1][0] = i.fT[1][1] = 0;
+    } else {
+        int bIn = aDenom * bDenom < 0;
+        i.fT[1][bIn] = SkTMax(SkTMin((b0 - a0) / bDenom, 1.0), 0.0);
+        i.fT[1][!bIn] = SkTMax(SkTMin((b0 - a1) / bDenom, 1.0), 0.0);
+    }
+    bool second = fabs(i.fT[0][0] - i.fT[0][1]) > FLT_EPSILON;
+    SkASSERT((fabs(i.fT[1][0] - i.fT[1][1]) <= FLT_EPSILON) ^ second);
+    return computePoints(a, 1 + second, i);
 }
 
 int horizontalIntersect(const _Line& line, double y, double tRange[2]) {
     double min = line[0].y;
     double max = line[1].y;
     if (min > max) {
-        std::swap(min, max);
+        SkTSwap(min, max);
     }
     if (min > y || max < y) {
         return 0;
     }
-    if (approximately_equal(min, max)) {
+    if (AlmostEqualUlps(min, max)) {
         tRange[0] = 0;
         tRange[1] = 1;
         return 2;
@@ -172,10 +185,10 @@ int horizontalIntersect(const _Line& line, double left, double right,
             double lineL = line[0].x;
             double lineR = line[1].x;
             if (lineL > lineR) {
-                std::swap(lineL, lineR);
+                SkTSwap(lineL, lineR);
             }
-            double overlapL = std::max(left, lineL);
-            double overlapR = std::min(right, lineR);
+            double overlapL = SkTMax(left, lineL);
+            double overlapR = SkTMin(right, lineR);
             if (overlapL > overlapR) {
                 return 0;
             }
@@ -199,18 +212,18 @@ int horizontalIntersect(const _Line& line, double left, double right,
             if ((at0 < 0 && at1 < 0) || (at0 > 1 && at1 > 1)) {
                 return 0;
             }
-            intersections.fT[0][0] = std::max(std::min(at0, 1.0), 0.0);
-            intersections.fT[0][1] = std::max(std::min(at1, 1.0), 0.0);
+            intersections.fT[0][0] = SkTMax(SkTMin(at0, 1.0), 0.0);
+            intersections.fT[0][1] = SkTMax(SkTMin(at1, 1.0), 0.0);
             int bIn = (a0 - a1) * (b0 - b1) < 0;
-            intersections.fT[1][bIn] = std::max(std::min((b0 - a0) / (b0 - b1),
+            intersections.fT[1][bIn] = SkTMax(SkTMin((b0 - a0) / (b0 - b1),
                     1.0), 0.0);
-            intersections.fT[1][!bIn] = std::max(std::min((b0 - a1) / (b0 - b1),
+            intersections.fT[1][!bIn] = SkTMax(SkTMin((b0 - a1) / (b0 - b1),
                     1.0), 0.0);
             bool second = fabs(intersections.fT[0][0] - intersections.fT[0][1])
                     > FLT_EPSILON;
-            assert((fabs(intersections.fT[1][0] - intersections.fT[1][1])
+            SkASSERT((fabs(intersections.fT[1][0] - intersections.fT[1][1])
                     <= FLT_EPSILON) ^ second);
-            return 1 + second;
+            return computePoints(line, 1 + second, intersections);
         #endif
             break;
     }
@@ -220,19 +233,19 @@ int horizontalIntersect(const _Line& line, double left, double right,
             intersections.fT[1][index] = 1 - intersections.fT[1][index];
         }
     }
-    return result;
+    return computePoints(line, result, intersections);
 }
 
 static int verticalIntersect(const _Line& line, double x, double tRange[2]) {
     double min = line[0].x;
     double max = line[1].x;
     if (min > max) {
-        std::swap(min, max);
+        SkTSwap(min, max);
     }
     if (min > x || max < x) {
         return 0;
     }
-    if (approximately_equal(min, max)) {
+    if (AlmostEqualUlps(min, max)) {
         tRange[0] = 0;
         tRange[1] = 1;
         return 2;
@@ -261,10 +274,10 @@ int verticalIntersect(const _Line& line, double top, double bottom,
             double lineT = line[0].y;
             double lineB = line[1].y;
             if (lineT > lineB) {
-                std::swap(lineT, lineB);
+                SkTSwap(lineT, lineB);
             }
-            double overlapT = std::max(top, lineT);
-            double overlapB = std::min(bottom, lineB);
+            double overlapT = SkTMax(top, lineT);
+            double overlapB = SkTMin(bottom, lineB);
             if (overlapT > overlapB) {
                 return 0;
             }
@@ -288,18 +301,18 @@ int verticalIntersect(const _Line& line, double top, double bottom,
             if ((at0 < 0 && at1 < 0) || (at0 > 1 && at1 > 1)) {
                 return 0;
             }
-            intersections.fT[0][0] = std::max(std::min(at0, 1.0), 0.0);
-            intersections.fT[0][1] = std::max(std::min(at1, 1.0), 0.0);
+            intersections.fT[0][0] = SkTMax(SkTMin(at0, 1.0), 0.0);
+            intersections.fT[0][1] = SkTMax(SkTMin(at1, 1.0), 0.0);
             int bIn = (a0 - a1) * (b0 - b1) < 0;
-            intersections.fT[1][bIn] = std::max(std::min((b0 - a0) / (b0 - b1),
+            intersections.fT[1][bIn] = SkTMax(SkTMin((b0 - a0) / (b0 - b1),
                     1.0), 0.0);
-            intersections.fT[1][!bIn] = std::max(std::min((b0 - a1) / (b0 - b1),
+            intersections.fT[1][!bIn] = SkTMax(SkTMin((b0 - a1) / (b0 - b1),
                     1.0), 0.0);
             bool second = fabs(intersections.fT[0][0] - intersections.fT[0][1])
                     > FLT_EPSILON;
-            assert((fabs(intersections.fT[1][0] - intersections.fT[1][1])
+            SkASSERT((fabs(intersections.fT[1][0] - intersections.fT[1][1])
                     <= FLT_EPSILON) ^ second);
-            return 1 + second;
+            return computePoints(line, 1 + second, intersections);
         #endif
             break;
     }
@@ -309,7 +322,7 @@ int verticalIntersect(const _Line& line, double top, double bottom,
             intersections.fT[1][index] = 1 - intersections.fT[1][index];
         }
     }
-    return result;
+    return computePoints(line, result, intersections);
 }
 
 // from http://www.bryceboe.com/wordpress/wp-content/uploads/2006/10/intersect.py

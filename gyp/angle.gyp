@@ -10,6 +10,7 @@
       },
       'variables': {
         'component': 'static_library',
+        'skia_warnings_as_errors': 0,
       },
       'includes': [
         '../third_party/externals/angle/src/build_angle.gypi',

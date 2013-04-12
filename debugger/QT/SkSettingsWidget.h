@@ -34,16 +34,23 @@ public:
      */
     SkSettingsWidget();
 
-    void setZoomText(int scaleFactor);
+    /** Sets the displayed user zoom level. A scale of 1.0 represents no zoom. */
+    void setZoomText(float scale);
 
     QRadioButton* getVisibilityButton();
 
+#if SK_SUPPORT_GPU
     QCheckBox* getGLCheckBox() {
         return &fGLCheckBox;
     }
+#endif
 
     QCheckBox* getRasterCheckBox() {
         return &fRasterCheckBox;
+    }
+
+    QCheckBox* getOverdrawVizCheckBox() {
+        return &fOverdrawVizCheckBox;
     }
 
 private slots:
@@ -86,9 +93,15 @@ private:
     QLabel fRasterLabel;
     QCheckBox fRasterCheckBox;
 
+    QHBoxLayout fOverdrawVizLayout;
+    QLabel fOverdrawVizLabel;
+    QCheckBox fOverdrawVizCheckBox;
+
+#if SK_SUPPORT_GPU
     QHBoxLayout fGLLayout;
     QLabel fGLLabel;
     QCheckBox fGLCheckBox;
+#endif
 
     QFrame fZoomFrame;
     QHBoxLayout fZoomLayout;

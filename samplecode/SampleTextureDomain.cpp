@@ -61,10 +61,8 @@ protected:
         // the constrainted texture domain.
         // Note:  GPU-backed bitmaps follow a different rendering path
         // when copying from one GPU device to another.
-        SkRefPtr<SkDevice> primaryDevice(canvas->getDevice());
-        SkRefPtr<SkDevice> secondDevice(canvas->createCompatibleDevice(
+        SkAutoTUnref<SkDevice> secondDevice(canvas->createCompatibleDevice(
                 SkBitmap::kARGB_8888_Config, 5, 5, true));
-        secondDevice->unref();
         SkCanvas secondCanvas(secondDevice.get());
 
         srcRect.setXYWH(1, 1, 3, 3);
@@ -113,4 +111,3 @@ private:
 
 static SkView* MyFactory() { return new TextureDomainView; }
 static SkViewRegister reg(MyFactory);
-

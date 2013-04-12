@@ -15,8 +15,10 @@
       'include_dirs': [
         '../include/config',
         '../include/core',
+        '../include/lazy',
         '../include/pipe',
         '../include/ports',
+        '../include/utils',
         '../include/xml',
         '../src/core',
         '../src/image',
@@ -27,10 +29,6 @@
       'msvs_disabled_warnings': [4244, 4267,4345, 4390, 4554, 4800],
       'conditions': [
         [ 'skia_os in ["linux", "freebsd", "openbsd", "solaris"]', {
-          'cflags': [
-            '-Wno-unused',
-            '-Wno-unused-function',
-          ],
           'link_settings': {
             'libraries': [
               '-lpthread',
@@ -76,14 +74,10 @@
           'include_dirs': [
             'config/win',
           ],
-          'sources!': [
-            '../include/core/SkMMapStream.h',
-            '../src/core/SkMMapStream.cpp',
-          ],
         }],
-        [ 'skia_os == "android"', {
+        [ 'skia_os in ("android", "nacl")', {
           'dependencies': [
-             'android_deps.gyp:ft2',
+            'freetype.gyp:freetype',
           ],
         }],
         [ 'skia_os == "android" and skia_arch_type == "arm" and armv7 == 1', {
@@ -93,12 +87,19 @@
             '../src/core/SkUtilsArm.h',
           ],
         }],
+        ['skia_gpu == 1', {
+          'include_dirs': [
+              '../include/gpu',
+              '../src/gpu',
+          ],
+        }],
       ],
       'direct_dependent_settings': {
         'include_dirs': [
           'config',
           '../include/config',
           '../include/core',
+          '../include/lazy',
           '../include/pipe',
           'ext',
         ],

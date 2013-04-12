@@ -45,7 +45,7 @@ protected:
         SkCanvas canvas(fBitmap);
         SkPaint p;
 
-        fBitmap.eraseColor(0);
+        fBitmap.eraseColor(SK_ColorTRANSPARENT);
         canvas.drawOval(SkRect::MakeSize(fSize), p);
     }
 
@@ -101,7 +101,7 @@ protected:
         }
     }
 
-    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y) {
+    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y, unsigned) SK_OVERRIDE {
         this->inval(NULL);
         return NULL;
     }
@@ -114,4 +114,3 @@ private:
 
 static SkView* MyFactory() { return new OvalTestView; }
 static SkViewRegister reg(MyFactory);
-

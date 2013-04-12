@@ -10,6 +10,7 @@
 #include "SkBitmapProcShader.h"
 #include "SkDeferredCanvas.h"
 #include "SkDevice.h"
+#include "SkGradientShader.h"
 #include "SkShader.h"
 
 static const int gWidth = 2;
@@ -97,22 +98,22 @@ static void TestDeferredCanvasFreshFrame(skiatest::Reporter* reporter) {
     // trigger frames to be marked as fresh
     {
         SkPaint paint;
-        paint.setStyle( SkPaint::kFill_Style );
-        paint.setAlpha( 255 );
+        paint.setStyle(SkPaint::kFill_Style);
+        paint.setAlpha(255);
         canvas.drawRect(fullRect, paint);
         REPORTER_ASSERT(reporter, canvas.isFreshFrame());
     }
     {
         SkPaint paint;
-        paint.setStyle( SkPaint::kFill_Style );
-        paint.setAlpha( 255 );
+        paint.setStyle(SkPaint::kFill_Style);
+        paint.setAlpha(255);
         paint.setXfermodeMode(SkXfermode::kSrcIn_Mode);
         canvas.drawRect(fullRect, paint);
         REPORTER_ASSERT(reporter, !canvas.isFreshFrame());
     }
     {
         SkPaint paint;
-        paint.setStyle( SkPaint::kFill_Style );
+        paint.setStyle(SkPaint::kFill_Style);
         SkBitmap bmp;
         create(&bmp, SkBitmap::kARGB_8888_Config, 0xFFFFFFFF);
         bmp.setIsOpaque(true);
@@ -127,14 +128,30 @@ static void TestDeferredCanvasFreshFrame(skiatest::Reporter* reporter) {
     // do not trigger frames to be marked as fresh
     {
         SkPaint paint;
-        paint.setStyle( SkPaint::kFill_Style );
-        paint.setAlpha( 254 );
+        paint.setStyle(SkPaint::kFill_Style);
+        paint.setAlpha(254);
         canvas.drawRect(fullRect, paint);
         REPORTER_ASSERT(reporter, !canvas.isFreshFrame());
     }
     {
         SkPaint paint;
-        paint.setStyle( SkPaint::kFill_Style );
+        paint.setStyle(SkPaint::kFill_Style);
+        // Defining a cone that partially overlaps the canvas
+        const SkPoint pt1 = SkPoint::Make(SkIntToScalar(0), SkIntToScalar(0));
+        const SkScalar r1 = SkIntToScalar(1);
+        const SkPoint pt2 = SkPoint::Make(SkIntToScalar(10), SkIntToScalar(0));
+        const SkScalar r2 = SkIntToScalar(5);
+        const SkColor colors[2] = {SK_ColorWHITE, SK_ColorWHITE};
+        const SkScalar pos[2] = {0, SK_Scalar1};
+        SkShader* shader = SkGradientShader::CreateTwoPointConical(
+            pt1, r1, pt2, r2, colors, pos, 2, SkShader::kClamp_TileMode, NULL);
+        paint.setShader(shader)->unref();
+        canvas.drawRect(fullRect, paint);
+        REPORTER_ASSERT(reporter, !canvas.isFreshFrame());
+    }
+    {
+        SkPaint paint;
+        paint.setStyle(SkPaint::kFill_Style);
         SkBitmap bmp;
         create(&bmp, SkBitmap::kARGB_8888_Config, 0xFFFFFFFF);
         bmp.setIsOpaque(false);
@@ -163,14 +180,27 @@ static void TestDeferredCanvasFreshFrame(skiatest::Reporter* reporter) {
         paint.setStyle(SkPaint::kFill_Style);
         paint.setAlpha(255);
         canvas.drawRect(fullRect, paint);
+        canvas.restore();
+        REPORTER_ASSERT(reporter, !canvas.isFreshFrame());
+    }
+    {
+        canvas.save(SkCanvas::kMatrixClip_SaveFlag);
+        SkPaint paint;
+        paint.setStyle(SkPaint::kFill_Style);
+        paint.setAlpha(255);
+        SkPath path;
+        path.addCircle(SkIntToScalar(0), SkIntToScalar(0), SkIntToScalar(2));
+        canvas.clipPath(path, SkRegion::kIntersect_Op, false);
+        canvas.drawRect(fullRect, paint);
+        canvas.restore();
         REPORTER_ASSERT(reporter, !canvas.isFreshFrame());
     }
 
     // Verify that stroked rect does not trigger a fresh frame
     {
         SkPaint paint;
-        paint.setStyle( SkPaint::kStroke_Style );
-        paint.setAlpha( 255 );
+        paint.setStyle(SkPaint::kStroke_Style);
+        paint.setAlpha(255);
         canvas.drawRect(fullRect, paint);
         REPORTER_ASSERT(reporter, !canvas.isFreshFrame());
     }
@@ -178,11 +208,11 @@ static void TestDeferredCanvasFreshFrame(skiatest::Reporter* reporter) {
     // Verify kSrcMode triggers a fresh frame even with transparent color
     {
         SkPaint paint;
-        paint.setStyle( SkPaint::kFill_Style );
-        paint.setAlpha( 100 );
+        paint.setStyle(SkPaint::kFill_Style);
+        paint.setAlpha(100);
         paint.setXfermodeMode(SkXfermode::kSrc_Mode);
         canvas.drawRect(fullRect, paint);
-        REPORTER_ASSERT(reporter, !canvas.isFreshFrame());
+        REPORTER_ASSERT(reporter, canvas.isFreshFrame());
     }
 }
 
@@ -233,7 +263,7 @@ public:
     virtual void prepareForDraw() SK_OVERRIDE {
         fPrepareForDrawCount++;
     }
-    virtual void storageAllocatedForRecordingChanged(size_t size) SK_OVERRIDE {
+    virtual void storageAllocatedForRecordingChanged(size_t) SK_OVERRIDE {
         fStorageAllocatedChangedCount++;
     }
     virtual void flushedDrawCommands() SK_OVERRIDE {
@@ -247,6 +277,9 @@ public:
     int fStorageAllocatedChangedCount;
     int fFlushedDrawCommandsCount;
     int fSkippedPendingDrawCommandsCount;
+
+private:
+    typedef SkDeferredCanvas::NotificationClient INHERITED;
 };
 
 static void TestDeferredCanvasBitmapCaching(skiatest::Reporter* reporter) {
@@ -387,8 +420,49 @@ static void TestDeferredCanvasBitmapShaderNoLeak(skiatest::Reporter* reporter) {
         }
     }
     // All cached resources should be evictable since last canvas call was flush()
-    canvas.freeMemoryIfPossible(~0);
+    canvas.freeMemoryIfPossible(~0U);
     REPORTER_ASSERT(reporter, 0 == canvas.storageAllocatedForRecording());
+}
+
+static void TestDeferredCanvasBitmapSizeThreshold(skiatest::Reporter* reporter) {
+    SkBitmap store;
+    store.setConfig(SkBitmap::kARGB_8888_Config, 100, 100);
+    store.allocPixels();
+
+    SkBitmap sourceImage;
+    // 100 by 100 image, takes 40,000 bytes in memory
+    sourceImage.setConfig(SkBitmap::kARGB_8888_Config, 100, 100);
+    sourceImage.allocPixels();
+
+    // 1 under : should not store the image
+    {
+        SkDevice device(store);
+        SkDeferredCanvas canvas(&device);
+        canvas.setBitmapSizeThreshold(39999);
+        canvas.drawBitmap(sourceImage, 0, 0, NULL);
+        size_t newBytesAllocated = canvas.storageAllocatedForRecording();
+        REPORTER_ASSERT(reporter, newBytesAllocated == 0);
+    }
+
+    // exact value : should store the image
+    {
+        SkDevice device(store);
+        SkDeferredCanvas canvas(&device);
+        canvas.setBitmapSizeThreshold(40000);
+        canvas.drawBitmap(sourceImage, 0, 0, NULL);
+        size_t newBytesAllocated = canvas.storageAllocatedForRecording();
+        REPORTER_ASSERT(reporter, newBytesAllocated > 0);
+    }
+
+    // 1 over : should still store the image
+    {
+        SkDevice device(store);
+        SkDeferredCanvas canvas(&device);
+        canvas.setBitmapSizeThreshold(40001);
+        canvas.drawBitmap(sourceImage, 0, 0, NULL);
+        size_t newBytesAllocated = canvas.storageAllocatedForRecording();
+        REPORTER_ASSERT(reporter, newBytesAllocated > 0);
+    }
 }
 
 static void TestDeferredCanvas(skiatest::Reporter* reporter) {
@@ -399,6 +473,7 @@ static void TestDeferredCanvas(skiatest::Reporter* reporter) {
     TestDeferredCanvasBitmapCaching(reporter);
     TestDeferredCanvasSkip(reporter);
     TestDeferredCanvasBitmapShaderNoLeak(reporter);
+    TestDeferredCanvasBitmapSizeThreshold(reporter);
 }
 
 #include "TestClassDef.h"

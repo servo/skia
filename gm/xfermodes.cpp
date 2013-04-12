@@ -15,7 +15,7 @@ namespace skiagm {
 static void make_bitmaps(int w, int h, SkBitmap* src, SkBitmap* dst) {
     src->setConfig(SkBitmap::kARGB_8888_Config, w, h);
     src->allocPixels();
-    src->eraseColor(0);
+    src->eraseColor(SK_ColorTRANSPARENT);
 
     SkPaint p;
     p.setAntiAlias(true);
@@ -33,7 +33,7 @@ static void make_bitmaps(int w, int h, SkBitmap* src, SkBitmap* dst) {
 
     dst->setConfig(SkBitmap::kARGB_8888_Config, w, h);
     dst->allocPixels();
-    dst->eraseColor(0);
+    dst->eraseColor(SK_ColorTRANSPARENT);
 
     {
         SkCanvas c(*dst);
@@ -43,10 +43,11 @@ static void make_bitmaps(int w, int h, SkBitmap* src, SkBitmap* dst) {
     }
 }
 
+static uint16_t gData[] = { 0xFFFF, 0xCCCF, 0xCCCF, 0xFFFF };
+
 class XfermodesGM : public GM {
     SkBitmap    fBG;
     SkBitmap    fSrcB, fDstB;
-    bool        fOnce;
 
     void draw_mode(SkCanvas* canvas, SkXfermode* mode, int alpha,
                    SkScalar x, SkScalar y) {
@@ -58,25 +59,18 @@ class XfermodesGM : public GM {
         canvas->drawBitmap(fDstB, x, y, &p);
     }
 
-    void init() {
-        if (!fOnce) {
-            // Do all this work in a temporary so we get a deep copy
-            uint16_t localData[] = { 0xFFFF, 0xCCCF, 0xCCCF, 0xFFFF };
-            SkBitmap scratchBitmap;
-            scratchBitmap.setConfig(SkBitmap::kARGB_4444_Config, 2, 2, 4);
-            scratchBitmap.setPixels(localData);
-            scratchBitmap.setIsOpaque(true);
-            scratchBitmap.copyTo(&fBG, SkBitmap::kARGB_4444_Config);
+    virtual void onOnceBeforeDraw() SK_OVERRIDE {
+        fBG.setConfig(SkBitmap::kARGB_4444_Config, 2, 2, 4);
+        fBG.setPixels(gData);
+        fBG.setIsOpaque(true);
 
-            make_bitmaps(W, H, &fSrcB, &fDstB);
-            fOnce = true;
-        }
+        make_bitmaps(W, H, &fSrcB, &fDstB);
     }
 
 public:
     const static int W = 64;
     const static int H = 64;
-    XfermodesGM() : fOnce(false) {}
+    XfermodesGM() {}
 
 protected:
     virtual SkString onShortName() {
@@ -88,8 +82,6 @@ protected:
     }
 
     virtual void onDraw(SkCanvas* canvas) {
-        this->init();
-
         canvas->translate(SkIntToScalar(10), SkIntToScalar(20));
 
         const struct {
@@ -110,7 +102,7 @@ protected:
             { SkXfermode::kXor_Mode,      "Xor"       },
 
             { SkXfermode::kPlus_Mode,         "Plus"          },
-            { SkXfermode::kMultiply_Mode,     "Multiply"      },
+            { SkXfermode::kModulate_Mode,     "Modulate"      },
             { SkXfermode::kScreen_Mode,       "Screen"        },
             { SkXfermode::kOverlay_Mode,      "Overlay"       },
             { SkXfermode::kDarken_Mode,       "Darken"        },
@@ -121,6 +113,11 @@ protected:
             { SkXfermode::kSoftLight_Mode,    "SoftLight"     },
             { SkXfermode::kDifference_Mode,   "Difference"    },
             { SkXfermode::kExclusion_Mode,    "Exclusion"     },
+            { SkXfermode::kMultiply_Mode,     "Multiply"      },
+            { SkXfermode::kHue_Mode,          "Hue"           },
+            { SkXfermode::kSaturation_Mode,   "Saturation"    },
+            { SkXfermode::kColor_Mode,        "Color"         },
+            { SkXfermode::kLuminosity_Mode,   "Luminosity"    },
         };
 
         const SkScalar w = SkIntToScalar(W);

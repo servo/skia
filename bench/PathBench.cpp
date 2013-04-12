@@ -122,7 +122,7 @@ public:
         name->append("oval");
     }
     virtual void makePath(SkPath* path) SK_OVERRIDE {
-        SkRect r = { 10, 10, 20, 20 };
+        SkRect r = { 10, 10, 23, 20 };
         path->addOval(r);
     }
 private:
@@ -624,13 +624,14 @@ private:
 class CirclesBench : public SkBenchmark {
 protected:
     SkString            fName;
+    Flags               fFlags;
 
     enum {
         N = SkBENCHLOOP(100)
     };
 public:
-    CirclesBench(void* param) : INHERITED(param) {
-        fName.printf("circles");
+    CirclesBench(void* param, Flags flags) : INHERITED(param), fFlags(flags) {
+        fName.printf("circles_%s", fFlags & kStroke_Flag ? "stroke" : "fill");
     }
 
 protected:
@@ -643,6 +644,9 @@ protected:
 
         paint.setColor(SK_ColorBLACK);
         paint.setAntiAlias(true);
+        if (fFlags & kStroke_Flag) {
+            paint.setStyle(SkPaint::kStroke_Style);
+        }
 
         SkRandom rand;
 
@@ -654,6 +658,10 @@ protected:
             r.fTop =  rand.nextUScalar1() * 300;
             r.fRight =  r.fLeft + 2 * radius;
             r.fBottom = r.fTop + 2 * radius;
+
+            if (fFlags & kStroke_Flag) {
+                paint.setStrokeWidth(rand.nextUScalar1() * 5.0f);
+            }
 
             SkPath temp;
 
@@ -670,6 +678,7 @@ protected:
 private:
     typedef SkBenchmark INHERITED;
 };
+
 
 // Chrome creates its own round rects with each corner possibly being different.
 // In its "zero radius" incarnation it creates degenerate round rects.
@@ -736,9 +745,7 @@ protected:
         add_corner_arc(path, r, xCorner, yCorner, 180);
         path->close();
 
-#ifdef SK_REDEFINE_ROOT2OVER2_TO_MAKE_ARCTOS_CONVEX
         SkASSERT(path->isConvex());
-#endif
     }
 
     virtual void onDraw(SkCanvas* canvas) SK_OVERRIDE {
@@ -779,107 +786,135 @@ private:
     typedef SkBenchmark INHERITED;
 };
 
-static SkBenchmark* FactT00(void* p) { return new TrianglePathBench(p, FLAGS00); }
-static SkBenchmark* FactT01(void* p) { return new TrianglePathBench(p, FLAGS01); }
-static SkBenchmark* FactT10(void* p) { return new TrianglePathBench(p, FLAGS10); }
-static SkBenchmark* FactT11(void* p) { return new TrianglePathBench(p, FLAGS11); }
+class ConservativelyContainsBench : public SkBenchmark {
+public:
+    enum Type {
+        kRect_Type,
+        kRoundRect_Type,
+        kOval_Type,
+    };
 
-static SkBenchmark* FactR00(void* p) { return new RectPathBench(p, FLAGS00); }
-static SkBenchmark* FactR01(void* p) { return new RectPathBench(p, FLAGS01); }
-static SkBenchmark* FactR10(void* p) { return new RectPathBench(p, FLAGS10); }
-static SkBenchmark* FactR11(void* p) { return new RectPathBench(p, FLAGS11); }
+    ConservativelyContainsBench(void* param, Type type) : INHERITED(param) {
+        fIsRendering = false;
+        fParity = false;
+        fName = "conservatively_contains_";
+        switch (type) {
+            case kRect_Type:
+                fName.append("rect");
+                fPath.addRect(kBaseRect);
+                break;
+            case kRoundRect_Type:
+                fName.append("round_rect");
+                fPath.addRoundRect(kBaseRect, kRRRadii[0], kRRRadii[1]);
+                break;
+            case kOval_Type:
+                fName.append("oval");
+                fPath.addOval(kBaseRect);
+                break;
+        }
+    }
 
-static SkBenchmark* FactO00(void* p) { return new OvalPathBench(p, FLAGS00); }
-static SkBenchmark* FactO01(void* p) { return new OvalPathBench(p, FLAGS01); }
-static SkBenchmark* FactO10(void* p) { return new OvalPathBench(p, FLAGS10); }
-static SkBenchmark* FactO11(void* p) { return new OvalPathBench(p, FLAGS11); }
+private:
+    virtual const char* onGetName() SK_OVERRIDE {
+        return fName.c_str();
+    }
 
-static SkBenchmark* FactC00(void* p) { return new CirclePathBench(p, FLAGS00); }
-static SkBenchmark* FactC01(void* p) { return new CirclePathBench(p, FLAGS01); }
-static SkBenchmark* FactC10(void* p) { return new CirclePathBench(p, FLAGS10); }
-static SkBenchmark* FactC11(void* p) { return new CirclePathBench(p, FLAGS11); }
+    virtual void onDraw(SkCanvas*) SK_OVERRIDE {
+        for (int i = 0; i < N; ++i) {
+            const SkRect& rect = fQueryRects[i % kQueryRectCnt];
+            fParity = fParity != fPath.conservativelyContainsRect(rect);
+        }
+    }
 
-static SkBenchmark* FactS00(void* p) { return new SawToothPathBench(p, FLAGS00); }
-static SkBenchmark* FactS01(void* p) { return new SawToothPathBench(p, FLAGS01); }
+    virtual void onPreDraw() SK_OVERRIDE {
+        fQueryRects.setCount(kQueryRectCnt);
 
-static SkBenchmark* FactLC00(void* p) {
-    return new LongCurvedPathBench(p, FLAGS00);
-}
-static SkBenchmark* FactLC01(void* p) {
-    return new LongCurvedPathBench(p, FLAGS01);
-}
+        SkRandom rand;
+        for (int i = 0; i < kQueryRectCnt; ++i) {
+            SkSize size;
+            SkPoint xy;
+            size.fWidth = rand.nextRangeScalar(kQueryMin.fWidth,  kQueryMax.fWidth);
+            size.fHeight = rand.nextRangeScalar(kQueryMin.fHeight, kQueryMax.fHeight);
+            xy.fX = rand.nextRangeScalar(kBounds.fLeft, kBounds.fRight - size.fWidth);
+            xy.fY = rand.nextRangeScalar(kBounds.fTop, kBounds.fBottom - size.fHeight);
 
-static SkBenchmark* FactLL00(void* p) {
-    return new LongLinePathBench(p, FLAGS00);
-}
+            fQueryRects[i] = SkRect::MakeXYWH(xy.fX, xy.fY, size.fWidth, size.fHeight);
+        }
+    }
 
-static SkBenchmark* FactLL01(void* p) {
-    return new LongLinePathBench(p, FLAGS01);
-}
+    virtual void onPostDraw() SK_OVERRIDE {
+        fQueryRects.setCount(0);
+    }
 
-static BenchRegistry gRegT00(FactT00);
-static BenchRegistry gRegT01(FactT01);
-static BenchRegistry gRegT10(FactT10);
-static BenchRegistry gRegT11(FactT11);
+    enum {
+        N = SkBENCHLOOP(100000),
+        kQueryRectCnt = 400,
+    };
+    static const SkRect kBounds;   // bounds for all random query rects
+    static const SkSize kQueryMin; // minimum query rect size, should be <= kQueryMax
+    static const SkSize kQueryMax; // max query rect size, should < kBounds
+    static const SkRect kBaseRect; // rect that is used to construct the path
+    static const SkScalar kRRRadii[2]; // x and y radii for round rect
 
-static BenchRegistry gRegR00(FactR00);
-static BenchRegistry gRegR01(FactR01);
-static BenchRegistry gRegR10(FactR10);
-static BenchRegistry gRegR11(FactR11);
+    SkString            fName;
+    SkPath              fPath;
+    bool                fParity;
+    SkTDArray<SkRect>   fQueryRects;
 
-static BenchRegistry gRegO00(FactO00);
-static BenchRegistry gRegO01(FactO01);
-static BenchRegistry gRegO10(FactO10);
-static BenchRegistry gRegO11(FactO11);
+    typedef SkBenchmark INHERITED;
+};
 
-static BenchRegistry gRegC00(FactC00);
-static BenchRegistry gRegC01(FactC01);
-static BenchRegistry gRegC10(FactC10);
-static BenchRegistry gRegC11(FactC11);
+const SkRect ConservativelyContainsBench::kBounds = SkRect::MakeWH(SkIntToScalar(100), SkIntToScalar(100));
+const SkSize ConservativelyContainsBench::kQueryMin = SkSize::Make(SkIntToScalar(1), SkIntToScalar(1));
+const SkSize ConservativelyContainsBench::kQueryMax = SkSize::Make(SkIntToScalar(40), SkIntToScalar(40));
+const SkRect ConservativelyContainsBench::kBaseRect = SkRect::MakeXYWH(SkIntToScalar(25), SkIntToScalar(25), SkIntToScalar(50), SkIntToScalar(50));
+const SkScalar ConservativelyContainsBench::kRRRadii[2] = {SkIntToScalar(5), SkIntToScalar(10)};
 
-static BenchRegistry gRegS00(FactS00);
-static BenchRegistry gRegS01(FactS01);
+DEF_BENCH( return new TrianglePathBench(p, FLAGS00); )
+DEF_BENCH( return new TrianglePathBench(p, FLAGS01); )
+DEF_BENCH( return new TrianglePathBench(p, FLAGS10); )
+DEF_BENCH( return new TrianglePathBench(p, FLAGS11); )
 
-static BenchRegistry gRegLC00(FactLC00);
-static BenchRegistry gRegLC01(FactLC01);
+DEF_BENCH( return new RectPathBench(p, FLAGS00); )
+DEF_BENCH( return new RectPathBench(p, FLAGS01); )
+DEF_BENCH( return new RectPathBench(p, FLAGS10); )
+DEF_BENCH( return new RectPathBench(p, FLAGS11); )
 
-static BenchRegistry gRegLL00(FactLL00);
-static BenchRegistry gRegLL01(FactLL01);
+DEF_BENCH( return new OvalPathBench(p, FLAGS00); )
+DEF_BENCH( return new OvalPathBench(p, FLAGS01); )
+DEF_BENCH( return new OvalPathBench(p, FLAGS10); )
+DEF_BENCH( return new OvalPathBench(p, FLAGS11); )
 
-static SkBenchmark* FactCreate(void* p) { return new PathCreateBench(p); }
-static BenchRegistry gRegCreate(FactCreate);
+DEF_BENCH( return new CirclePathBench(p, FLAGS00); )
+DEF_BENCH( return new CirclePathBench(p, FLAGS01); )
+DEF_BENCH( return new CirclePathBench(p, FLAGS10); )
+DEF_BENCH( return new CirclePathBench(p, FLAGS11); )
 
-static SkBenchmark* FactCopy(void* p) { return new PathCopyBench(p); }
-static BenchRegistry gRegCopy(FactCopy);
+DEF_BENCH( return new SawToothPathBench(p, FLAGS00); )
+DEF_BENCH( return new SawToothPathBench(p, FLAGS01); )
 
-static SkBenchmark* FactPathTransformInPlace(void* p) { return new PathTransformBench(true, p); }
-static BenchRegistry gRegPathTransformInPlace(FactPathTransformInPlace);
+DEF_BENCH( return new LongCurvedPathBench(p, FLAGS00); )
+DEF_BENCH( return new LongCurvedPathBench(p, FLAGS01); )
+DEF_BENCH( return new LongLinePathBench(p, FLAGS00); )
+DEF_BENCH( return new LongLinePathBench(p, FLAGS01); )
 
-static SkBenchmark* FactPathTransformCopy(void* p) { return new PathTransformBench(false, p); }
-static BenchRegistry gRegPathTransformCopy(FactPathTransformCopy);
+DEF_BENCH( return new PathCreateBench(p); )
+DEF_BENCH( return new PathCopyBench(p); )
+DEF_BENCH( return new PathTransformBench(true, p); )
+DEF_BENCH( return new PathTransformBench(false, p); )
+DEF_BENCH( return new PathEqualityBench(p); )
 
-static SkBenchmark* FactEquality(void* p) { return new PathEqualityBench(p); }
-static BenchRegistry gRegEquality(FactEquality);
+DEF_BENCH( return new SkBench_AddPathTest(SkBench_AddPathTest::kAdd_AddType, p); )
+DEF_BENCH( return new SkBench_AddPathTest(SkBench_AddPathTest::kAddTrans_AddType, p); )
+DEF_BENCH( return new SkBench_AddPathTest(SkBench_AddPathTest::kAddMatrix_AddType, p); )
+DEF_BENCH( return new SkBench_AddPathTest(SkBench_AddPathTest::kPathTo_AddType, p); )
+DEF_BENCH( return new SkBench_AddPathTest(SkBench_AddPathTest::kReverseAdd_AddType, p); )
+DEF_BENCH( return new SkBench_AddPathTest(SkBench_AddPathTest::kReversePathTo_AddType, p); )
 
-static SkBenchmark* FactAdd(void* p) { return new SkBench_AddPathTest(SkBench_AddPathTest::kAdd_AddType, p); }
-static SkBenchmark* FactAddTrans(void* p) { return new SkBench_AddPathTest(SkBench_AddPathTest::kAddTrans_AddType, p); }
-static SkBenchmark* FactAddMatrix(void* p) { return new SkBench_AddPathTest(SkBench_AddPathTest::kAddMatrix_AddType, p); }
-static SkBenchmark* FactPathTo(void* p) { return new SkBench_AddPathTest(SkBench_AddPathTest::kPathTo_AddType, p); }
-static SkBenchmark* FactReverseAdd(void* p) { return new SkBench_AddPathTest(SkBench_AddPathTest::kReverseAdd_AddType, p); }
-static SkBenchmark* FactReverseTo(void* p) { return new SkBench_AddPathTest(SkBench_AddPathTest::kReversePathTo_AddType, p); }
-
-static BenchRegistry gRegAdd(FactAdd);
-static BenchRegistry gRegAddTrans(FactAddTrans);
-static BenchRegistry gRegAddMatrix(FactAddMatrix);
-static BenchRegistry gRegPathTo(FactPathTo);
-static BenchRegistry gRegReverseAdd(FactReverseAdd);
-static BenchRegistry gRegReverseTo(FactReverseTo);
-
-static SkBenchmark* CirclesTest(void* p) { return new CirclesBench(p); }
-static BenchRegistry gRegCirclesTest(CirclesTest);
-
-static SkBenchmark* ArbRoundRectTest(void* p) { return new ArbRoundRectBench(p, false); }
-static BenchRegistry gRegArbRoundRectTest(ArbRoundRectTest);
-
-static SkBenchmark* ZeroRadRoundRectTest(void* p) { return new ArbRoundRectBench(p, true); }
-static BenchRegistry gRegZeroRadRoundRectTest(ZeroRadRoundRectTest);
+DEF_BENCH( return new CirclesBench(p, FLAGS00); )
+DEF_BENCH( return new CirclesBench(p, FLAGS01); )
+DEF_BENCH( return new ArbRoundRectBench(p, false); )
+DEF_BENCH( return new ArbRoundRectBench(p, true); )
+DEF_BENCH( return new ConservativelyContainsBench(p, ConservativelyContainsBench::kRect_Type); )
+DEF_BENCH( return new ConservativelyContainsBench(p, ConservativelyContainsBench::kRoundRect_Type); )
+DEF_BENCH( return new ConservativelyContainsBench(p, ConservativelyContainsBench::kOval_Type); )

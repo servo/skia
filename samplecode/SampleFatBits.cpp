@@ -21,16 +21,18 @@
 #define WIRE_FRAME_SIZE     1.5f
 
 static void erase(SkSurface* surface) {
-    surface->getCanvas()->clear(0);
+    surface->getCanvas()->clear(SK_ColorTRANSPARENT);
 }
 
 static SkShader* createChecker() {
+//    SkColor colors[] = { 0xFFFDFDFD, 0xFFF4F4F4 };
+    SkColor colors[] = { 0xFFFFFFFF, 0xFFFFFFFF };
     SkBitmap bm;
     bm.setConfig(SkBitmap::kARGB_8888_Config, 2, 2);
     bm.allocPixels();
     bm.lockPixels();
-    *bm.getAddr32(0, 0) = *bm.getAddr32(1, 1) = SkPreMultiplyColor(0xFFFDFDFD);
-    *bm.getAddr32(0, 1) = *bm.getAddr32(1, 0) = SkPreMultiplyColor(0xFFF4F4F4);
+    *bm.getAddr32(0, 0) = *bm.getAddr32(1, 1) = SkPreMultiplyColor(colors[0]);
+    *bm.getAddr32(0, 1) = *bm.getAddr32(1, 0) = SkPreMultiplyColor(colors[1]);
     SkShader* s = SkShader::CreateBitmapShader(bm, SkShader::kRepeat_TileMode,
                                                SkShader::kRepeat_TileMode);
 
@@ -48,9 +50,13 @@ public:
         fGrid = true;
         fShowSkeleton = true;
         fUseGPU = false;
+        fUseClip = false;
+        fRectAsOval = false;
+
+        fClipRect.set(2, 2, 11, 8 );
     }
 
-    int getZoom() const { return fZ; }
+    int getZoom() const { return fZoom; }
 
     bool getAA() const { return fAA; }
     void setAA(bool aa) { fAA = aa; }
@@ -64,6 +70,11 @@ public:
     bool getUseGPU() const { return fUseGPU; }
     void setUseGPU(bool ug) { fUseGPU = ug; }
 
+    void toggleRectAsOval() { fRectAsOval = !fRectAsOval; }
+
+    bool getUseClip() const { return fUseClip; }
+    void setUseClip(bool uc) { fUseClip = uc; }
+
     enum Style {
         kHair_Style,
         kStroke_Style,
@@ -74,7 +85,7 @@ public:
     void setWHZ(int width, int height, int zoom) {
         fW = width;
         fH = height;
-        fZ = zoom;
+        fZoom = zoom;
         fBounds.set(0, 0, SkIntToScalar(width * zoom), SkIntToScalar(height * zoom));
         fMatrix.setScale(SkIntToScalar(zoom), SkIntToScalar(zoom));
         fInverse.setScale(SK_Scalar1 / zoom, SK_Scalar1 / zoom);
@@ -83,10 +94,10 @@ public:
         SkImage::Info info = {
             width, height, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
         };
-        fMinSurface.reset(SkSurface::NewRaster(info, NULL));
+        fMinSurface.reset(SkSurface::NewRaster(info));
         info.fWidth *= zoom;
         info.fHeight *= zoom;
-        fMaxSurface.reset(SkSurface::NewRaster(info, NULL));
+        fMaxSurface.reset(SkSurface::NewRaster(info));
     }
 
     void drawBG(SkCanvas*);
@@ -95,11 +106,11 @@ public:
     void drawRect(SkCanvas* canvas, SkPoint pts[2]);
 
 private:
-    bool fAA, fGrid, fShowSkeleton, fUseGPU;
+    bool fAA, fGrid, fShowSkeleton, fUseGPU, fUseClip, fRectAsOval;
     Style fStyle;
-    int fW, fH, fZ;
+    int fW, fH, fZoom;
     SkMatrix fMatrix, fInverse;
-    SkRect   fBounds;
+    SkRect   fBounds, fClipRect;
     SkAutoTUnref<SkShader> fShader;
     SkAutoTUnref<SkSurface> fMinSurface;
     SkAutoTUnref<SkSurface> fMaxSurface;
@@ -112,7 +123,6 @@ private:
                 break;
             case kStroke_Style:
                 paint->setStrokeWidth(SK_Scalar1);
-//                paint->setStrokeWidth(SK_Scalar1 + SK_Scalar1/500);
                 break;
         }
         paint->setAntiAlias(aa);
@@ -133,15 +143,15 @@ private:
 
         if (fUseGPU && fAA) {
             SkRect rr = r;
-            rr.inset(fZ/2, fZ/2);
+            rr.inset(SkIntToScalar(fZoom)/2, SkIntToScalar(fZoom)/2);
             path.addRect(rr);
             path.moveTo(rr.fLeft, rr.fTop);
             path.lineTo(rr.fRight, rr.fBottom);
             rr = r;
-            rr.inset(-fZ/2, -fZ/2);
+            rr.inset(-SkIntToScalar(fZoom)/2, -SkIntToScalar(fZoom)/2);
             path.addRect(rr);
         } else {
-            path.addRect(r);
+            fRectAsOval ? path.addOval(r) : path.addRect(r);
             if (fUseGPU) {
                 path.moveTo(r.fLeft, r.fTop);
                 path.lineTo(r.fRight, r.fBottom);
@@ -161,11 +171,11 @@ private:
         SkPaint paint;
         paint.setXfermodeMode(SkXfermode::kClear_Mode);
         for (int iy = 1; iy < fH; ++iy) {
-            SkScalar y = SkIntToScalar(iy * fZ);
+            SkScalar y = SkIntToScalar(iy * fZoom);
             canvas->drawLine(0, y - SK_ScalarHalf, 999, y - SK_ScalarHalf, paint);
         }
         for (int ix = 1; ix < fW; ++ix) {
-            SkScalar x = SkIntToScalar(ix * fZ);
+            SkScalar x = SkIntToScalar(ix * fZoom);
             canvas->drawLine(x - SK_ScalarHalf, 0, x - SK_ScalarHalf, 999, paint);
         }
     }
@@ -190,15 +200,28 @@ void FatBits::drawFG(SkCanvas* canvas) {
     outer.setColor(SK_ColorWHITE);
     outer.setStrokeWidth(PIXEL_CENTER_SIZE + 2);
 
-    SkScalar half = SkIntToScalar(fZ) / 2;
+    SkScalar half = SkIntToScalar(fZoom) / 2;
     for (int iy = 0; iy < fH; ++iy) {
-        SkScalar y = SkIntToScalar(iy * fZ) + half;
+        SkScalar y = SkIntToScalar(iy * fZoom) + half;
         for (int ix = 0; ix < fW; ++ix) {
-            SkScalar x = SkIntToScalar(ix * fZ) + half;
+            SkScalar x = SkIntToScalar(ix * fZoom) + half;
 
             canvas->drawPoint(x, y, outer);
             canvas->drawPoint(x, y, inner);
         }
+    }
+
+    if (fUseClip) {
+        SkPaint p;
+        p.setStyle(SkPaint::kStroke_Style);
+        p.setColor(SK_ColorLTGRAY);
+        SkRect r = {
+            fClipRect.fLeft * fZoom,
+            fClipRect.fTop * fZoom,
+            fClipRect.fRight * fZoom,
+            fClipRect.fBottom * fZoom
+        };
+        canvas->drawRect(r, p);
     }
 }
 
@@ -215,7 +238,7 @@ void FatBits::drawLineSkeleton(SkCanvas* max, const SkPoint pts[]) {
             if (fUseGPU) {
                 SkPaint p;
                 p.setStyle(SkPaint::kStroke_Style);
-                p.setStrokeWidth(SK_Scalar1 * fZ);
+                p.setStrokeWidth(SK_Scalar1 * fZoom);
                 SkPath dst;
                 p.getFillPath(path, &dst);
                 path.addPath(dst);
@@ -224,7 +247,7 @@ void FatBits::drawLineSkeleton(SkCanvas* max, const SkPoint pts[]) {
         case kStroke_Style: {
             SkPaint p;
             p.setStyle(SkPaint::kStroke_Style);
-            p.setStrokeWidth(SK_Scalar1 * fZ);
+            p.setStrokeWidth(SK_Scalar1 * fZoom);
             SkPath dst;
             p.getFillPath(path, &dst);
             path = dst;
@@ -254,7 +277,16 @@ void FatBits::drawLine(SkCanvas* canvas, SkPoint pts[]) {
     erase(fMinSurface);
     this->setupPaint(&paint);
     paint.setColor(FAT_PIXEL_COLOR);
+    if (fUseClip) {
+        fMinSurface->getCanvas()->save();
+        SkRect r = fClipRect;
+        r.inset(SK_Scalar1/3, SK_Scalar1/3);
+        fMinSurface->getCanvas()->clipRect(r, SkRegion::kIntersect_Op, true);
+    }
     fMinSurface->getCanvas()->drawLine(pts[0].fX, pts[0].fY, pts[1].fX, pts[1].fY, paint);
+    if (fUseClip) {
+        fMinSurface->getCanvas()->restore();
+    }
     this->copyMinToMax();
 
     SkCanvas* max = fMaxSurface->getCanvas();
@@ -281,7 +313,10 @@ void FatBits::drawRect(SkCanvas* canvas, SkPoint pts[2]) {
     erase(fMinSurface);
     this->setupPaint(&paint);
     paint.setColor(FAT_PIXEL_COLOR);
-    fMinSurface->getCanvas()->drawRect(r, paint);
+    {
+        SkCanvas* c = fMinSurface->getCanvas();
+        fRectAsOval ? c->drawOval(r, paint) : c->drawRect(r, paint);
+    }
     this->copyMinToMax();
 
     SkCanvas* max = fMaxSurface->getCanvas();
@@ -331,8 +366,16 @@ protected:
         SkUnichar uni;
         if (SampleCode::CharQ(*evt, &uni)) {
             switch (uni) {
+                case 'c':
+                    fFB.setUseClip(!fFB.getUseClip());
+                    this->inval(NULL);
+                    return true;
                 case 'r':
                     fIsRect = !fIsRect;
+                    this->inval(NULL);
+                    return true;
+                case 'o':
+                    fFB.toggleRectAsOval();
                     this->inval(NULL);
                     return true;
                 case 'x':
@@ -374,10 +417,11 @@ protected:
 
         {
             SkString str;
-            str.printf("%s %s %s",
+            str.printf("%s %s %s %s",
                        fFB.getAA() ? "AA" : "BW",
                        FatBits::kHair_Style == fFB.getStyle() ? "Hair" : "Stroke",
-                       fFB.getUseGPU() ? "GPU" : "CPU");
+                       fFB.getUseGPU() ? "GPU" : "CPU",
+                       fFB.getUseClip() ? "clip" : "noclip");
             SkPaint paint;
             paint.setAntiAlias(true);
             paint.setTextSize(16);
@@ -386,7 +430,8 @@ protected:
         }
     }
 
-    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y) {
+    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y,
+                                              unsigned modi) SK_OVERRIDE {
         SkPoint pt = { x, y };
         int index = -1;
         SkScalar tol = 12;
@@ -398,7 +443,7 @@ protected:
         return new IndexClick(this, index);
     }
 
-    virtual bool onClick(Click* click) {
+    virtual bool onClick(Click* click) SK_OVERRIDE {
         int index = IndexClick::GetIndex(click);
         if (index >= 0 && index <= 1) {
             fPts[index] = click->fCurr;
@@ -421,4 +466,3 @@ private:
 
 static SkView* MyFactory() { return new DrawLineView; }
 static SkViewRegister reg(MyFactory);
-

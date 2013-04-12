@@ -1,12 +1,14 @@
-
 /*
  * Copyright 2011 Google Inc.
  *
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  */
+
+#include "SkCommandLineFlags.h"
 #include "SkGraphics.h"
 #include "Test.h"
+#include "SkOSFile.h"
 
 #if SK_SUPPORT_GPU
 #include "GrContext.h"
@@ -60,79 +62,100 @@ static const char* result2string(Reporter::Result result) {
 
 class DebugfReporter : public Reporter {
 public:
-    DebugfReporter(bool androidMode) : fAndroidMode(androidMode) {}
+    DebugfReporter(bool allowExtendedTest)
+        : fIndex(0)
+        , fTotal(0)
+        , fAllowExtendedTest(allowExtendedTest) {
+    }
 
     void setIndexOfTotal(int index, int total) {
         fIndex = index;
         fTotal = total;
     }
+
+    virtual bool allowExtendedTest() const {
+        return fAllowExtendedTest;
+    }
+
 protected:
     virtual void onStart(Test* test) {
-        this->dumpState(test, kStarting_State);
+        SkDebugf("[%d/%d] %s...\n", fIndex+1, fTotal, test->getName());
     }
     virtual void onReport(const char desc[], Reporter::Result result) {
-        if (!fAndroidMode) {
-            SkDebugf("\t%s: %s\n", result2string(result), desc);
-        }
+        SkDebugf("\t%s: %s\n", result2string(result), desc);
     }
-    virtual void onEnd(Test* test) {
-        this->dumpState(test, this->getCurrSuccess() ?
-                        kSucceeded_State : kFailed_State);
+    virtual void onEnd(Test*) {
+        if (!this->getCurrSuccess()) {
+            SkDebugf("---- FAILED\n");
+        }
     }
 private:
-    enum State {
-        kStarting_State = 1,
-        kSucceeded_State = 0,
-        kFailed_State = -2
-    };
+    int fIndex, fTotal;
+    bool fAllowExtendedTest;
+};
 
-    void dumpState(Test* test, State state) {
-        if (fAndroidMode) {
-            SkDebugf("INSTRUMENTATION_STATUS: test=%s\n", test->getName());
-            SkDebugf("INSTRUMENTATION_STATUS: class=com.skia\n");
-            SkDebugf("INSTRUMENTATION_STATUS: current=%d\n", fIndex+1);
-            SkDebugf("INSTRUMENTATION_STATUS: numtests=%d\n", fTotal);
-            SkDebugf("INSTRUMENTATION_STATUS_CODE: %d\n", state);
-        } else {
-            if (kStarting_State == state) {
-                SkDebugf("[%d/%d] %s...\n", fIndex+1, fTotal, test->getName());
-            } else if (kFailed_State == state) {
-                SkDebugf("---- FAILED\n");
-            }
+static const char* make_canonical_dir_path(const char* path, SkString* storage) {
+    if (path) {
+        // clean it up so it always has a trailing searator
+        size_t len = strlen(path);
+        if (0 == len) {
+            path = NULL;
+        } else if (SkPATH_SEPARATOR != path[len - 1]) {
+            // resize to len + 1, to make room for searator
+            storage->set(path, len + 1);
+            storage->writable_str()[len] = SkPATH_SEPARATOR;
+            path = storage->c_str();
         }
     }
+    return path;
+}
 
-    int fIndex, fTotal;
-    bool fAndroidMode;
-};
+static SkString gTmpDir;
+
+const SkString& Test::GetTmpDir() {
+    return gTmpDir;
+}
+
+static SkString gResourcePath;
+
+const SkString& Test::GetResourcePath() {
+    return gResourcePath;
+}
+
+DEFINE_string2(match, m, NULL, "substring of test name to run.");
+DEFINE_string2(tmpDir, t, NULL, "tmp directory for tests to use.");
+DEFINE_string2(resourcePath, i, NULL, "directory for test resources.");
+DEFINE_bool2(extendedTest, x, false, "run extended tests for pathOps.");
+DEFINE_bool2(verbose, v, false, "enable verbose output.");
 
 int tool_main(int argc, char** argv);
 int tool_main(int argc, char** argv) {
-#ifdef SK_ENABLE_INST_COUNT
+    SkCommandLineFlags::SetUsage("");
+    SkCommandLineFlags::Parse(argc, argv);
+
+    if (!FLAGS_tmpDir.isEmpty()) {
+        make_canonical_dir_path(FLAGS_tmpDir[0], &gTmpDir);
+    }
+    if (!FLAGS_resourcePath.isEmpty()) {
+        make_canonical_dir_path(FLAGS_resourcePath[0], &gResourcePath);
+    }
+
+#if SK_ENABLE_INST_COUNT
     gPrintInstCount = true;
 #endif
+
     SkGraphics::Init();
-
-    bool androidMode = false;
-    const char* matchStr = NULL;
-
-    char* const* stop = argv + argc;
-    for (++argv; argv < stop; ++argv) {
-        if (strcmp(*argv, "-android") == 0) {
-            androidMode = true;
-
-        } else if (strcmp(*argv, "--match") == 0) {
-            ++argv;
-            if (argv < stop && **argv) {
-                matchStr = *argv;
-            }
-        }
-    }
 
     {
         SkString header("Skia UnitTests:");
-        if (matchStr) {
-            header.appendf(" --match %s", matchStr);
+        if (!FLAGS_match.isEmpty()) {
+            header.appendf(" --match %s", FLAGS_match[0]);
+        }
+        if (!gTmpDir.isEmpty()) {
+            header.appendf(" --tmpDir %s", gTmpDir.c_str());
+        }
+        if (!gResourcePath.isEmpty()) {
+            header.appendf(" --resourcePath %s", gResourcePath.c_str());
         }
 #ifdef SK_DEBUG
         header.append(" SK_DEBUG");
@@ -144,12 +167,10 @@ int tool_main(int argc, char** argv) {
 #else
         header.append(" SK_SCALAR_IS_FLOAT");
 #endif
-        if (!androidMode) {
-            SkDebugf("%s\n", header.c_str());
-        }
+        SkDebugf("%s\n", header.c_str());
     }
 
-    DebugfReporter reporter(androidMode);
+    DebugfReporter reporter(FLAGS_extendedTest);
     Iter iter(&reporter);
     Test* test;
 
@@ -159,7 +180,7 @@ int tool_main(int argc, char** argv) {
     int skipCount = 0;
     while ((test = iter.next()) != NULL) {
         reporter.setIndexOfTotal(index, count);
-        if (NULL != matchStr && !strstr(test->getName(), matchStr)) {
+        if (!FLAGS_match.isEmpty() && !strstr(test->getName(), FLAGS_match[0])) {
             ++skipCount;
         } else {
             if (!test->run()) {
@@ -170,11 +191,12 @@ int tool_main(int argc, char** argv) {
         index += 1;
     }
 
-    if (!androidMode) {
-        SkDebugf("Finished %d tests, %d failures, %d skipped.\n",
-                 count, failCount, skipCount);
+    SkDebugf("Finished %d tests, %d failures, %d skipped.\n",
+             count, failCount, skipCount);
+    int testCount = reporter.countTests();
+    if (FLAGS_verbose && testCount > 0) {
+        SkDebugf("Ran %d Internal tests.\n", testCount);
     }
-
 #if SK_SUPPORT_GPU
 
 #if GR_CACHE_STATS
@@ -186,13 +208,13 @@ int tool_main(int argc, char** argv) {
 #endif
 
     SkGraphics::Term();
+    GpuTest::DestroyContexts();
 
     return (failCount == 0) ? 0 : 1;
 }
 
-#if !defined SK_BUILD_FOR_IOS
+#if !defined(SK_BUILD_FOR_IOS) && !defined(SK_BUILD_FOR_NACL)
 int main(int argc, char * const argv[]) {
     return tool_main(argc, (char**) argv);
 }
 #endif
-

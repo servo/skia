@@ -83,7 +83,13 @@ public:
         Returns a string representation of the SkRects coordinates.
         @param rect  SkRect
      */
-    static SkString* RectToString(const SkRect& rect);
+    static SkString* RectToString(const SkRect& rect, const char* title = NULL);
+
+    /**
+        Returns a string representation of an SkRRect.
+        @param rrect  SkRRect
+     */
+    static SkString* RRectToString(const SkRRect& rrect, const char* title = NULL);
 
     /**
         Returns a string representation of the SkRegion enum.
@@ -115,7 +121,8 @@ public:
         Returns a string representation of the char pointer passed in.
         @param text  const void* that will be cast to a char*
      */
-    static SkString* TextToString(const void* text, size_t byteLength);
+    static SkString* TextToString(const void* text, size_t byteLength,
+                                  SkPaint::TextEncoding encoding);
 };
 
 #endif

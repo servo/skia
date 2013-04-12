@@ -15,14 +15,21 @@
 
 class GMSampleView : public SampleView {
 private:
+    bool fShowSize;
     typedef skiagm::GM GM;
 
 public:
     GMSampleView(GM* gm)
-    : fGM(gm) {}
+    : fShowSize(false), fGM(gm) {}
 
     virtual ~GMSampleView() {
         delete fGM;
+    }
+
+    static SkEvent* NewShowSizeEvt(bool doShowSize) {
+        SkEvent* evt = SkNEW_ARGS(SkEvent, ("GMSampleView::showSize"));
+        evt->setFast32(doShowSize);
+        return evt;
     }
 
 protected:
@@ -36,8 +43,27 @@ protected:
         return this->INHERITED::onQuery(evt);
     }
 
+    virtual bool onEvent(const SkEvent& evt) SK_OVERRIDE {
+        if (evt.isType("GMSampleView::showSize")) {
+            fShowSize = SkToBool(evt.getFast32());
+            return true;
+        }
+        return this->INHERITED::onEvent(evt);
+    }
+
     virtual void onDrawContent(SkCanvas* canvas) {
-        fGM->drawContent(canvas);
+        {
+            SkAutoCanvasRestore acr(canvas, fShowSize);
+            fGM->drawContent(canvas);
+        }
+        if (fShowSize) {
+            SkISize size = fGM->getISize();
+            SkRect r = SkRect::MakeWH(SkIntToScalar(size.width()),
+                                      SkIntToScalar(size.height()));
+            SkPaint paint;
+            paint.setColor(0x40FF8833);
+            canvas->drawRect(r, paint);
+        }
     }
 
     virtual void onDrawBackground(SkCanvas* canvas) {

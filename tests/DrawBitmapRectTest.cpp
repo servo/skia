@@ -9,8 +9,94 @@
 #include "SkBitmap.h"
 #include "SkCanvas.h"
 #include "SkShader.h"
+#include "SkRandom.h"
+#include "SkMatrixUtils.h"
 
-#ifdef SK_SCALAR_IS_FLOAT
+static void rand_matrix(SkMatrix* mat, SkMWCRandom& rand, unsigned mask) {
+    mat->setIdentity();
+    if (mask & SkMatrix::kTranslate_Mask) {
+        mat->postTranslate(rand.nextSScalar1(), rand.nextSScalar1());
+    }
+    if (mask & SkMatrix::kScale_Mask) {
+        mat->postScale(rand.nextSScalar1(), rand.nextSScalar1());
+    }
+    if (mask & SkMatrix::kAffine_Mask) {
+        mat->postRotate(rand.nextSScalar1() * 360);
+    }
+    if (mask & SkMatrix::kPerspective_Mask) {
+        mat->setPerspX(rand.nextSScalar1());
+        mat->setPerspY(rand.nextSScalar1());
+    }
+}
+
+static void rand_size(SkISize* size, SkMWCRandom& rand) {
+    size->set(rand.nextU() & 0xFFFF, rand.nextU() & 0xFFFF);
+}
+
+static bool treat_as_sprite(const SkMatrix& mat, const SkISize& size,
+                            unsigned bits) {
+    return SkTreatAsSprite(mat, size.width(), size.height(), bits);
+}
+
+static void test_treatAsSprite(skiatest::Reporter* reporter) {
+    const unsigned bilerBits = kSkSubPixelBitsForBilerp;
+
+    SkMatrix mat;
+    SkISize  size;
+    SkMWCRandom rand;
+
+    // assert: translate-only no-filter can always be treated as sprite
+    for (int i = 0; i < 1000; ++i) {
+        rand_matrix(&mat, rand, SkMatrix::kTranslate_Mask);
+        for (int j = 0; j < 1000; ++j) {
+            rand_size(&size, rand);
+            REPORTER_ASSERT(reporter, treat_as_sprite(mat, size, 0));
+        }
+    }
+
+    // assert: rotate/perspect is never treated as sprite
+    for (int i = 0; i < 1000; ++i) {
+        rand_matrix(&mat, rand, SkMatrix::kAffine_Mask | SkMatrix::kPerspective_Mask);
+        for (int j = 0; j < 1000; ++j) {
+            rand_size(&size, rand);
+            REPORTER_ASSERT(reporter, !treat_as_sprite(mat, size, 0));
+            REPORTER_ASSERT(reporter, !treat_as_sprite(mat, size, bilerBits));
+        }
+    }
+
+    size.set(500, 600);
+
+    const SkScalar tooMuchSubpixel = SkFloatToScalar(100.1f);
+    mat.setTranslate(tooMuchSubpixel, 0);
+    REPORTER_ASSERT(reporter, !treat_as_sprite(mat, size, bilerBits));
+    mat.setTranslate(0, tooMuchSubpixel);
+    REPORTER_ASSERT(reporter, !treat_as_sprite(mat, size, bilerBits));
+
+    const SkScalar tinySubPixel = SkFloatToScalar(100.02f);
+    mat.setTranslate(tinySubPixel, 0);
+    REPORTER_ASSERT(reporter, treat_as_sprite(mat, size, bilerBits));
+    mat.setTranslate(0, tinySubPixel);
+    REPORTER_ASSERT(reporter, treat_as_sprite(mat, size, bilerBits));
+
+    const SkScalar twoThirds = SK_Scalar1 * 2 / 3;
+    const SkScalar bigScale = SkScalarDiv(size.width() + twoThirds, size.width());
+    mat.setScale(bigScale, bigScale);
+    REPORTER_ASSERT(reporter, !treat_as_sprite(mat, size, false));
+    REPORTER_ASSERT(reporter, !treat_as_sprite(mat, size, bilerBits));
+
+    const SkScalar oneThird = SK_Scalar1 / 3;
+    const SkScalar smallScale = SkScalarDiv(size.width() + oneThird, size.width());
+    mat.setScale(smallScale, smallScale);
+    REPORTER_ASSERT(reporter, treat_as_sprite(mat, size, false));
+    REPORTER_ASSERT(reporter, !treat_as_sprite(mat, size, bilerBits));
+
+    const SkScalar oneFortyth = SK_Scalar1 / 40;
+    const SkScalar tinyScale = SkScalarDiv(size.width() + oneFortyth, size.width());
+    mat.setScale(tinyScale, tinyScale);
+    REPORTER_ASSERT(reporter, treat_as_sprite(mat, size, false));
+    REPORTER_ASSERT(reporter, treat_as_sprite(mat, size, bilerBits));
+}
+
 static void assert_ifDrawnTo(skiatest::Reporter* reporter,
                              const SkBitmap& bm, bool shouldBeDrawn) {
     for (int y = 0; y < bm.height(); ++y) {
@@ -36,7 +122,7 @@ static void test_wacky_bitmapshader(skiatest::Reporter* reporter,
     SkBitmap dev;
     dev.setConfig(SkBitmap::kARGB_8888_Config, 0x56F, 0x4f6);
     dev.allocPixels();
-    dev.eraseColor(0);  // necessary, so we know if we draw to it
+    dev.eraseColor(SK_ColorTRANSPARENT);  // necessary, so we know if we draw to it
 
     SkMatrix matrix;
 
@@ -74,7 +160,6 @@ static void test_wacky_bitmapshader(skiatest::Reporter* reporter,
 
     assert_ifDrawnTo(reporter, dev, shouldBeDrawn);
 }
-#endif
 
 /*
  *  Original bug was asserting that the matrix-proc had generated a (Y) value
@@ -117,7 +202,7 @@ static void test_giantrepeat_crbug118018(skiatest::Reporter* reporter) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static void test_nan_antihair(skiatest::Reporter* reporter) {
+static void test_nan_antihair() {
     SkBitmap bm;
     bm.setConfig(SkBitmap::kARGB_8888_Config, 20, 20);
     bm.allocPixels();
@@ -179,8 +264,10 @@ static void TestDrawBitmapRect(skiatest::Reporter* reporter) {
     // ensure that we draw nothing if srcR does not intersect the bitmap
     REPORTER_ASSERT(reporter, check_for_all_zeros(dst));
 
-    test_nan_antihair(reporter);
+    test_nan_antihair();
     test_giantrepeat_crbug118018(reporter);
+
+    test_treatAsSprite(reporter);
 }
 
 #include "TestClassDef.h"

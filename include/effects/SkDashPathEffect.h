@@ -36,14 +36,19 @@ public:
 
         Note: only affects stroked paths.
     */
-    SkDashPathEffect(const SkScalar intervals[], int count, SkScalar phase, bool scaleToFit = false);
+    SkDashPathEffect(const SkScalar intervals[], int count, SkScalar phase,
+                     bool scaleToFit = false);
     virtual ~SkDashPathEffect();
 
-    virtual bool filterPath(SkPath* dst, const SkPath& src, SkStrokeRec*) SK_OVERRIDE;
+    virtual bool filterPath(SkPath* dst, const SkPath& src,
+                            SkStrokeRec*, const SkRect*) const SK_OVERRIDE;
 
-    // overrides for SkFlattenable
-    //  This method is not exported to java.
-    virtual Factory getFactory();
+    virtual bool asPoints(PointData* results, const SkPath& src,
+                          const SkStrokeRec&, const SkMatrix&,
+                          const SkRect*) const SK_OVERRIDE;
+
+    virtual Factory getFactory() SK_OVERRIDE;
+
     static SkFlattenable* CreateProc(SkFlattenableReadBuffer&);
 
 protected:

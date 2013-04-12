@@ -22,7 +22,7 @@ static void test_strokerect(SkCanvas* canvas) {
     SkBitmap bitmap;
     bitmap.setConfig(SkBitmap::kA8_Config, width*2, height*2);
     bitmap.allocPixels();
-    bitmap.eraseColor(0);
+    bitmap.eraseColor(SK_ColorTRANSPARENT);
 
     SkScalar dx = 20;
     SkScalar dy = 20;
@@ -41,12 +41,12 @@ static void test_strokerect(SkCanvas* canvas) {
     paint.setStrokeWidth(1);
 
     // use the rect
-    c.clear(0);
+    c.clear(SK_ColorTRANSPARENT);
     c.drawRect(r, paint);
     canvas->drawBitmap(bitmap, 0, 0, NULL);
 
     // use the path
-    c.clear(0);
+    c.clear(SK_ColorTRANSPARENT);
     c.drawPath(path, paint);
     canvas->drawBitmap(bitmap, SkIntToScalar(2*width), 0, NULL);
 }
@@ -274,13 +274,13 @@ protected:
 
             {
                 char    buffer[1000];
-                size_t  size = tmp.writeToMemory(NULL);
+                SkDEBUGCODE(size_t  size = ) tmp.writeToMemory(NULL);
                 SkASSERT(size <= sizeof(buffer));
-                size_t  size2 = tmp.writeToMemory(buffer);
+                SkDEBUGCODE(size_t  size2 = ) tmp.writeToMemory(buffer);
                 SkASSERT(size == size2);
 
                 SkRegion    tmp3;
-                size2 = tmp3.readFromMemory(buffer);
+                SkDEBUGCODE(size2 = ) tmp3.readFromMemory(buffer);
                 SkASSERT(size == size2);
 
                 SkASSERT(tmp3 == tmp);
@@ -394,7 +394,8 @@ protected:
         }
     }
 
-    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y) {
+    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y,
+                                              unsigned modi) SK_OVERRIDE {
         return fRect.contains(SkScalarRound(x), SkScalarRound(y)) ? new Click(this) : NULL;
     }
 
@@ -415,4 +416,3 @@ private:
 
 static SkView* MyFactory() { return new RegionView; }
 static SkViewRegister reg(MyFactory);
-

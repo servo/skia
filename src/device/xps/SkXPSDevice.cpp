@@ -37,6 +37,7 @@
 #include "SkTDArray.h"
 #include "SkTLazy.h"
 #include "SkTScopedComPtr.h"
+#include "SkTypefacePriv.h"
 #include "SkUtils.h"
 #include "SkXPSDevice.h"
 
@@ -950,7 +951,7 @@ HRESULT SkXPSDevice::createXpsBrush(const SkPaint& skPaint,
         SkASSERT(1 == info.fColorCount);
         SkColor color;
         info.fColors = &color;
-        SkShader::GradientType gradientType = shader->asAGradient(&info);
+        shader->asAGradient(&info);
         SkAlpha alpha = skPaint.getAlpha();
         HR(this->createXpsSolidColorBrush(color, alpha, brush));
         return S_OK;
@@ -2013,10 +2014,10 @@ void SkXPSDevice::drawSprite(const SkDraw&, const SkBitmap& bitmap,
 
 HRESULT SkXPSDevice::CreateTypefaceUse(const SkPaint& paint,
                                        TypefaceUse** typefaceUse) {
-    const SkTypeface* typeface = paint.getTypeface();
+    SkAutoResolveDefaultTypeface typeface(paint.getTypeface());
 
     //Check cache.
-    const SkFontID typefaceID = SkTypeface::UniqueID(typeface);
+    const SkFontID typefaceID = typeface->uniqueID();
     if (!this->fTypefaces.empty()) {
         TypefaceUse* current = &this->fTypefaces.front();
         const TypefaceUse* last = &this->fTypefaces.back();
@@ -2033,7 +2034,7 @@ HRESULT SkXPSDevice::CreateTypefaceUse(const SkPaint& paint,
     XPS_FONT_EMBEDDING embedding = XPS_FONT_EMBEDDING_RESTRICTED;
 
     SkTScopedComPtr<IStream> fontStream;
-    SkStream* fontData = SkFontHost::OpenStream(typefaceID);
+    SkStream* fontData = typeface->openStream(NULL);
     HRM(SkIStream::CreateFromSkStream(fontData, true, &fontStream),
         "Could not create font stream.");
 
@@ -2061,7 +2062,7 @@ HRESULT SkXPSDevice::CreateTypefaceUse(const SkPaint& paint,
     newTypefaceUse.fontData = fontData;
     newTypefaceUse.xpsFont = xpsFontResource.release();
 
-    SkAutoGlyphCache agc = SkAutoGlyphCache(paint, &SkMatrix::I());
+    SkAutoGlyphCache agc = SkAutoGlyphCache(paint, NULL, &SkMatrix::I());
     SkGlyphCache* glyphCache = agc.getCache();
     unsigned int glyphCount = glyphCache->getGlyphCount();
     newTypefaceUse.glyphsUsed = new SkBitSet(glyphCount);
@@ -2182,13 +2183,8 @@ static void xps_draw_1_glyph(const SkDraw1Glyph& state,
     SkXPSDrawProcs* procs = static_cast<SkXPSDrawProcs*>(state.fDraw->fProcs);
 
     //Draw pre-adds half the sampling frequency for floor rounding.
-    if (state.fCache->isSubpixel()) {
-        x -= (SK_FixedHalf >> SkGlyph::kSubBits);
-        y -= (SK_FixedHalf >> SkGlyph::kSubBits);
-    } else {
-        x -= SK_FixedHalf;
-        y -= SK_FixedHalf;
-    }
+    x -= state.fHalfSampleX;
+    y -= state.fHalfSampleY;
 
     XPS_GLYPH_INDEX* xpsGlyph = procs->xpsGlyphs.append();
     uint16_t glyphID = skGlyph.getGlyphID();
@@ -2422,4 +2418,3 @@ SkXPSDevice::SkXPSDevice(IXpsOMObjectFactory* xpsFactory)
 bool SkXPSDevice::allowImageFilter(SkImageFilter*) {
     return false;
 }
-

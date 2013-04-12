@@ -9,12 +9,10 @@
 #define GrGLEffect_DEFINED
 
 #include "GrBackendEffectFactory.h"
-#include "GrGLProgram.h"
 #include "GrGLShaderBuilder.h"
 #include "GrGLShaderVar.h"
 #include "GrGLSL.h"
 
-class GrEffectStage;
 class GrGLTexture;
 
 /** @file
@@ -22,12 +20,19 @@ class GrGLTexture;
     include/gpu/GrEffect.h. Objects of type GrGLEffect are responsible for emitting the
     GLSL code that implements a GrEffect and for uploading uniforms at draw time. They also
     must have a function:
-        static inline EffectKey GenKey(const GrEffectStage&, const GrGLCaps&)
+        static inline EffectKey GenKey(const GrDrawEffect&, const GrGLCaps&)
     that is used to implement a program cache. When two GrEffects produce the same key this means
     that their GrGLEffects would emit the same GLSL code.
 
+    The GrGLEffect subclass must also have a constructor of the form:
+        EffectSubclass::EffectSubclass(const GrBackendEffectFactory&, const GrDrawEffect&)
+    The effect held by the GrDrawEffect is guaranteed to be of the type that generated the
+    GrGLEffect subclass instance.
+
     These objects are created by the factory object returned by the GrEffect::getFactory().
 */
+
+class GrDrawEffect;
 
 class GrGLEffect {
 
@@ -35,6 +40,7 @@ public:
     typedef GrBackendEffectFactory::EffectKey EffectKey;
 
     enum {
+        kNoEffectKey = GrBackendEffectFactory::kNoEffectKey,
         // the number of bits in EffectKey available to GenKey
         kEffectKeyBits = GrBackendEffectFactory::kEffectKeyBits,
     };
@@ -50,11 +56,10 @@ public:
         stages.
 
         @param builder      Interface used to emit code in the shaders.
-        @param stage        The effect stage that generated this program stage.
-        @param key          The key that was computed by EffectKey() from the generating GrEffect.
-        @param vertexCoords A vec2 of texture coordinates in the VS, which may be altered. This will
-                            be removed soon and stages will be responsible for computing their own
-                            coords.
+        @param drawEffect   A wrapper on the effect that generated this program stage.
+        @param key          The key that was computed by GenKey() from the generating GrEffect.
+                            Only the bits indicated by GrBackendEffectFactory::kEffectKeyBits are
+                            guaranteed to match the value produced by GenKey();
         @param outputColor  A predefined vec4 in the FS in which the stage should place its output
                             color (or coverage).
         @param inputColor   A vec4 that holds the input color to the stage in the FS. This may be
@@ -67,9 +72,8 @@ public:
                             reads in the generated code.
         */
     virtual void emitCode(GrGLShaderBuilder* builder,
-                          const GrEffectStage& stage,
+                          const GrDrawEffect& drawEffect,
                           EffectKey key,
-                          const char* vertexCoords,
                           const char* outputColor,
                           const char* inputColor,
                           const TextureSamplerArray& samplers) = 0;
@@ -78,15 +82,17 @@ public:
         key; this function reads data from a stage and uploads any uniform variables required
         by the shaders created in emitCode(). The GrEffect installed in the GrEffectStage is
         guaranteed to be of the same type that created this GrGLEffect and to have an identical
-        EffectKey as the one that created this GrGLEffect. */
-    virtual void setData(const GrGLUniformManager&, const GrEffectStage&);
+        EffectKey as the one that created this GrGLEffect. Effects that use local coords have
+        to consider whether the GrEffectStage's coord change matrix should be used. When explicit
+        local coordinates are used it can be ignored. */
+    virtual void setData(const GrGLUniformManager&, const GrDrawEffect&);
 
     const char* name() const { return fFactory.name(); }
 
-    static EffectKey GenTextureKey(const GrEffect&, const GrGLCaps&);
+    static EffectKey GenTextureKey(const GrDrawEffect&, const GrGLCaps&);
+    static EffectKey GenAttribKey(const GrDrawEffect& stage);
 
 protected:
-
     const GrBackendEffectFactory& fFactory;
 };
 

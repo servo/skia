@@ -71,6 +71,7 @@
     the performance impact. By default these flags are undefined, but can be
     enabled by uncommenting them below.
  */
+//#define SK_DEBUG_GLYPH_CACHE
 //#define SK_DEBUG_PATH
 
 /*  To assist debugging, Skia provides an instance counting utility in
@@ -78,7 +79,7 @@
     allow instance count tracking in either debug or release builds. By
     default it is enabled in debug but disabled in release.
  */
-//#define SK_ENABLE_INST_COUNT
+//#define SK_ENABLE_INST_COUNT 1
 
 /*  If, in debugging mode, Skia needs to stop (presumably to invoke a debugger)
     it will call SK_CRASH(). If this is not defined it, it is defined in
@@ -199,4 +200,5 @@
    backend. Defaults to 1 (build the GPU code).
  */
 //#define SK_SUPPORT_GPU 1
+
 #endif

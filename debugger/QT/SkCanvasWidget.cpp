@@ -13,7 +13,9 @@ SkCanvasWidget::SkCanvasWidget(QWidget* parent,
         SkDebugger* debugger) : QWidget(parent)
     , fHorizontalLayout(this)
     , fRasterWidget(debugger)
+#if SK_SUPPORT_GPU
     , fGLWidget(debugger)
+#endif
 {
 
     fDebugger = debugger;
@@ -22,17 +24,22 @@ SkCanvasWidget::SkCanvasWidget(QWidget* parent,
     fHorizontalLayout.setContentsMargins(0,0,0,0);
     fRasterWidget.setSizePolicy(QSizePolicy::Expanding,
             QSizePolicy::Expanding);
+#if SK_SUPPORT_GPU
     fGLWidget.setSizePolicy(QSizePolicy::Expanding,
             QSizePolicy::Expanding);
+#endif
 
     fHorizontalLayout.addWidget(&fRasterWidget);
+#if SK_SUPPORT_GPU
     fHorizontalLayout.addWidget(&fGLWidget);
+#endif
 
     fPreviousPoint.set(0,0);
-    fUserOffset.set(0,0);
-    fUserScaleFactor = 1.0;
+    fUserMatrix.reset();
 
+#if SK_SUPPORT_GPU
     setWidgetVisibility(kGPU_WidgetType, true);
+#endif
     connect(&fRasterWidget, SIGNAL(drawComplete()),
             this->parentWidget(), SLOT(drawComplete()));
 }
@@ -42,15 +49,18 @@ SkCanvasWidget::~SkCanvasWidget() {}
 void SkCanvasWidget::drawTo(int index) {
     fDebugger->setIndex(index);
     fRasterWidget.draw();
+#if SK_SUPPORT_GPU
     fGLWidget.draw();
+#endif
     emit commandChanged(fDebugger->index());
 }
 
 void SkCanvasWidget::mouseMoveEvent(QMouseEvent* event) {
     SkIPoint eventPoint = SkIPoint::Make(event->globalX(), event->globalY());
-    fUserOffset += eventPoint - fPreviousPoint;
+    SkIPoint eventOffset = eventPoint - fPreviousPoint;
     fPreviousPoint = eventPoint;
-    fDebugger->setUserOffset(fUserOffset);
+    fUserMatrix.postTranslate(eventOffset.fX, eventOffset.fY);
+    fDebugger->setUserMatrix(fUserMatrix);
     drawTo(fDebugger->index());
 }
 
@@ -61,37 +71,67 @@ void SkCanvasWidget::mousePressEvent(QMouseEvent* event) {
 }
 
 void SkCanvasWidget::mouseDoubleClickEvent(QMouseEvent* event) {
-    resetWidgetTransform();
+    Qt::KeyboardModifiers modifiers = event->modifiers();
+    if (modifiers.testFlag(Qt::ControlModifier)) {
+        snapWidgetTransform();
+    } else {
+        resetWidgetTransform();
+    }
+}
+
+#define ZOOM_FACTOR (1.25f)
+
+void SkCanvasWidget::wheelEvent(QWheelEvent* event) {
+    Qt::KeyboardModifiers modifiers = event->modifiers();
+    if (modifiers.testFlag(Qt::ControlModifier)) {
+        zoom(event->delta() > 0 ? ZOOM_FACTOR : (1.0f / ZOOM_FACTOR), event->x(), event->y());
+    } else {
+        if (Qt::Horizontal == event->orientation()) {
+            fUserMatrix.postTranslate(event->delta(), 0.0f);
+        } else {
+            fUserMatrix.postTranslate(0.0f, event->delta());
+        }
+        fDebugger->setUserMatrix(fUserMatrix);
+        drawTo(fDebugger->index());
+    }
+}
+
+void SkCanvasWidget::zoom(int zoomCommand) {
+    zoom(kIn_ZoomCommand == zoomCommand ? ZOOM_FACTOR : (1.0f / ZOOM_FACTOR),
+         this->size().width() / 2, this->size().height() / 2);
+}
+
+void SkCanvasWidget::snapWidgetTransform() {
+    double x, y;
+    modf(fUserMatrix.getTranslateX(), &x);
+    modf(fUserMatrix.getTranslateY(), &y);
+    fUserMatrix[SkMatrix::kMTransX] = x;
+    fUserMatrix[SkMatrix::kMTransY] = y;
+    fDebugger->setUserMatrix(fUserMatrix);
+    drawTo(fDebugger->index());
 }
 
 void SkCanvasWidget::resetWidgetTransform() {
-    fUserOffset.set(0,0);
-    fUserScaleFactor = 1.0;
-    fDebugger->setUserOffset(fUserOffset);
-    fDebugger->setUserScale(fUserScaleFactor);
-    emit scaleFactorChanged(fUserScaleFactor);
+    fUserMatrix.reset();
+    fDebugger->setUserMatrix(fUserMatrix);
+    emit scaleFactorChanged(fUserMatrix.getScaleX());
     drawTo(fDebugger->index());
 }
 
 void SkCanvasWidget::setWidgetVisibility(WidgetType type, bool isHidden) {
     if (type == kRaster_8888_WidgetType) {
         fRasterWidget.setHidden(isHidden);
-    } else if (type == kGPU_WidgetType) {
+    }
+#if SK_SUPPORT_GPU
+    else if (type == kGPU_WidgetType) {
         fGLWidget.setHidden(isHidden);
     }
+#endif
 }
 
-void SkCanvasWidget::zoom(float zoomIncrement) {
-    fUserScaleFactor += zoomIncrement;
-
-    /* The range of the fUserScaleFactor crosses over the range -1,0,1 frequently.
-    * Based on the code below, -1 and 1 both scale the image to it's original
-    * size we do the following to never have a registered wheel scroll
-    * not effect the fUserScaleFactor. */
-    if (fUserScaleFactor == 0) {
-        fUserScaleFactor = 2 * zoomIncrement;
-    }
-    emit scaleFactorChanged(fUserScaleFactor);
-    fDebugger->setUserScale(fUserScaleFactor);
+void SkCanvasWidget::zoom(float scale, int px, int py) {
+    fUserMatrix.postScale(scale, scale, px, py);
+    emit scaleFactorChanged(fUserMatrix.getScaleX());
+    fDebugger->setUserMatrix(fUserMatrix);
     drawTo(fDebugger->index());
 }
