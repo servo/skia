@@ -31,7 +31,7 @@ protected:
         return fName.c_str();
     }
 
-    virtual void onDraw(SkCanvas* canvas) SK_OVERRIDE {
+    virtual void onDraw(SkCanvas*) SK_OVERRIDE {
         size_t inc = fMinSize >> 4;
         SkASSERT(inc > 0);
         size_t total = fMinSize * 64;
@@ -59,4 +59,3 @@ static SkBenchmark* F1(void* p) { return new ChunkAllocBench(p, 8*1024); }
 
 static BenchRegistry gR0(F0);
 static BenchRegistry gR1(F1);
-

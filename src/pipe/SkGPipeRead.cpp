@@ -21,6 +21,7 @@
 #include "SkOrderedReadBuffer.h"
 #include "SkPathEffect.h"
 #include "SkRasterizer.h"
+#include "SkRRect.h"
 #include "SkShader.h"
 #include "SkTypeface.h"
 #include "SkXfermode.h"
@@ -51,6 +52,9 @@ static void set_paintflat(SkPaint* paint, SkFlattenable* obj, unsigned paintFlat
             break;
         case kXfermode_PaintFlat:
             paint->setXfermode((SkXfermode*)obj);
+            break;
+        case kAnnotation_PaintFlat:
+            paint->setAnnotation((SkAnnotation*)obj);
             break;
         default:
             SkDEBUGFAIL("never gets here");
@@ -237,6 +241,14 @@ static void clipRect_rp(SkCanvas* canvas, SkReader32* reader, uint32_t op32,
     canvas->clipRect(*rect, (SkRegion::Op)DrawOp_unpackData(op32), doAA);
 }
 
+static void clipRRect_rp(SkCanvas* canvas, SkReader32* reader, uint32_t op32,
+                         SkGPipeState* state) {
+    SkRRect rrect;
+    reader->readRRect(&rrect);
+    bool doAA = SkToBool(DrawOp_unpackFlags(op32) & kClip_HasAntiAlias_DrawOpFlag);
+    canvas->clipRRect(rrect, (SkRegion::Op)DrawOp_unpackData(op32), doAA);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 static void setMatrix_rp(SkCanvas* canvas, SkReader32* reader, uint32_t op32,
@@ -332,11 +344,28 @@ static void drawPoints_rp(SkCanvas* canvas, SkReader32* reader, uint32_t op32,
     }
 }
 
+static void drawOval_rp(SkCanvas* canvas, SkReader32* reader, uint32_t op32,
+                        SkGPipeState* state) {
+    const SkRect* rect = skip<SkRect>(reader);
+    if (state->shouldDraw()) {
+        canvas->drawOval(*rect, state->paint());
+    }
+}
+
 static void drawRect_rp(SkCanvas* canvas, SkReader32* reader, uint32_t op32,
                         SkGPipeState* state) {
     const SkRect* rect = skip<SkRect>(reader);
     if (state->shouldDraw()) {
         canvas->drawRect(*rect, state->paint());
+    }
+}
+
+static void drawRRect_rp(SkCanvas* canvas, SkReader32* reader, uint32_t op32,
+                         SkGPipeState* state) {
+    SkRRect rrect;
+    reader->readRRect(&rrect);
+    if (state->shouldDraw()) {
+        canvas->drawRRect(rrect, state->paint());
     }
 }
 
@@ -677,6 +706,7 @@ static const ReadProc gReadTable[] = {
     clipPath_rp,
     clipRegion_rp,
     clipRect_rp,
+    clipRRect_rp,
     concat_rp,
     drawBitmap_rp,
     drawBitmapMatrix_rp,
@@ -684,6 +714,7 @@ static const ReadProc gReadTable[] = {
     drawBitmapRect_rp,
     drawClear_rp,
     drawData_rp,
+    drawOval_rp,
     drawPaint_rp,
     drawPath_rp,
     drawPicture_rp,
@@ -691,6 +722,7 @@ static const ReadProc gReadTable[] = {
     drawPosText_rp,
     drawPosTextH_rp,
     drawRect_rp,
+    drawRRect_rp,
     drawSprite_rp,
     drawText_rp,
     drawTextOnPath_rp,
@@ -808,5 +840,3 @@ SkGPipeReader::Status SkGPipeReader::playback(const void* data, size_t length,
     }
     return status;
 }
-
-

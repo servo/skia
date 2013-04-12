@@ -9,6 +9,8 @@
 
 #include "SkGLWidget.h"
 
+#if SK_SUPPORT_GPU
+
 SkGLWidget::SkGLWidget(SkDebugger* debugger) : QGLWidget() {
     this->setStyleSheet("QWidget {background-color: white; border: 1px solid #cccccc;}");
     fDebugger = debugger;
@@ -29,6 +31,7 @@ void SkGLWidget::initializeGL() {
     fCurIntf = GrGLCreateNativeInterface();
     fCurContext = GrContext::Create(kOpenGL_GrBackend, (GrBackendContext) fCurIntf);
     GrBackendRenderTargetDesc desc = this->getDesc(this->width(), this->height());
+    desc.fOrigin = kBottomLeft_GrSurfaceOrigin;
     GrRenderTarget* curRenderTarget = fCurContext->wrapBackendRenderTarget(desc);
     fGpuDevice = new SkGpuDevice(fCurContext, curRenderTarget);
     fCanvas = new SkCanvas(fGpuDevice);
@@ -41,6 +44,7 @@ void SkGLWidget::initializeGL() {
 
 void SkGLWidget::resizeGL(int w, int h) {
     GrBackendRenderTargetDesc desc = this->getDesc(w, h);
+    desc.fOrigin = kBottomLeft_GrSurfaceOrigin;
     GrRenderTarget* curRenderTarget = fCurContext->wrapBackendRenderTarget(desc);
     SkSafeUnref(fGpuDevice);
     SkSafeUnref(fCanvas);
@@ -63,7 +67,7 @@ GrBackendRenderTargetDesc SkGLWidget::getDesc(int w, int h) {
     GrBackendRenderTargetDesc desc;
     desc.fWidth = SkScalarRound(this->width());
     desc.fHeight = SkScalarRound(this->height());
-    desc.fConfig = kSkia8888_PM_GrPixelConfig;
+    desc.fConfig = kSkia8888_GrPixelConfig;
     GR_GL_GetIntegerv(fCurIntf, GR_GL_SAMPLES, &desc.fSampleCnt);
     GR_GL_GetIntegerv(fCurIntf, GR_GL_STENCIL_BITS, &desc.fStencilBits);
     GrGLint buffer;
@@ -72,3 +76,5 @@ GrBackendRenderTargetDesc SkGLWidget::getDesc(int w, int h) {
 
     return desc;
 }
+
+#endif

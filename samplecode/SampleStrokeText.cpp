@@ -48,7 +48,7 @@ static void lettersToBitmap(SkBitmap* dst, const char chars[],
     SkBitmap src;
     src.setConfig(config, w, h);
     src.allocPixels();
-    src.eraseColor(0);
+    src.eraseColor(SK_ColorTRANSPARENT);
     {
         SkCanvas canvas(src);
         paint.setAntiAlias(true);
@@ -106,9 +106,8 @@ static void lettersToBitmap2(SkBitmap* dst, const char chars[],
 }
 
 class StrokeTextView : public SampleView {
-    bool fAA;
 public:
-    StrokeTextView() : fAA(false) {
+    StrokeTextView() {
         this->setBGColor(0xFFCC8844);
     }
 
@@ -146,4 +145,3 @@ private:
 
 static SkView* MyFactory() { return new StrokeTextView; }
 static SkViewRegister reg(MyFactory);
-

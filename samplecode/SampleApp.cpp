@@ -64,14 +64,6 @@ public:
 SkTCPServer gServer;
 #endif
 
-#define DEBUGGERx
-#ifdef  DEBUGGER
-extern SkView* create_debugger(const char* data, size_t size);
-extern bool is_debugger(SkView* view);
-SkTDArray<char> gTempDataStore;
-#endif
-
-
 #define USE_ARROWS_FOR_ZOOM true
 
 #if SK_ANGLE
@@ -91,6 +83,8 @@ SkTDArray<char> gTempDataStore;
 #define FPS_REPEAT_COUNT    (10 * FPS_REPEAT_MULTIPLIER)
 
 static SampleWindow* gSampleWindow;
+
+static bool gShowGMBounds;
 
 static void postEventToSink(SkEvent* evt, SkEventSink* sink) {
     evt->setTargetID(sink->getSinkID())->post();
@@ -194,8 +188,8 @@ public:
                 SkASSERT(false);
                 break;
         }
-
-        bool result = win->attach(fBackend, msaaSampleCount);
+        AttachmentInfo attachmentInfo;
+        bool result = win->attach(fBackend, msaaSampleCount, &attachmentInfo);
         if (!result) {
             SkDebugf("Failed to initialize GL");
             return;
@@ -258,32 +252,15 @@ public:
 
     virtual SkCanvas* createCanvas(SampleWindow::DeviceType dType,
                                    SampleWindow* win) {
-        switch (dType) {
-            case kRaster_DeviceType:
-                // fallthrough
-            case kPicture_DeviceType:
-                // fallthrough
-#if SK_ANGLE
-            case kANGLE_DeviceType:
-#endif
-                break;
 #if SK_SUPPORT_GPU
-            case kGPU_DeviceType:
-            case kNullGPU_DeviceType:
-                if (fCurContext) {
-                    SkAutoTUnref<SkDevice> device(new SkGpuDevice(fCurContext,
-                                                                  fCurRenderTarget));
-                    return new SkCanvas(device);
-                } else {
-                    return NULL;
-                }
-                break;
+        if (IsGpuDeviceType(dType) && NULL != fCurContext) {
+            SkAutoTUnref<SkDevice> device(new SkGpuDevice(fCurContext, fCurRenderTarget));
+            return new SkCanvas(device);
+        } else
 #endif
-            default:
-                SkASSERT(false);
-                return NULL;
+        {
+            return NULL;
         }
-        return NULL;
     }
 
     virtual void publishCanvas(SampleWindow::DeviceType dType,
@@ -294,12 +271,12 @@ public:
             // in case we have queued drawing calls
             fCurContext->flush();
 
-            if (kGPU_DeviceType != dType && kNullGPU_DeviceType != dType) {
+            if (!IsGpuDeviceType(dType)) {
                 // need to send the raster bits to the (gpu) window
                 fCurContext->setRenderTarget(fCurRenderTarget);
                 const SkBitmap& bm = win->getBitmap();
                 fCurRenderTarget->writePixels(0, 0, bm.width(), bm.height(),
-                                             kSkia8888_PM_GrPixelConfig,
+                                             kSkia8888_GrPixelConfig,
                                              bm.getPixels(),
                                              bm.rowBytes());
             }
@@ -312,14 +289,16 @@ public:
     virtual void windowSizeChanged(SampleWindow* win) {
 #if SK_SUPPORT_GPU
         if (fCurContext) {
-            win->attach(fBackend, fMSAASampleCount);
+            AttachmentInfo attachmentInfo;
+            win->attach(fBackend, fMSAASampleCount, &attachmentInfo);
 
             GrBackendRenderTargetDesc desc;
             desc.fWidth = SkScalarRound(win->width());
             desc.fHeight = SkScalarRound(win->height());
-            desc.fConfig = kSkia8888_PM_GrPixelConfig;
-            GR_GL_GetIntegerv(fCurIntf, GR_GL_SAMPLES, &desc.fSampleCnt);
-            GR_GL_GetIntegerv(fCurIntf, GR_GL_STENCIL_BITS, &desc.fStencilBits);
+            desc.fConfig = kSkia8888_GrPixelConfig;
+            desc.fOrigin = kBottomLeft_GrSurfaceOrigin;
+            desc.fSampleCnt = attachmentInfo.fSampleCount;
+            desc.fStencilBits = attachmentInfo.fStencilBits;
             GrGLint buffer;
             GR_GL_GetIntegerv(fCurIntf, GR_GL_FRAMEBUFFER_BINDING, &buffer);
             desc.fRenderTargetHandle = buffer;
@@ -466,7 +445,7 @@ static void testpdf() {
         SkBitmap bm;
         bm.setConfig(SkBitmap::kA8_Config, 64, 64);
         bm.allocPixels();
-        bm.eraseColor(0);
+        bm.eraseColor(SK_ColorTRANSPARENT);
 
         SkCanvas canvas(bm);
 
@@ -489,7 +468,7 @@ public:
                     SkOSMenu::TriState hinting) :
         fLCDState(lcd), fAAState(aa), fFilterState(filter), fHintingState(hinting) {}
 
-    virtual void filter(SkPaint* paint, Type t) {
+    virtual bool filter(SkPaint* paint, Type t) {
         if (kText_Type == t && SkOSMenu::kMixedState != fLCDState) {
             paint->setLCDRenderText(SkOSMenu::kOnState == fLCDState);
         }
@@ -504,6 +483,7 @@ public:
                               SkPaint::kNormal_Hinting :
                               SkPaint::kSlight_Hinting);
         }
+        return true;
     }
 
 private:
@@ -808,7 +788,6 @@ SampleWindow::SampleWindow(void* hwnd, int argc, char** argv, DeviceManager* dev
     fZoomScale = SK_Scalar1;
 
     fMagnify = false;
-    fDebugger = false;
 
     fSaveToPdf = false;
     fPdfCanvas = NULL;
@@ -844,10 +823,6 @@ SampleWindow::SampleWindow(void* hwnd, int argc, char** argv, DeviceManager* dev
     itemID = fAppMenu->appendTriState("Tiling", "Tiling", sinkID, fTilingState);
     fAppMenu->assignKeyEquivalentToItem(itemID, 't');
 
-#ifdef DEBUGGER
-    itemID = fAppMenu->appendSwitch("Debugger", "Debugger", sinkID, fDebugger);
-    fAppMenu->assignKeyEquivalentToItem(itemID, 'q');
-#endif
     itemID = fAppMenu->appendSwitch("Slide Show", "Slide Show" , sinkID, false);
     fAppMenu->assignKeyEquivalentToItem(itemID, 'a');
     itemID = fAppMenu->appendSwitch("Clip", "Clip" , sinkID, fUseClip);
@@ -1048,6 +1023,10 @@ void SampleWindow::draw(SkCanvas* canvas) {
         this->updateMatrix();
     }
 
+    if (fMeasureFPS) {
+        fMeasureFPS_Time = 0;
+    }
+
     if (fNClip) {
         this->INHERITED::draw(canvas);
         SkBitmap orig = capture_bitmap(canvas);
@@ -1106,6 +1085,11 @@ void SampleWindow::draw(SkCanvas* canvas) {
     }
     if (fMagnify && !fSaveToPdf) {
         magnify(canvas);
+    }
+
+    if (fMeasureFPS && fMeasureFPS_Time) {
+        this->updateTitle();
+        this->postInvalDelay();
     }
 
     // do this last
@@ -1274,30 +1258,15 @@ SkCanvas* SampleWindow::beforeChildren(SkCanvas* canvas) {
         fPdfCanvas = new SkCanvas(pdfDevice);
         pdfDevice->unref();
         canvas = fPdfCanvas;
+    } else if (kPicture_DeviceType == fDeviceType) {
+        fPicture = new SkPicture;
+        canvas = fPicture->beginRecording(9999, 9999);
     } else {
-        switch (fDeviceType) {
-            case kRaster_DeviceType:
-                // fallthrough
 #if SK_SUPPORT_GPU
-            case kGPU_DeviceType:
-                // fallthrough
-#if SK_ANGLE
-            case kANGLE_DeviceType:
-#endif // SK_ANGLE
-#endif // SK_SUPPORT_GPU
-                canvas = this->INHERITED::beforeChildren(canvas);
-                break;
-            case kPicture_DeviceType:
-                fPicture = new SkPicture;
-                canvas = fPicture->beginRecording(9999, 9999);
-                break;
-#if SK_SUPPORT_GPU
-            case kNullGPU_DeviceType:
-                break;
+        if (kNullGPU_DeviceType != fDeviceType)
 #endif
-            default:
-                SkASSERT(false);
-                break;
+        {
+            canvas = this->INHERITED::beforeChildren(canvas);
         }
     }
 
@@ -1393,10 +1362,8 @@ void SampleWindow::afterChildren(SkCanvas* orig) {
     }
 
     // Do this after presentGL and other finishing, rather than in afterChild
-    if (fMeasureFPS && fMeasureFPS_Time) {
-        fMeasureFPS_Time = SkTime::GetMSecs() - fMeasureFPS_Time;
-        this->updateTitle();
-        this->postInvalDelay();
+    if (fMeasureFPS && fMeasureFPS_StartTime) {
+        fMeasureFPS_Time += SkTime::GetMSecs() - fMeasureFPS_StartTime;
     }
 
     //    if ((fScrollTestX | fScrollTestY) != 0)
@@ -1411,25 +1378,6 @@ void SampleWindow::afterChildren(SkCanvas* orig) {
         bm.scrollRect(&r, dx, dy, &inval);
         paint_rgn(bm, r, inval);
     }
-#ifdef DEBUGGER
-    SkView* curr = curr_view(this);
-    if (fDebugger && !is_debugger(curr) && !is_transition(curr) && !is_overview(curr)) {
-        //Stop Pipe when fDebugger is active
-        if (fPipeState != SkOSMenu::kOffState) {
-            fPipeState = SkOSMenu::kOffState;
-            (void)SampleView::SetUsePipe(curr, fPipeState);
-            fAppMenu->getItemByID(fUsePipeMenuItemID)->setTriState(fPipeState);
-            this->onUpdateMenu(fAppMenu);
-        }
-
-        //Reset any transformations
-        fGesture.stop();
-        fGesture.reset();
-
-        this->loadView(create_debugger(gTempDataStore.begin(),
-                                       gTempDataStore.count()));
-    }
-#endif
 }
 
 void SampleWindow::beforeChild(SkView* child, SkCanvas* canvas) {
@@ -1468,9 +1416,8 @@ void SampleWindow::beforeChild(SkView* child, SkCanvas* canvas) {
     this->installDrawFilter(canvas);
 
     if (fMeasureFPS) {
-        fMeasureFPS_Time = 0;   // 0 means the child is not aware of repeat-draw
         if (SampleView::SetRepeatDraw(child, FPS_REPEAT_COUNT)) {
-            fMeasureFPS_Time = SkTime::GetMSecs();
+            fMeasureFPS_StartTime = SkTime::GetMSecs();
         }
     } else {
         (void)SampleView::SetRepeatDraw(child, 1);
@@ -1677,18 +1624,6 @@ bool SampleWindow::onEvent(const SkEvent& evt) {
         this->saveToPdf();
         return true;
     }
-#ifdef DEBUGGER
-    if (SkOSMenu::FindSwitchState(evt, "Debugger", &fDebugger)) {
-        if (fDebugger) {
-            fPipeState = SkOSMenu::kOnState;
-            (void)SampleView::SetUsePipe(curr_view(this), fPipeState);
-        } else {
-            this->loadView((*fSamples[fCurrIndex])());
-        }
-        this->inval(NULL);
-        return true;
-    }
-#endif
     return this->INHERITED::onEvent(evt);
 }
 
@@ -1730,6 +1665,8 @@ static void cleanup_for_filename(SkString* name) {
     }
 }
 #endif
+
+//extern bool gIgnoreFastBlurRect;
 
 bool SampleWindow::onHandleChar(SkUnichar uni) {
     {
@@ -1773,12 +1710,30 @@ bool SampleWindow::onHandleChar(SkUnichar uni) {
     }
 
     switch (uni) {
+        case 'b':
+            {
+            postEventToSink(SkNEW_ARGS(SkEvent, ("PictFileView::toggleBBox")), curr_view(this));
+            this->updateTitle();
+            this->inval(NULL);
+            break;
+            }
+        case 'B':
+//            gIgnoreFastBlurRect = !gIgnoreFastBlurRect;
+            this->inval(NULL);
+            break;
+
         case 'f':
             // only
             toggleFPS();
             break;
         case 'g':
             fRequestGrabImage = true;
+            this->inval(NULL);
+            break;
+        case 'G':
+            gShowGMBounds = !gShowGMBounds;
+            postEventToSink(GMSampleView::NewShowSizeEvt(gShowGMBounds),
+                            curr_view(this));
             this->inval(NULL);
             break;
         case 'i':
@@ -1926,7 +1881,7 @@ bool SampleWindow::onHandleKey(SkKey key) {
 static const char gGestureClickType[] = "GestureClickType";
 
 bool SampleWindow::onDispatchClick(int x, int y, Click::State state,
-        void* owner) {
+        void* owner, unsigned modi) {
     if (Click::kMoved_State == state) {
         updatePointer(x, y);
     }
@@ -1941,9 +1896,19 @@ bool SampleWindow::onDispatchClick(int x, int y, Click::State state,
         //it's only necessary to update the drawing if there's a click
         this->inval(NULL);
         return false; //prevent dragging while magnify is enabled
-    }
-    else {
-        return this->INHERITED::onDispatchClick(x, y, state, owner);
+    } else {
+        // capture control+option, and trigger debugger
+        if ((modi & kControl_SkModifierKey) && (modi & kOption_SkModifierKey)) {
+            if (Click::kDown_State == state) {
+                SkEvent evt("debug-hit-test");
+                evt.setS32("debug-hit-test-x", x);
+                evt.setS32("debug-hit-test-y", y);
+                curr_view(this)->doEvent(evt);
+            }
+            return true;
+        } else {
+            return this->INHERITED::onDispatchClick(x, y, state, owner, modi);
+        }
     }
 }
 
@@ -1958,7 +1923,8 @@ public:
     }
 };
 
-SkView::Click* SampleWindow::onFindClickHandler(SkScalar x, SkScalar y) {
+SkView::Click* SampleWindow::onFindClickHandler(SkScalar x, SkScalar y,
+                                                unsigned modi) {
     return new GestureClick(this);
 }
 
@@ -2001,12 +1967,7 @@ void SampleWindow::loadView(SkView* view) {
 
     //repopulate the slide menu when a view is loaded
     fSlideMenu->reset();
-#ifdef DEBUGGER
-    if (!is_debugger(view) && !is_overview(view) && !is_transition(view) && fDebugger) {
-        //Force Pipe to be on if using debugger
-        fPipeState = SkOSMenu::kOnState;
-    }
-#endif
+
     (void)SampleView::SetUsePipe(view, fPipeState);
     if (SampleView::IsSampleView(view))
         ((SampleView*)view)->requestMenu(fSlideMenu);
@@ -2041,21 +2002,6 @@ static const char* gDeviceTypePrefix[] = {
 };
 SK_COMPILE_ASSERT(SK_ARRAY_COUNT(gDeviceTypePrefix) == SampleWindow::kDeviceTypeCnt,
                   array_size_mismatch);
-
-static const bool gDeviceTypeIsGPU[] = {
-    false,
-    false,
-#if SK_SUPPORT_GPU
-    true,
-#if SK_ANGLE
-    true,
-#endif // SK_ANGLE
-    true
-#endif // SK_SUPPORT_GPU
-};
-SK_COMPILE_ASSERT(SK_ARRAY_COUNT(gDeviceTypeIsGPU) == SampleWindow::kDeviceTypeCnt,
-                  array_size_mismatch);
-
 
 static const char* trystate_str(SkOSMenu::TriState state,
                                 const char trueStr[], const char falseStr[]) {
@@ -2125,8 +2071,9 @@ void SampleWindow::updateTitle() {
     }
 
 #if SK_SUPPORT_GPU
-    if (gDeviceTypeIsGPU[fDeviceType] &&
+    if (IsGpuDeviceType(fDeviceType) &&
         NULL != fDevManager &&
+        fDevManager->getGrRenderTarget() &&
         fDevManager->getGrRenderTarget()->numSamples() > 0) {
         title.appendf(" [MSAA: %d]",
                        fDevManager->getGrRenderTarget()->numSamples());
@@ -2205,11 +2152,21 @@ bool SampleView::onEvent(const SkEvent& evt) {
         fRepeatCount = evt.getFast32();
         return true;
     }
+
     int32_t pipeHolder;
     if (evt.findS32(set_use_pipe_tag, &pipeHolder)) {
         fPipeState = static_cast<SkOSMenu::TriState>(pipeHolder);
         return true;
     }
+
+    if (evt.isType("debug-hit-test")) {
+        fDebugHitTest = true;
+        evt.findS32("debug-hit-test-x", &fDebugHitTestLoc.fX);
+        evt.findS32("debug-hit-test-y", &fDebugHitTestLoc.fY);
+        this->inval(NULL);
+        return true;
+    }
+
     return this->INHERITED::onEvent(evt);
 }
 
@@ -2266,10 +2223,6 @@ SimplePC::~SimplePC() {
             gServer.writePacket(fBlock, fTotalWritten);
         }
 #endif
-#ifdef  DEBUGGER
-        gTempDataStore.reset();
-        gTempDataStore.append(fTotalWritten, (const char*)fBlock);
-#endif
     }
     sk_free(fBlock);
 }
@@ -2318,13 +2271,46 @@ void SampleView::draw(SkCanvas* canvas) {
         writer.endRecording();
     }
 }
+
+#include "SkBounder.h"
+
+class DebugHitTestBounder : public SkBounder {
+public:
+    DebugHitTestBounder(int x, int y) {
+        fLoc.set(x, y);
+    }
+
+    virtual bool onIRect(const SkIRect& bounds) SK_OVERRIDE {
+        if (bounds.contains(fLoc.x(), fLoc.y())) {
+            //
+            // Set a break-point here to see what was being drawn under
+            // the click point (just needed a line of code to stop the debugger)
+            //
+            bounds.centerX();
+        }
+        return true;
+    }
+
+private:
+    SkIPoint fLoc;
+    typedef SkBounder INHERITED;
+};
+
 void SampleView::onDraw(SkCanvas* canvas) {
     this->onDrawBackground(canvas);
+
+    DebugHitTestBounder bounder(fDebugHitTestLoc.x(), fDebugHitTestLoc.y());
+    if (fDebugHitTest) {
+        canvas->setBounder(&bounder);
+    }
 
     for (int i = 0; i < fRepeatCount; i++) {
         SkAutoCanvasRestore acr(canvas, true);
         this->onDrawContent(canvas);
     }
+
+    fDebugHitTest = false;
+    canvas->setBounder(NULL);
 }
 
 void SampleView::onDrawBackground(SkCanvas* canvas) {

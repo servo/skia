@@ -61,8 +61,8 @@ public:
                 SkASSERT(false);
                 break;
         }
-        
-        bool result = win->attach(fBackend, msaaSampleCount);
+        SkOSWindow::AttachmentInfo info;
+        bool result = win->attach(fBackend, msaaSampleCount, &info);
         if (!result) {
             SkDebugf("Failed to initialize GL");
             return;
@@ -89,8 +89,8 @@ public:
         
         SkASSERT(NULL == fCurContext);
         if (SkOSWindow::kNone_BackEndType != fBackend) {
-            fCurContext = GrContext::Create(kOpenGL_Shaders_GrEngine,
-                                            (GrPlatform3DContext) fCurIntf);
+            fCurContext = GrContext::Create(kOpenGL_GrBackend,
+                                            (GrBackendContext) fCurIntf);
         }
         
         if ((NULL == fCurContext || NULL == fCurIntf) &&
@@ -165,19 +165,21 @@ public:
     virtual void windowSizeChanged(SampleWindow* win) SK_OVERRIDE {
 #if SK_SUPPORT_GPU
         if (NULL != fCurContext) {
-            win->attach(fBackend, fMSAASampleCount);
+            SkOSWindow::AttachmentInfo info;
+
+            win->attach(fBackend, fMSAASampleCount, &info);
             
             glBindFramebuffer(GL_FRAMEBUFFER, fLayerFBO);
-            GrPlatformRenderTargetDesc desc;
+            GrBackendRenderTargetDesc desc;
             desc.fWidth = SkScalarRound(win->width());
             desc.fHeight = SkScalarRound(win->height());
-            desc.fConfig = kSkia8888_PM_GrPixelConfig;
+            desc.fConfig = kSkia8888_GrPixelConfig;
             desc.fRenderTargetHandle = fLayerFBO;
-            glGetIntegerv(GL_SAMPLES, &desc.fSampleCnt);
-            glGetIntegerv(GL_STENCIL_BITS, &desc.fStencilBits);
-            
+            desc.fSampleCnt = info.fSampleCount;
+            desc.fStencilBits = info.fStencilBits;
+
             SkSafeUnref(fCurRenderTarget);
-            fCurRenderTarget = fCurContext->createPlatformRenderTarget(desc);
+            fCurRenderTarget = fCurContext->wrapBackendRenderTarget(desc);
         }
 #endif
     }
@@ -478,6 +480,16 @@ static FPSState gFPS;
             [self setNeedsDisplay];
         }
     }
+}
+
+- (void)getAttachmentInfo:(SkOSWindow::AttachmentInfo*)info {
+    glBindRenderbuffer(GL_RENDERBUFFER, fGL.fRenderbuffer);
+    glGetRenderbufferParameteriv(GL_RENDERBUFFER,
+                                 GL_RENDERBUFFER_STENCIL_SIZE,
+                                 &info->fStencilBits);
+    glGetRenderbufferParameteriv(GL_RENDERBUFFER,
+                                 GL_RENDERBUFFER_SAMPLES_APPLE,
+                                 &info->fSampleCount);
 }
 
 @end

@@ -15,7 +15,7 @@ namespace skiagm {
 static void makebm(SkBitmap* bm, SkBitmap::Config config, int w, int h) {
     bm->setConfig(config, w, h);
     bm->allocPixels();
-    bm->eraseColor(0);
+    bm->eraseColor(SK_ColorTRANSPARENT);
 
     SkCanvas    canvas(*bm);
     SkScalar    s = SkIntToScalar(SkMin32(w, h));
@@ -78,7 +78,7 @@ static SkShader* MakeRadial(const SkPoint pts[2], const GradData& data,
 }
 
 static SkShader* MakeSweep(const SkPoint pts[2], const GradData& data,
-                           SkShader::TileMode tm, SkUnitMapper* mapper) {
+                           SkShader::TileMode, SkUnitMapper* mapper) {
     SkPoint center;
     center.set(SkScalarAve(pts[0].fX, pts[1].fX),
                SkScalarAve(pts[0].fY, pts[1].fY));

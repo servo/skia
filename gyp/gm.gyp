@@ -9,7 +9,9 @@
       'type': 'executable',
       'include_dirs' : [
         '../src/core',
+        '../src/effects',
         '../src/pipe/utils/',
+        '../src/utils/',
       ],
       'includes': [
         'gmslides.gypi',
@@ -24,8 +26,11 @@
       'dependencies': [
         'skia_base_libs.gyp:skia_base_libs',
         'effects.gyp:effects',
+        'flags.gyp:flags',
         'images.gyp:images',
+        'jsoncpp.gyp:jsoncpp',
         'pdf.gyp:pdf',
+        'utils.gyp:utils',
       ],
       'conditions': [
         ['skia_os == "mac"', {

@@ -24,9 +24,9 @@ static bool drawPaths(SkCanvas* canvas, const SkPath& path, bool useOld)
     SkPaint paint;
     paint.setAntiAlias(true);
     paint.setStyle(SkPaint::kStroke_Style);
-  //  paint.setStrokeWidth(6);
-  //  paint.setColor(0x1F003f7f);
- //   canvas->drawPath(path, paint);
+//   paint.setStrokeWidth(6);
+ //  paint.setColor(0x1F003f7f);
+ //  canvas->drawPath(path, paint);
     paint.setColor(0xFF305F00);
     paint.setStrokeWidth(1);
     canvas->drawPath(out, paint);
@@ -150,6 +150,7 @@ static bool drawStars(SkCanvas* canvas, int step, bool useOld)
     return drawPaths(canvas, path, useOld);
 }
 
+#if 0
 static void tryRoncoOnce(const SkPath& path, const SkRect& target, bool show) {
     // capture everything in a desired rectangle
     SkPath tiny;
@@ -226,7 +227,9 @@ static void tryRoncoOnce(const SkPath& path, const SkRect& target, bool show) {
     }
     testSimplifyx(tiny);
 }
+#endif
 
+#if 0
 static void tryRonco(const SkPath& path) {
     int divMax = 64;
     int divMin = 1;
@@ -261,6 +264,7 @@ static void tryRonco(const SkPath& path) {
         }
     }
 }
+#endif
 
 static bool drawLetters(SkCanvas* canvas, int step, bool useOld)
 {
@@ -287,7 +291,7 @@ static bool drawLetters(SkCanvas* canvas, int step, bool useOld)
         textPos[x].fY = height / 2;
     }
     paint.setTextSize(40 + step / 100.0f);
-#if 1
+#if 0
     bool oneShot = false;
     for (int mask = 0; mask < 1 << testStrLen; ++mask) {
         char maskStr[testStrLen];
@@ -329,7 +333,7 @@ static bool (*drawDemos[])(SkCanvas* , int , bool ) = {
 
 static size_t drawDemosCount = sizeof(drawDemos) / sizeof(drawDemos[0]);
 
-static bool (*firstTest)(SkCanvas* , int , bool) = drawLetters;
+static bool (*firstTest)(SkCanvas* , int , bool) = drawStars;
 
 
 bool DrawEdgeDemo(SkCanvas* canvas, int step, bool useOld) {

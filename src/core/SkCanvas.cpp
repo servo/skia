@@ -17,6 +17,7 @@
 #include "SkMetaData.h"
 #include "SkPicture.h"
 #include "SkRasterClip.h"
+#include "SkRRect.h"
 #include "SkScalarCompare.h"
 #include "SkSurface_Base.h"
 #include "SkTemplates.h"
@@ -52,6 +53,69 @@ SK_DEFINE_INST_COUNT(SkDrawFilter)
     #define dec_rec()
     #define inc_canvas()
     #define dec_canvas()
+#endif
+
+#ifdef SK_DEBUG
+#include "SkPixelRef.h"
+
+/*
+ *  Some pixelref subclasses can support being "locked" from another thread
+ *  during the lock-scope of skia calling them. In these instances, this balance
+ *  check will fail, but may not be indicative of a problem, so we allow a build
+ *  flag to disable this check.
+ *
+ *  Potentially another fix would be to have a (debug-only) virtual or flag on
+ *  pixelref, which could tell us at runtime if this check is valid. That would
+ *  eliminate the need for this heavy-handed build check.
+ */
+#ifdef SK_DISABLE_PIXELREF_LOCKCOUNT_BALANCE_CHECK
+class AutoCheckLockCountBalance {
+public:
+    AutoCheckLockCountBalance(const SkBitmap&) { /* do nothing */ }
+};
+#else
+class AutoCheckLockCountBalance {
+public:
+    AutoCheckLockCountBalance(const SkBitmap& bm) : fPixelRef(bm.pixelRef()) {
+        fLockCount = fPixelRef ? fPixelRef->getLockCount() : 0;
+    }
+    ~AutoCheckLockCountBalance() {
+        const int count = fPixelRef ? fPixelRef->getLockCount() : 0;
+        SkASSERT(count == fLockCount);
+    }
+
+private:
+    const SkPixelRef* fPixelRef;
+    int               fLockCount;
+};
+#endif
+
+class AutoCheckNoSetContext {
+public:
+    AutoCheckNoSetContext(const SkPaint& paint) : fPaint(paint) {
+        this->assertNoSetContext(fPaint);
+    }
+    ~AutoCheckNoSetContext() {
+        this->assertNoSetContext(fPaint);
+    }
+
+private:
+    const SkPaint& fPaint;
+
+    void assertNoSetContext(const SkPaint& paint) {
+        SkShader* s = paint.getShader();
+        if (s) {
+            SkASSERT(!s->setContextHasBeenCalled());
+        }
+    }
+};
+
+#define CHECK_LOCKCOUNT_BALANCE(bitmap)  AutoCheckLockCountBalance clcb(bitmap)
+#define CHECK_SHADER_NOSETCONTEXT(paint) AutoCheckNoSetContext     cshsc(paint)
+
+#else
+    #define CHECK_LOCKCOUNT_BALANCE(bitmap)
+    #define CHECK_SHADER_NOSETCONTEXT(paint)
 #endif
 
 typedef SkTLazy<SkPaint> SkLazyPaint;
@@ -354,7 +418,10 @@ bool AutoDrawLooper::doNext(SkDrawFilter::Type drawType) {
         return false;
     }
     if (fFilter) {
-        fFilter->filter(paint, drawType);
+        if (!fFilter->filter(paint, drawType)) {
+            fDone = true;
+            return false;
+        }
         if (NULL == fLooper) {
             // no looper means we only draw once
             fDone = true;
@@ -440,6 +507,7 @@ SkDevice* SkCanvas::init(SkDevice* device) {
     fBounder = NULL;
     fLocalBoundsCompareType.setEmpty();
     fLocalBoundsCompareTypeDirty = true;
+    fAllowSoftClip = true;
     fDeviceCMDirty = false;
     fSaveLayerCount = 0;
     fMetaData = NULL;
@@ -958,6 +1026,7 @@ void SkCanvas::internalDrawDevice(SkDevice* srcDev, int x, int y,
 void SkCanvas::drawSprite(const SkBitmap& bitmap, int x, int y,
                           const SkPaint* paint) {
     SkDEBUGCODE(bitmap.validate();)
+    CHECK_LOCKCOUNT_BALANCE(bitmap);
 
     if (reject_bitmap(bitmap)) {
         return;
@@ -1061,6 +1130,7 @@ bool SkCanvas::clipRect(const SkRect& rect, SkRegion::Op op, bool doAA) {
 
     fDeviceCMDirty = true;
     fLocalBoundsCompareTypeDirty = true;
+    doAA &= fAllowSoftClip;
 
     if (fMCRec->fMatrix->rectStaysRect()) {
         // for these simpler matrices, we can stay a rect ever after applying
@@ -1120,6 +1190,18 @@ static bool clipPathHelper(const SkCanvas* canvas, SkRasterClip* currClip,
     }
 }
 
+bool SkCanvas::clipRRect(const SkRRect& rrect, SkRegion::Op op, bool doAA) {
+    if (rrect.isRect()) {
+        // call the non-virtual version
+        return this->SkCanvas::clipRect(rrect.getBounds(), op, doAA);
+    } else {
+        SkPath path;
+        path.addRRect(rrect);
+        // call the non-virtual version
+        return this->SkCanvas::clipPath(path, op, doAA);
+    }
+}
+
 bool SkCanvas::clipPath(const SkPath& path, SkRegion::Op op, bool doAA) {
 #ifdef SK_ENABLE_CLIP_QUICKREJECT
     if (SkRegion::kIntersect_Op == op && !path.isInverseFillType()) {
@@ -1141,6 +1223,7 @@ bool SkCanvas::clipPath(const SkPath& path, SkRegion::Op op, bool doAA) {
 
     fDeviceCMDirty = true;
     fLocalBoundsCompareTypeDirty = true;
+    doAA &= fAllowSoftClip;
 
     SkPath devPath;
     path.transform(*fMCRec->fMatrix, &devPath);
@@ -1188,15 +1271,23 @@ void SkCanvas::validateClip() const {
     SkRasterClip tmpClip(ir);
 
     SkClipStack::B2TIter                iter(fClipStack);
-    const SkClipStack::B2TIter::Clip*   clip;
-    while ((clip = iter.next()) != NULL) {
-        if (clip->fPath) {
-            clipPathHelper(this, &tmpClip, *clip->fPath, clip->fOp, clip->fDoAA);
-        } else if (clip->fRect) {
-            clip->fRect->round(&ir);
-            tmpClip.op(ir, clip->fOp);
-        } else {
-            tmpClip.setEmpty();
+    const SkClipStack::Element* element;
+    while ((element = iter.next()) != NULL) {
+        switch (element->getType()) {
+            case SkClipStack::Element::kPath_Type:
+                clipPathHelper(this,
+                               &tmpClip,
+                               element->getPath(),
+                               element->getOp(),
+                               element->isAA());
+                break;
+            case SkClipStack::Element::kRect_Type:
+                element->getRect().round(&ir);
+                tmpClip.op(ir, element->getOp());
+                break;
+            case SkClipStack::Element::kEmpty_Type:
+                tmpClip.setEmpty();
+                break;
         }
     }
 
@@ -1210,16 +1301,20 @@ void SkCanvas::validateClip() const {
 
 void SkCanvas::replayClips(ClipVisitor* visitor) const {
     SkClipStack::B2TIter                iter(fClipStack);
-    const SkClipStack::B2TIter::Clip*   clip;
+    const SkClipStack::Element*         element;
 
-    SkRect empty = { 0, 0, 0, 0 };
-    while ((clip = iter.next()) != NULL) {
-        if (clip->fPath) {
-            visitor->clipPath(*clip->fPath, clip->fOp, clip->fDoAA);
-        } else if (clip->fRect) {
-            visitor->clipRect(*clip->fRect, clip->fOp, clip->fDoAA);
-        } else {
-            visitor->clipRect(empty, SkRegion::kIntersect_Op, false);
+    static const SkRect kEmpty = { 0, 0, 0, 0 };
+    while ((element = iter.next()) != NULL) {
+        switch (element->getType()) {
+            case SkClipStack::Element::kPath_Type:
+                visitor->clipPath(element->getPath(), element->getOp(), element->isAA());
+                break;
+            case SkClipStack::Element::kRect_Type:
+                visitor->clipRect(element->getRect(), element->getOp(), element->isAA());
+                break;
+            case SkClipStack::Element::kEmpty_Type:
+                visitor->clipRect(kEmpty, SkRegion::kIntersect_Op, false);
+                break;
         }
     }
 }
@@ -1380,7 +1475,7 @@ SkDevice* SkCanvas::createCompatibleDevice(SkBitmap::Config config,
 
 void SkCanvas::clear(SkColor color) {
     SkDrawIter  iter(this);
-
+    this->predrawNotify();
     while (iter.next()) {
         iter.fDevice->clear(color);
     }
@@ -1391,6 +1486,8 @@ void SkCanvas::drawPaint(const SkPaint& paint) {
 }
 
 void SkCanvas::internalDrawPaint(const SkPaint& paint) {
+    CHECK_SHADER_NOSETCONTEXT(paint);
+
     LOOPER_BEGIN(paint, SkDrawFilter::kPaint_Type)
 
     while (iter.next()) {
@@ -1405,6 +1502,8 @@ void SkCanvas::drawPoints(PointMode mode, size_t count, const SkPoint pts[],
     if ((long)count <= 0) {
         return;
     }
+
+    CHECK_SHADER_NOSETCONTEXT(paint);
 
     if (paint.canComputeFastBounds()) {
         SkRect r;
@@ -1432,6 +1531,8 @@ void SkCanvas::drawPoints(PointMode mode, size_t count, const SkPoint pts[],
 }
 
 void SkCanvas::drawRect(const SkRect& r, const SkPaint& paint) {
+    CHECK_SHADER_NOSETCONTEXT(paint);
+
     if (paint.canComputeFastBounds()) {
         SkRect storage;
         if (this->quickReject(paint.computeFastBounds(r, &storage))) {
@@ -1448,7 +1549,50 @@ void SkCanvas::drawRect(const SkRect& r, const SkPaint& paint) {
     LOOPER_END
 }
 
+void SkCanvas::drawOval(const SkRect& oval, const SkPaint& paint) {
+    CHECK_SHADER_NOSETCONTEXT(paint);
+
+    if (paint.canComputeFastBounds()) {
+        SkRect storage;
+        if (this->quickReject(paint.computeFastBounds(oval, &storage))) {
+            return;
+        }
+    }
+
+    LOOPER_BEGIN(paint, SkDrawFilter::kOval_Type)
+
+    while (iter.next()) {
+        iter.fDevice->drawOval(iter, oval, looper.paint());
+    }
+
+    LOOPER_END
+}
+
+void SkCanvas::drawRRect(const SkRRect& rrect, const SkPaint& paint) {
+    CHECK_SHADER_NOSETCONTEXT(paint);
+
+    if (paint.canComputeFastBounds()) {
+        SkRect storage;
+        if (this->quickReject(paint.computeFastBounds(rrect.getBounds(), &storage))) {
+            return;
+        }
+    }
+
+    if (rrect.isRect()) {
+        // call the non-virtual version
+        this->SkCanvas::drawRect(rrect.getBounds(), paint);
+    } else {
+        SkPath  path;
+        path.addRRect(rrect);
+        // call the non-virtual version
+        this->SkCanvas::drawPath(path, paint);
+    }
+}
+
+
 void SkCanvas::drawPath(const SkPath& path, const SkPaint& paint) {
+    CHECK_SHADER_NOSETCONTEXT(paint);
+
     if (!path.isFinite()) {
         return;
     }
@@ -1506,6 +1650,8 @@ void SkCanvas::internalDrawBitmapRect(const SkBitmap& bitmap, const SkRect* src,
         return;
     }
 
+    CHECK_LOCKCOUNT_BALANCE(bitmap);
+
     if (NULL == paint || paint->canComputeFastBounds()) {
         SkRect storage;
         const SkRect* bounds = &dst;
@@ -1546,6 +1692,7 @@ void SkCanvas::drawBitmapMatrix(const SkBitmap& bitmap, const SkMatrix& matrix,
 void SkCanvas::commonDrawBitmap(const SkBitmap& bitmap, const SkIRect* srcRect,
                                 const SkMatrix& matrix, const SkPaint& paint) {
     SkDEBUGCODE(bitmap.validate();)
+    CHECK_LOCKCOUNT_BALANCE(bitmap);
 
     LOOPER_BEGIN(paint, SkDrawFilter::kBitmap_Type)
 
@@ -1581,10 +1728,10 @@ void SkCanvas::internalDrawBitmapNine(const SkBitmap& bitmap,
     c.fBottom = SkPin32(center.fBottom, c.fTop, h);
 
     const SkScalar srcX[4] = {
-        0, SkIntToScalar(c.fLeft), SkIntToScalar(c.fRight), w
+        0, SkIntToScalar(c.fLeft), SkIntToScalar(c.fRight), SkIntToScalar(w)
     };
     const SkScalar srcY[4] = {
-        0, SkIntToScalar(c.fTop), SkIntToScalar(c.fBottom), h
+        0, SkIntToScalar(c.fTop), SkIntToScalar(c.fBottom), SkIntToScalar(h)
     };
     SkScalar dstX[4] = {
         dst.fLeft, dst.fLeft + SkIntToScalar(c.fLeft),
@@ -1725,6 +1872,8 @@ void SkCanvas::DrawTextDecorations(const SkDraw& draw, const SkPaint& paint,
 
 void SkCanvas::drawText(const void* text, size_t byteLength,
                         SkScalar x, SkScalar y, const SkPaint& paint) {
+    CHECK_SHADER_NOSETCONTEXT(paint);
+
     LOOPER_BEGIN(paint, SkDrawFilter::kText_Type)
 
     while (iter.next()) {
@@ -1739,6 +1888,8 @@ void SkCanvas::drawText(const void* text, size_t byteLength,
 
 void SkCanvas::drawPosText(const void* text, size_t byteLength,
                            const SkPoint pos[], const SkPaint& paint) {
+    CHECK_SHADER_NOSETCONTEXT(paint);
+
     LOOPER_BEGIN(paint, SkDrawFilter::kText_Type)
 
     while (iter.next()) {
@@ -1753,6 +1904,8 @@ void SkCanvas::drawPosText(const void* text, size_t byteLength,
 void SkCanvas::drawPosTextH(const void* text, size_t byteLength,
                             const SkScalar xpos[], SkScalar constY,
                             const SkPaint& paint) {
+    CHECK_SHADER_NOSETCONTEXT(paint);
+
     LOOPER_BEGIN(paint, SkDrawFilter::kText_Type)
 
     while (iter.next()) {
@@ -1767,6 +1920,8 @@ void SkCanvas::drawPosTextH(const void* text, size_t byteLength,
 void SkCanvas::drawTextOnPath(const void* text, size_t byteLength,
                               const SkPath& path, const SkMatrix* matrix,
                               const SkPaint& paint) {
+    CHECK_SHADER_NOSETCONTEXT(paint);
+
     LOOPER_BEGIN(paint, SkDrawFilter::kText_Type)
 
     while (iter.next()) {
@@ -1781,6 +1936,8 @@ void SkCanvas::drawTextOnPath(const void* text, size_t byteLength,
 void SkCanvas::drawPosTextOnPath(const void* text, size_t byteLength,
                                  const SkPoint pos[], const SkPaint& paint,
                                  const SkPath& path, const SkMatrix* matrix) {
+    CHECK_SHADER_NOSETCONTEXT(paint);
+
     LOOPER_BEGIN(paint, SkDrawFilter::kText_Type)
 
     while (iter.next()) {
@@ -1797,6 +1954,8 @@ void SkCanvas::drawVertices(VertexMode vmode, int vertexCount,
                             const SkColor colors[], SkXfermode* xmode,
                             const uint16_t indices[], int indexCount,
                             const SkPaint& paint) {
+    CHECK_SHADER_NOSETCONTEXT(paint);
+
     LOOPER_BEGIN(paint, SkDrawFilter::kPath_Type)
 
     while (iter.next()) {
@@ -1880,17 +2039,7 @@ void SkCanvas::drawCircle(SkScalar cx, SkScalar cy, SkScalar radius,
 
     SkRect  r;
     r.set(cx - radius, cy - radius, cx + radius, cy + radius);
-
-    if (paint.canComputeFastBounds()) {
-        SkRect storage;
-        if (this->quickReject(paint.computeFastBounds(r, &storage))) {
-            return;
-        }
-    }
-
-    SkPath  path;
-    path.addOval(r);
-    this->drawPath(path, paint);
+    this->drawOval(r, paint);
 }
 
 void SkCanvas::drawRoundRect(const SkRect& r, SkScalar rx, SkScalar ry,
@@ -1902,26 +2051,12 @@ void SkCanvas::drawRoundRect(const SkRect& r, SkScalar rx, SkScalar ry,
                 return;
             }
         }
-
-        SkPath  path;
-        path.addRoundRect(r, rx, ry, SkPath::kCW_Direction);
-        this->drawPath(path, paint);
+        SkRRect rrect;
+        rrect.setRectXY(r, rx, ry);
+        this->drawRRect(rrect, paint);
     } else {
         this->drawRect(r, paint);
     }
-}
-
-void SkCanvas::drawOval(const SkRect& oval, const SkPaint& paint) {
-    if (paint.canComputeFastBounds()) {
-        SkRect storage;
-        if (this->quickReject(paint.computeFastBounds(oval, &storage))) {
-            return;
-        }
-    }
-
-    SkPath  path;
-    path.addOval(oval);
-    this->drawPath(path, paint);
 }
 
 void SkCanvas::drawArc(const SkRect& oval, SkScalar startAngle,
@@ -2000,5 +2135,3 @@ int SkCanvas::LayerIter::y() const { return fImpl->getY(); }
 ///////////////////////////////////////////////////////////////////////////////
 
 SkCanvas::ClipVisitor::~ClipVisitor() { }
-
-

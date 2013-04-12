@@ -12,15 +12,16 @@
 #include "GrContext.h"
 #include "GrDrawTarget.h"
 #include "GrFontScaler.h"
-#include "GrGpuVertex.h"
 #include "GrIndexBuffer.h"
 #include "GrTextStrike.h"
 #include "GrTextStrike_impl.h"
 #include "SkPath.h"
+#include "SkStrokeRec.h"
 
-enum {
-    kGlyphMaskStage = GrPaint::kTotalStages,
-};
+// glyph rendering shares this stage with edge rendering (kEdgeEffectStage in GrContext) && SW path
+// rendering (kPathMaskStage in GrSWMaskHelper)
+static const int kGlyphMaskStage = GrPaint::kTotalStages;
+static const int kGlyphCoordsAttributeIndex = 1;
 
 void GrTextContext::flushGlyphs() {
     if (NULL == fDrawTarget) {
@@ -29,12 +30,14 @@ void GrTextContext::flushGlyphs() {
     GrDrawState* drawState = fDrawTarget->drawState();
     if (fCurrVertex > 0) {
         // setup our sampler state for our text texture/atlas
-        drawState->stage(kGlyphMaskStage)->reset();
-
         GrAssert(GrIsALIGN4(fCurrVertex));
         GrAssert(fCurrTexture);
         GrTextureParams params(SkShader::kRepeat_TileMode, false);
-        drawState->createTextureEffect(kGlyphMaskStage, fCurrTexture, GrMatrix::I(), params);
+
+        // This effect could be stored with one of the cache objects (atlas?)
+        drawState->setEffect(kGlyphMaskStage,
+                             GrSimpleTextureEffect::CreateWithCustomCoords(fCurrTexture, params),
+                             kGlyphCoordsAttributeIndex)->unref();
 
         if (!GrPixelConfigIsAlphaOnly(fCurrTexture->config())) {
             if (kOne_GrBlendCoeff != fPaint.getSrcBlendCoeff() ||
@@ -94,10 +97,6 @@ GrTextContext::GrTextContext(GrContext* context, const GrPaint& paint) : fPaint(
 
     fVertices = NULL;
     fMaxVertices = 0;
-
-    fVertexLayout =
-        GrDrawTarget::kTextFormat_VertexLayoutBit |
-        GrDrawTarget::StageTexCoordVertexLayoutBit(kGlyphMaskStage, 0);
 }
 
 GrTextContext::~GrTextContext() {
@@ -109,14 +108,6 @@ GrTextContext::~GrTextContext() {
 
 void GrTextContext::flush() {
     this->flushGlyphs();
-}
-
-static inline void setRectFan(GrGpuTextVertex v[4], int l, int t, int r, int b,
-                              int stride) {
-    v[0 * stride].setI(l, t);
-    v[1 * stride].setI(l, b);
-    v[2 * stride].setI(r, b);
-    v[3 * stride].setI(r, t);
 }
 
 void GrTextContext::drawPackedGlyph(GrGlyph::PackedID packed,
@@ -131,8 +122,8 @@ void GrTextContext::drawPackedGlyph(GrGlyph::PackedID packed,
         return;
     }
 
-    vx += GrIntToFixed(glyph->fBounds.fLeft);
-    vy += GrIntToFixed(glyph->fBounds.fTop);
+    vx += SkIntToFixed(glyph->fBounds.fLeft);
+    vy += SkIntToFixed(glyph->fBounds.fTop);
 
     // keep them as ints until we've done the clip-test
     GrFixed width = glyph->fBounds.width();
@@ -143,7 +134,7 @@ void GrTextContext::drawPackedGlyph(GrGlyph::PackedID packed,
         int x = vx >> 16;
         int y = vy >> 16;
         if (fClipRect.quickReject(x, y, x + width, y + height)) {
-//            Gr_clz(3);    // so we can set a break-point in the debugger
+//            SkCLZ(3);    // so we can set a break-point in the debugger
             return;
         }
     }
@@ -174,21 +165,22 @@ void GrTextContext::drawPackedGlyph(GrGlyph::PackedID packed,
         }
 
         GrContext::AutoMatrix am;
-        GrMatrix translate;
-        translate.setTranslate(GrFixedToScalar(vx - GrIntToFixed(glyph->fBounds.fLeft)),
-                               GrFixedToScalar(vy - GrIntToFixed(glyph->fBounds.fTop)));
+        SkMatrix translate;
+        translate.setTranslate(SkFixedToScalar(vx - SkIntToFixed(glyph->fBounds.fLeft)),
+                               SkFixedToScalar(vy - SkIntToFixed(glyph->fBounds.fTop)));
         GrPaint tmpPaint(fPaint);
         am.setPreConcat(fContext, translate, &tmpPaint);
-        fContext->drawPath(tmpPaint, *glyph->fPath, kWinding_GrPathFill);
+        SkStrokeRec stroke(SkStrokeRec::kFill_InitStyle);
+        fContext->drawPath(tmpPaint, *glyph->fPath, stroke);
         return;
     }
 
 HAS_ATLAS:
     GrAssert(glyph->fAtlas);
 
-    // now promote them to fixed
-    width = GrIntToFixed(width);
-    height = GrIntToFixed(height);
+    // now promote them to fixed (TODO: Rethink using fixed pt).
+    width = SkIntToFixed(width);
+    height = SkIntToFixed(height);
 
     GrTexture* texture = glyph->fAtlas->texture();
     GrAssert(texture);
@@ -200,23 +192,31 @@ HAS_ATLAS:
     }
 
     if (NULL == fVertices) {
-        // If we need to reserve vertices allow the draw target to suggest
+        // position + texture coord
+        static const GrVertexAttrib kVertexAttribs[] = {
+            {kVec2f_GrVertexAttribType, 0,               kPosition_GrVertexAttribBinding},
+            {kVec2f_GrVertexAttribType, sizeof(GrPoint), kEffect_GrVertexAttribBinding}
+        };
+
+       // If we need to reserve vertices allow the draw target to suggest
         // a number of verts to reserve and whether to perform a flush.
         fMaxVertices = kMinRequestedVerts;
-        bool flush = (NULL != fDrawTarget) &&
-                     fDrawTarget->geometryHints(fVertexLayout,
-                                                &fMaxVertices,
-                                                NULL);
+        bool flush = false;
+        fDrawTarget = fContext->getTextTarget(fPaint);
+        if (NULL != fDrawTarget) {
+            fDrawTarget->drawState()->setVertexAttribs(kVertexAttribs, SK_ARRAY_COUNT(kVertexAttribs));
+            flush = fDrawTarget->geometryHints(&fMaxVertices, NULL);
+        }
         if (flush) {
             this->flushGlyphs();
             fContext->flush();
+            // flushGlyphs() will reset fDrawTarget to NULL.
+            fDrawTarget = fContext->getTextTarget(fPaint);
+            fDrawTarget->drawState()->setVertexAttribs(kVertexAttribs, SK_ARRAY_COUNT(kVertexAttribs));
         }
-        fDrawTarget = fContext->getTextTarget(fPaint);
         fMaxVertices = kDefaultRequestedVerts;
         // ignore return, no point in flushing again.
-        fDrawTarget->geometryHints(fVertexLayout,
-                                   &fMaxVertices,
-                                   NULL);
+        fDrawTarget->geometryHints(&fMaxVertices, NULL);
 
         int maxQuadVertices = 4 * fContext->getQuadIndexBuffer()->maxQuads();
         if (fMaxVertices < kMinRequestedVerts) {
@@ -226,39 +226,26 @@ HAS_ATLAS:
             fMaxVertices = maxQuadVertices;
         }
         bool success = fDrawTarget->reserveVertexAndIndexSpace(
-                                                   fVertexLayout,
                                                    fMaxVertices,
                                                    0,
                                                    GrTCast<void**>(&fVertices),
                                                    NULL);
         GrAlwaysAssert(success);
+        GrAssert(2*sizeof(GrPoint) == fDrawTarget->getDrawState().getVertexSize());
     }
 
-    GrFixed tx = GrIntToFixed(glyph->fAtlasLocation.fX);
-    GrFixed ty = GrIntToFixed(glyph->fAtlasLocation.fY);
+    GrFixed tx = SkIntToFixed(glyph->fAtlasLocation.fX);
+    GrFixed ty = SkIntToFixed(glyph->fAtlasLocation.fY);
 
-#if GR_TEXT_SCALAR_IS_USHORT
-    int x = vx >> 16;
-    int y = vy >> 16;
-    int w = width >> 16;
-    int h = height >> 16;
-
-    setRectFan(&fVertices[2*fCurrVertex], x, y, x + w, y + h, 2);
-    setRectFan(&fVertices[2*fCurrVertex+1],
-               texture->normalizeFixedX(tx),
-               texture->normalizeFixedY(ty),
-               texture->normalizeFixedX(tx + width),
-               texture->normalizeFixedY(ty + height),
-               2);
-#else
-    fVertices[2*fCurrVertex].setXRectFan(vx, vy, vx + width, vy + height,
-                                        2 * sizeof(GrGpuTextVertex));
-    fVertices[2*fCurrVertex+1].setXRectFan(texture->normalizeFixedX(tx),
-                                          texture->normalizeFixedY(ty),
-                                          texture->normalizeFixedX(tx + width),
-                                          texture->normalizeFixedY(ty + height),
-                                          2 * sizeof(GrGpuTextVertex));
-#endif
+    fVertices[2*fCurrVertex].setRectFan(SkFixedToFloat(vx),
+                                        SkFixedToFloat(vy),
+                                        SkFixedToFloat(vx + width),
+                                        SkFixedToFloat(vy + height),
+                                        2 * sizeof(SkPoint));
+    fVertices[2*fCurrVertex+1].setRectFan(SkFixedToFloat(texture->normalizeFixedX(tx)),
+                                          SkFixedToFloat(texture->normalizeFixedY(ty)),
+                                          SkFixedToFloat(texture->normalizeFixedX(tx + width)),
+                                          SkFixedToFloat(texture->normalizeFixedY(ty + height)),
+                                          2 * sizeof(SkPoint));
     fCurrVertex += 4;
 }
-

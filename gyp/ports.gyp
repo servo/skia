@@ -12,25 +12,24 @@
         'utils.gyp:utils',
       ],
       'include_dirs': [
-        '../include/images',
         '../include/effects',
+        '../include/images',
         '../include/ports',
         '../include/xml',
         '../src/core',
+        '../src/lazy',
         '../src/utils',
       ],
       'sources': [
+        '../src/ports/SkDebug_nacl.cpp',
         '../src/ports/SkDebug_stdio.cpp',
         '../src/ports/SkDebug_win.cpp',
-        '../src/ports/SkFontDescriptor.h',
-        '../src/ports/SkFontDescriptor.cpp',
-        '../src/ports/SkFontHost_sandbox_none.cpp',
         '../src/ports/SkFontHost_win.cpp',
         '../src/ports/SkFontHost_win_dw.cpp',
         '../src/ports/SkGlobalInitialization_default.cpp',
+        '../src/ports/SkPurgeableMemoryBlock_none.cpp',
         '../src/ports/SkThread_win.cpp',
 
-        '../src/ports/SkFontHost_tables.cpp',
         '../src/ports/SkMemory_malloc.cpp',
         '../src/ports/SkOSFile_stdio.cpp',
         '../src/ports/SkTime_Unix.cpp',
@@ -39,35 +38,52 @@
       ],
       'conditions': [
         [ 'skia_os in ["linux", "freebsd", "openbsd", "solaris"]', {
-          'conditions': [
-            [ 'skia_nacl', {
-              'defines': [
-                'SK_CAN_USE_DLOPEN=0',
-              ],
-              'sources': [
-                '../src/ports/SkFontHost_none.cpp',
-              ],
-            }, {
-              'defines': [
-                #The font host requires at least FreeType 2.3.0 at runtime.
-                'SK_FONTHOST_FREETYPE_RUNTIME_VERSION=0x020300',
-                'SK_CAN_USE_DLOPEN=1',
-              ],
-              'sources': [
-                '../src/ports/SkFontHost_FreeType.cpp',
-                '../src/ports/SkFontHost_FreeType_common.cpp',
-                '../src/ports/SkFontHost_linux.cpp',
-              ],
-              'link_settings': {
-                'libraries': [
-                  '-lfreetype',
-                  '-ldl',
-                ],
-              },
-            }],
+          'defines': [
+            #The font host requires at least FreeType 2.3.0 at runtime.
+            'SK_FONTHOST_FREETYPE_RUNTIME_VERSION=0x020300',\
+            'SK_CAN_USE_DLOPEN=1',
+          ],
+          'link_settings': {
+            'libraries': [
+              '-lfreetype',
+              '-lfontconfig',
+              '-ldl',
+            ],
+          },
+          'sources': [
+            '../src/ports/SkFontHost_FreeType.cpp',
+            '../src/ports/SkFontHost_FreeType_common.cpp',
+            '../src/ports/SkFontHost_fontconfig.cpp',
+            '../src/ports/SkFontConfigInterface_direct.cpp',
+            '../src/ports/SkThread_pthread.cpp',
+          ],
+        }],
+        [ 'skia_os == "nacl"', {
+          'dependencies': [
+            # On other OS, we can dynamically link against freetype.  For nacl,
+            # we have to include our own version since the naclports version is
+            # too old (<0x020300) to provide the functionality we need.
+            'freetype.gyp:freetype',
+          ],
+          'export_dependent_settings': [
+            'freetype.gyp:freetype',
+          ],
+          'defines': [
+            # We use Android's repo, which provides at least FreeType 2.4.0
+            'SK_FONTHOST_FREETYPE_RUNTIME_VERSION=0x020400',\
           ],
           'sources': [
+            '../src/ports/SkFontHost_FreeType.cpp',
+            '../src/ports/SkFontHost_FreeType_common.cpp',
+            '../src/ports/SkFontHost_linux.cpp',
             '../src/ports/SkThread_pthread.cpp',
+          ],
+          'sources!': [
+            '../src/ports/SkDebug_stdio.cpp',
+          ],
+        }, {
+          'sources!': [
+            '../src/ports/SkDebug_nacl.cpp',
           ],
         }],
         [ 'skia_os == "mac"', {
@@ -76,14 +92,15 @@
             '../third_party/freetype/include/**',
           ],
           'sources': [
-            '../src/ports/SkFontHost_mac_coretext.cpp',
-            '../src/utils/mac/SkStream_mac.cpp',
+            '../src/ports/SkFontHost_mac.cpp',
 #            '../src/ports/SkFontHost_FreeType.cpp',
 #            '../src/ports/SkFontHost_FreeType_common.cpp',
-#            '../src/ports/SkFontHost_freetype_mac.cpp',
+            '../src/ports/SkPurgeableMemoryBlock_mac.cpp',
             '../src/ports/SkThread_pthread.cpp',
+            '../src/utils/mac/SkStream_mac.cpp',
           ],
           'sources!': [
+            '../src/ports/SkPurgeableMemoryBlock_none.cpp',
             '../src/ports/SkFontHost_tables.cpp',
           ],
         }],
@@ -93,11 +110,13 @@
             '../include/utils/mac',
           ],
           'sources': [
-            '../src/ports/SkFontHost_mac_coretext.cpp',
-            '../src/utils/mac/SkStream_mac.cpp',
+            '../src/ports/SkFontHost_mac.cpp',
+            '../src/ports/SkPurgeableMemoryBlock_mac.cpp',
             '../src/ports/SkThread_pthread.cpp',
+            '../src/utils/mac/SkStream_mac.cpp',
           ],
           'sources!': [
+            '../src/ports/SkPurgeableMemoryBlock_none.cpp',
             '../src/ports/SkFontHost_tables.cpp',
           ],
         }],
@@ -139,18 +158,19 @@
           ],
           'sources!': [
             '../src/ports/SkDebug_stdio.cpp',
+            '../src/ports/SkPurgeableMemoryBlock_none.cpp',
           ],
           'sources': [
+            '../src/ports/FontHostConfiguration_android.cpp',
             '../src/ports/SkDebug_android.cpp',
             '../src/ports/SkThread_pthread.cpp',
             '../src/ports/SkFontHost_android.cpp',
             '../src/ports/SkFontHost_FreeType.cpp',
             '../src/ports/SkFontHost_FreeType_common.cpp',
-            '../src/ports/FontHostConfiguration_android.cpp',
-            #TODO: include the ports/SkImageRef_ashmem.cpp for non-NDK builds
+            '../src/ports/SkPurgeableMemoryBlock_android.cpp',
           ],
           'dependencies': [
-             'android_deps.gyp:ft2',
+             'freetype.gyp:freetype',
              'android_deps.gyp:expat',
           ],
         }],

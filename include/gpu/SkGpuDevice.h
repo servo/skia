@@ -27,16 +27,24 @@ class GrTextContext;
  */
 class SK_API SkGpuDevice : public SkDevice {
 public:
+
+    /**
+     * Creates an SkGpuDevice from a GrSurface. This will fail if the surface is not a render
+     * target. The caller owns a ref on the returned device.
+     */
+    static SkGpuDevice* Create(GrSurface* surface);
+
     /**
      *  New device that will create an offscreen renderTarget based on the
      *  config, width, height, and sampleCount. The device's storage will not
      *  count against the GrContext's texture cache budget. The device's pixels
-     *  will be uninitialized.
+     *  will be uninitialized. TODO: This can fail, replace with a factory function.
      */
     SkGpuDevice(GrContext*, SkBitmap::Config, int width, int height, int sampleCount = 0);
 
     /**
      *  New device that will render to the specified renderTarget.
+     *  DEPRECATED: Use Create(surface)
      */
     SkGpuDevice(GrContext*, GrRenderTarget*);
 
@@ -44,6 +52,7 @@ public:
      *  New device that will render to the texture (as a rendertarget).
      *  The GrTexture's asRenderTarget() must be non-NULL or device will not
      *  function.
+     *  DEPRECATED: Use Create(surface)
      */
     SkGpuDevice(GrContext*, GrTexture*);
 
@@ -63,6 +72,8 @@ public:
     virtual void drawPoints(const SkDraw&, SkCanvas::PointMode mode, size_t count,
                             const SkPoint[], const SkPaint& paint) SK_OVERRIDE;
     virtual void drawRect(const SkDraw&, const SkRect& r,
+                          const SkPaint& paint) SK_OVERRIDE;
+    virtual void drawOval(const SkDraw&, const SkRect& oval,
                           const SkPaint& paint) SK_OVERRIDE;
     virtual void drawPath(const SkDraw&, const SkPath& path,
                           const SkPaint& paint, const SkMatrix* prePathMatrix,
@@ -110,9 +121,6 @@ public:
     class SkAutoCachedTexture; // used internally
 
 protected:
-    bool isBitmapInTextureCache(const SkBitmap& bitmap,
-                                const GrTextureParams& params) const;
-
     // overrides from SkDevice
     virtual bool onReadPixels(const SkBitmap& bitmap,
                               int x, int y,
@@ -184,4 +192,3 @@ private:
 };
 
 #endif
-

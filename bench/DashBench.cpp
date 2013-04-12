@@ -102,7 +102,7 @@ private:
 
 class RectDashBench : public DashBench {
 public:
-    RectDashBench(void* param, const SkScalar intervals[], int count, int width, bool doClip = false)
+    RectDashBench(void* param, const SkScalar intervals[], int count, int width)
     : INHERITED(param, intervals, count, width) {
         fName.append("_rect");
     }
@@ -201,12 +201,12 @@ protected:
         return fName.c_str();
     }
 
-    virtual void onDraw(SkCanvas* canvas) SK_OVERRIDE {
+    virtual void onDraw(SkCanvas*) SK_OVERRIDE {
         SkPath dst;
         for (int i = 0; i < N; ++i) {
             SkStrokeRec rec(SkStrokeRec::kHairline_InitStyle);
 
-            fPE->filterPath(&dst, fPath, &rec);
+            fPE->filterPath(&dst, fPath, &rec, NULL);
             dst.rewind();
         }
     }
@@ -220,7 +220,6 @@ private:
  */
 class DashLineBench : public SkBenchmark {
     SkString fName;
-    SkPath   fPath;
     SkScalar fStrokeWidth;
     bool     fIsRound;
     SkAutoTUnref<SkPathEffect> fPE;
@@ -260,36 +259,166 @@ private:
     typedef SkBenchmark INHERITED;
 };
 
+class DrawPointsDashingBench : public SkBenchmark {
+    SkString fName;
+    int      fStrokeWidth;
+    bool     fDoAA;
+
+    SkAutoTUnref<SkPathEffect> fPathEffect;
+
+    enum {
+        N = SkBENCHLOOP(480)
+    };
+
+public:
+    DrawPointsDashingBench(void* param, int dashLength, int strokeWidth, bool doAA)
+        : INHERITED(param) {
+        fName.printf("drawpointsdash_%d_%d%s", dashLength, strokeWidth, doAA ? "_aa" : "_bw");
+        fStrokeWidth = strokeWidth;
+        fDoAA = doAA;
+
+        SkScalar vals[] = { SkIntToScalar(dashLength), SkIntToScalar(dashLength) };
+        fPathEffect.reset(new SkDashPathEffect(vals, 2, SK_Scalar1, false));
+    }
+
+protected:
+    virtual const char* onGetName() SK_OVERRIDE {
+        return fName.c_str();
+    }
+
+    virtual void onDraw(SkCanvas* canvas) SK_OVERRIDE {
+
+        SkPaint p;
+        this->setupPaint(&p);
+        p.setColor(SK_ColorBLACK);
+        p.setStyle(SkPaint::kStroke_Style);
+        p.setStrokeWidth(SkIntToScalar(fStrokeWidth));
+        p.setPathEffect(fPathEffect);
+        p.setAntiAlias(fDoAA);
+
+        SkPoint pts[2] = {
+            { SkIntToScalar(10), 0 },
+            { SkIntToScalar(640), 0 }
+        };
+
+        for (int i = 0; i < N; ++i) {
+
+            pts[0].fY = pts[1].fY = SkIntToScalar(i % 480);
+            canvas->drawPoints(SkCanvas::kLines_PointMode, 2, pts, p);
+        }
+    }
+
+private:
+    typedef SkBenchmark INHERITED;
+};
+
+// Want to test how we handle dashing when 99% of the dash is clipped out
+class GiantDashBench : public SkBenchmark {
+    SkString fName;
+    SkScalar fStrokeWidth;
+    SkPoint  fPts[2];
+    SkAutoTUnref<SkPathEffect> fPathEffect;
+
+public:
+    enum LineType {
+        kHori_LineType,
+        kVert_LineType,
+        kDiag_LineType
+    };
+
+    static const char* LineTypeName(LineType lt) {
+        static const char* gNames[] = { "hori", "vert", "diag" };
+        SkASSERT((size_t)lt <= SK_ARRAY_COUNT(gNames));
+        return gNames[lt];
+    }
+
+    GiantDashBench(void* param, LineType lt, SkScalar width) : INHERITED(param) {
+        fName.printf("giantdashline_%s_%g", LineTypeName(lt), width);
+        fStrokeWidth = width;
+
+        // deliberately pick intervals that won't be caught by asPoints(), so
+        // we can test the filterPath code-path.
+        const SkScalar intervals[] = { 2, 1, 1, 1 };
+        fPathEffect.reset(new SkDashPathEffect(intervals,
+                                               SK_ARRAY_COUNT(intervals), 0));
+
+        SkScalar cx = 640 / 2;  // center X
+        SkScalar cy = 480 / 2;  // center Y
+        SkMatrix matrix;
+
+        switch (lt) {
+            case kHori_LineType:
+                matrix.setIdentity();
+                break;
+            case kVert_LineType:
+                matrix.setRotate(90, cx, cy);
+                break;
+            case kDiag_LineType:
+                matrix.setRotate(45, cx, cy);
+                break;
+        }
+
+        const SkScalar overshoot = 100*1000;
+        const SkPoint pts[2] = {
+            { -overshoot, cy }, { 640 + overshoot, cy }
+        };
+        matrix.mapPoints(fPts, pts, 2);
+    }
+
+protected:
+    virtual const char* onGetName() SK_OVERRIDE {
+        return fName.c_str();
+    }
+
+    virtual void onDraw(SkCanvas* canvas) SK_OVERRIDE {
+        SkPaint p;
+        this->setupPaint(&p);
+        p.setStyle(SkPaint::kStroke_Style);
+        p.setStrokeWidth(fStrokeWidth);
+        p.setPathEffect(fPathEffect);
+
+        canvas->drawPoints(SkCanvas::kLines_PointMode, 2, fPts, p);
+    }
+
+private:
+    typedef SkBenchmark INHERITED;
+};
+
+
 ///////////////////////////////////////////////////////////////////////////////
 
 static const SkScalar gDots[] = { SK_Scalar1, SK_Scalar1 };
 
 #define PARAM(array)    array, SK_ARRAY_COUNT(array)
 
-static SkBenchmark* gF0(void* p) { return new DashBench(p, PARAM(gDots), 0); }
-static SkBenchmark* gF1(void* p) { return new DashBench(p, PARAM(gDots), 1); }
-static SkBenchmark* gF2(void* p) { return new DashBench(p, PARAM(gDots), 1, true); }
-static SkBenchmark* gF3(void* p) { return new DashBench(p, PARAM(gDots), 4); }
-static SkBenchmark* gF4(void* p) { return new MakeDashBench(p, make_poly, "poly"); }
-static SkBenchmark* gF5(void* p) { return new MakeDashBench(p, make_quad, "quad"); }
-static SkBenchmark* gF6(void* p) { return new MakeDashBench(p, make_cubic, "cubic"); }
-static SkBenchmark* gF700(void* p) { return new DashLineBench(p, 0, false); }
-static SkBenchmark* gF710(void* p) { return new DashLineBench(p, SK_Scalar1, false); }
-static SkBenchmark* gF720(void* p) { return new DashLineBench(p, 2 * SK_Scalar1, false); }
-static SkBenchmark* gF701(void* p) { return new DashLineBench(p, 0, true); }
-static SkBenchmark* gF711(void* p) { return new DashLineBench(p, SK_Scalar1, true); }
-static SkBenchmark* gF721(void* p) { return new DashLineBench(p, 2 * SK_Scalar1, true); }
+DEF_BENCH( return new DashBench(p, PARAM(gDots), 0); )
+DEF_BENCH( return new DashBench(p, PARAM(gDots), 1); )
+DEF_BENCH( return new DashBench(p, PARAM(gDots), 1, true); )
+DEF_BENCH( return new DashBench(p, PARAM(gDots), 4); )
+DEF_BENCH( return new MakeDashBench(p, make_poly, "poly"); )
+DEF_BENCH( return new MakeDashBench(p, make_quad, "quad"); )
+DEF_BENCH( return new MakeDashBench(p, make_cubic, "cubic"); )
+DEF_BENCH( return new DashLineBench(p, 0, false); )
+DEF_BENCH( return new DashLineBench(p, SK_Scalar1, false); )
+DEF_BENCH( return new DashLineBench(p, 2 * SK_Scalar1, false); )
+DEF_BENCH( return new DashLineBench(p, 0, true); )
+DEF_BENCH( return new DashLineBench(p, SK_Scalar1, true); )
+DEF_BENCH( return new DashLineBench(p, 2 * SK_Scalar1, true); )
 
-static BenchRegistry gR0(gF0);
-static BenchRegistry gR1(gF1);
-static BenchRegistry gR2(gF2);
-static BenchRegistry gR3(gF3);
-static BenchRegistry gR4(gF4);
-static BenchRegistry gR5(gF5);
-static BenchRegistry gR6(gF6);
-static BenchRegistry gR700(gF700);
-static BenchRegistry gR710(gF710);
-static BenchRegistry gR720(gF720);
-static BenchRegistry gR701(gF701);
-static BenchRegistry gR711(gF711);
-static BenchRegistry gR721(gF721);
+DEF_BENCH( return new DrawPointsDashingBench(p, 1, 1, false); )
+DEF_BENCH( return new DrawPointsDashingBench(p, 1, 1, true); )
+DEF_BENCH( return new DrawPointsDashingBench(p, 3, 1, false); )
+DEF_BENCH( return new DrawPointsDashingBench(p, 3, 1, true); )
+DEF_BENCH( return new DrawPointsDashingBench(p, 5, 5, false); )
+DEF_BENCH( return new DrawPointsDashingBench(p, 5, 5, true); )
+
+DEF_BENCH( return new GiantDashBench(p, GiantDashBench::kHori_LineType, 0); )
+DEF_BENCH( return new GiantDashBench(p, GiantDashBench::kVert_LineType, 0); )
+DEF_BENCH( return new GiantDashBench(p, GiantDashBench::kDiag_LineType, 0); )
+
+// pass 2 to explicitly avoid any 1-is-the-same-as-hairline special casing
+
+// hori_2 is just too slow to enable at the moment
+DEF_BENCH( return new GiantDashBench(p, GiantDashBench::kHori_LineType, 2); )
+DEF_BENCH( return new GiantDashBench(p, GiantDashBench::kVert_LineType, 2); )
+DEF_BENCH( return new GiantDashBench(p, GiantDashBench::kDiag_LineType, 2); )

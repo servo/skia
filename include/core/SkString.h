@@ -12,6 +12,8 @@
 
 #include "SkScalar.h"
 
+#include <stdarg.h>
+
 /*  Some helper functions for C strings
 */
 
@@ -30,15 +32,32 @@ bool SkStrEndsWith(const char string[], const char suffixChar);
 
 int SkStrStartsWithOneOf(const char string[], const char prefixes[]);
 
+static int SkStrFind(const char string[], const char substring[]) {
+    const char *first = strstr(string, substring);
+    if (NULL == first) return -1;
+    return SkToS32(first - &string[0]);
+}
+
 static bool SkStrContains(const char string[], const char substring[]) {
     SkASSERT(string);
     SkASSERT(substring);
-    return (NULL != strstr(string, substring));
+    return (-1 != SkStrFind(string, substring));
 }
 static bool SkStrContains(const char string[], const char subchar) {
     SkASSERT(string);
-    return (NULL != strchr(string, subchar));
+    char tmp[2];
+    tmp[0] = subchar;
+    tmp[1] = '\0';
+    return (-1 != SkStrFind(string, tmp));
 }
+
+static inline char *SkStrDup(const char string[]) {
+    char *ret = (char *) sk_malloc_throw(strlen(string)+1);
+    memcpy(ret,string,strlen(string)+1);
+    return ret;
+}
+
+
 
 #define SkStrAppendS32_MaxSize  11
 char*   SkStrAppendS32(char buffer[], int32_t);
@@ -112,6 +131,9 @@ public:
     bool contains(const char subchar) const {
         return SkStrContains(fRec->data(), subchar);
     }
+    int find(const char substring[]) const {
+        return SkStrFind(fRec->data(), substring);
+    }
 
     friend bool operator==(const SkString& a, const SkString& b) {
         return a.equals(b);
@@ -165,6 +187,7 @@ public:
 
     void printf(const char format[], ...) SK_PRINTF_LIKE(2, 3);
     void appendf(const char format[], ...) SK_PRINTF_LIKE(2, 3);
+    void appendf(const char format[], va_list);
     void prependf(const char format[], ...) SK_PRINTF_LIKE(2, 3);
 
     void remove(size_t offset, size_t length);
@@ -223,5 +246,11 @@ private:
 
 /// Creates a new string and writes into it using a printf()-style format.
 SkString SkStringPrintf(const char* format, ...);
+
+// Specialized to take advantage of SkString's fast swap path. The unspecialized function is
+// declared in SkTypes.h and called by SkTSort.
+template <> inline void SkTSwap(SkString& a, SkString& b) {
+    a.swap(b);
+}
 
 #endif

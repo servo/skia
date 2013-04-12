@@ -67,17 +67,17 @@ protected:
         canvas->drawPaint(paint);
     }
 
-    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y) {
+    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y, unsigned modi) SK_OVERRIDE {
         this->inval(NULL);
 
-        return this->INHERITED::onFindClickHandler(x, y);
+        return this->INHERITED::onFindClickHandler(x, y, modi);
     }
 
     virtual bool onClick(Click* click) {
         return this->INHERITED::onClick(click);
     }
 
-    virtual bool handleKey(SkKey key) {
+    virtual bool handleKey(SkKey) {
         this->inval(NULL);
         return true;
     }
@@ -90,4 +90,3 @@ private:
 
 static SkView* MyFactory() { return new RepeatTileView; }
 static SkViewRegister reg(MyFactory);
-

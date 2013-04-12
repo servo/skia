@@ -19,6 +19,7 @@ class SK_API SkPixelXorXfermode : public SkXfermode {
 public:
     SkPixelXorXfermode(SkColor opColor) : fOpColor(opColor) {}
 
+    SK_DEVELOPER_TO_STRING()
     SK_DECLARE_PUBLIC_FLATTENABLE_DESERIALIZATION_PROCS(SkPixelXorXfermode)
 
 protected:
@@ -26,7 +27,7 @@ protected:
     virtual void flatten(SkFlattenableWriteBuffer&) const SK_OVERRIDE;
 
     // override from SkXfermode
-    virtual SkPMColor xferColor(SkPMColor src, SkPMColor dst);
+    virtual SkPMColor xferColor(SkPMColor src, SkPMColor dst) const;
 
 private:
     SkColor fOpColor;

@@ -1,0 +1,16 @@
+{
+   "actual-results" : {
+      "failed" : null,
+      "failure-ignored" : null,
+      "no-comparison" : {
+         "565/selftest1" : {
+            "checksum" : 9512553915271796906
+         },
+         "8888/selftest1" : {
+            "checksum" : 14022967492765711532
+         }
+      },
+      "succeeded" : null
+   },
+   "expected-results" : null
+}

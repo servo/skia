@@ -7,33 +7,7 @@
  */
 #include "Test.h"
 #include "SkRandom.h"
-#include "SkChecksum.h"
 #include "SkTSort.h"
-
-// assert that as we change values (from 0 to non-zero) in our buffer, we
-// get a different value
-static void test_checksum(skiatest::Reporter* reporter, size_t size) {
-    SkAutoMalloc storage(size);
-    uint32_t*    ptr = (uint32_t*)storage.get();
-    char*        cptr = (char*)ptr;
-
-    sk_bzero(ptr, size);
-    uint32_t prev = 0;
-    for (size_t i = 0; i < size; ++i) {
-        cptr[i] = 0x5B; // just need some non-zero value here
-        uint32_t curr = SkChecksum::Compute(ptr, size);
-        REPORTER_ASSERT(reporter, prev != curr);
-        prev = curr;
-    }
-}
-
-static void test_checksum(skiatest::Reporter* reporter) {
-    REPORTER_ASSERT(reporter, SkChecksum::Compute(NULL, 0) == 0);
-
-    for (size_t size = 4; size <= 1000; size += 4) {
-        test_checksum(reporter, size);
-    }
-}
 
 extern "C" {
     static int compare_int(const void* a, const void* b) {
@@ -41,44 +15,49 @@ extern "C" {
     }
 }
 
-static void rand_array(SkRandom& rand, int array[], int n) {
+static void rand_array(SkMWCRandom& rand, int array[], int n) {
     for (int j = 0; j < n; j++) {
         array[j] = rand.nextS() & 0xFF;
     }
 }
 
 static void check_sort(skiatest::Reporter* reporter, const char label[],
-                       const int array[], int n) {
-    for (int j = 1; j < n; j++) {
-        if (array[j-1] > array[j]) {
+                       const int array[], const int reference[], int n) {
+    for (int j = 0; j < n; ++j) {
+        if (array[j] != reference[j]) {
             SkString str;
-           str.printf("%sSort [%d] failed %d %d", label, n,
-                      array[j-1], array[j]);
+            str.printf("%sSort [%d] failed %d %d", label, n, array[j], reference[j]);
             reporter->reportFailed(str);
         }
     }
 }
 
 static void TestSort(skiatest::Reporter* reporter) {
-    int         array[500];
-    SkRandom    rand;
+    /** An array of random numbers to be sorted. */
+    int randomArray[500];
+    /** The reference sort of the random numbers. */
+    int sortedArray[SK_ARRAY_COUNT(randomArray)];
+    /** The random numbers are copied into this array, sorted by an SkSort,
+        then this array is compared against the reference sort. */
+    int workingArray[SK_ARRAY_COUNT(randomArray)];
+    SkMWCRandom    rand;
 
     for (int i = 0; i < 10000; i++) {
-        int count = rand.nextRangeU(1, SK_ARRAY_COUNT(array));
+        int count = rand.nextRangeU(1, SK_ARRAY_COUNT(randomArray));
+        rand_array(rand, randomArray, count);
 
-        rand_array(rand, array, count);
-        SkTHeapSort<int>(array, count);
-        check_sort(reporter, "Heap", array, count);
+        // Use qsort as the reference sort.
+        memcpy(sortedArray, randomArray, sizeof(randomArray));
+        qsort(sortedArray, count, sizeof(sortedArray[0]), compare_int);
 
-        rand_array(rand, array, count);
-        SkTQSort<int>(array, array + count - 1);
-        check_sort(reporter, "Quick", array, count);
+        memcpy(workingArray, randomArray, sizeof(randomArray));
+        SkTHeapSort<int>(workingArray, count);
+        check_sort(reporter, "Heap", workingArray, sortedArray, count);
+
+        memcpy(workingArray, randomArray, sizeof(randomArray));
+        SkTQSort<int>(workingArray, workingArray + count - 1);
+        check_sort(reporter, "Quick", workingArray, sortedArray, count);
     }
-    if (false) { // avoid bit rot, suppress warning
-        compare_int(array, array);
-    }
-
-    test_checksum(reporter);
 }
 
 // need tests for SkStrSearch

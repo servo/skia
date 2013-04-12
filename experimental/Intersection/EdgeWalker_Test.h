@@ -16,12 +16,16 @@ extern int comparePaths(const SkPath& one, const SkPath& two, SkBitmap& bitmap);
 extern void comparePathsTiny(const SkPath& one, const SkPath& two);
 extern bool drawAsciiPaths(const SkPath& one, const SkPath& two,
         bool drawPaths);
-extern void showPath(const SkPath& path, const char* str = NULL);
+extern void showOp(const ShapeOp op);
+extern void showPath(const SkPath& path, const char* str);
+extern void showPath(const SkPath& path);
+extern void showPathData(const SkPath& path);
 extern bool testSimplify(const SkPath& path, bool fill, SkPath& out,
         SkBitmap& bitmap);
 extern bool testSimplifyx(SkPath& path, bool useXor, SkPath& out,
         State4& state, const char* pathStr);
 extern bool testSimplifyx(const SkPath& path);
+extern bool testShapeOp(const SkPath& a, const SkPath& b, const ShapeOp );
 
 struct State4 {
     State4();
@@ -47,6 +51,9 @@ void createThread(State4* statePtr, void* (*test)(void* ));
 int dispatchTest4(void* (*testFun)(void* ), int a, int b, int c, int d);
 void initializeTests(const char* testName, size_t testNameSize);
 void outputProgress(const State4& state, const char* pathStr, SkPath::FillType );
-void outputToStream(const State4& state, const char* pathStr, SkPath::FillType, SkWStream& outFile);
+void outputProgress(const State4& state, const char* pathStr, ShapeOp op);
+void outputToStream(const State4& state, const char* pathStr, const char* pathPrefix,
+                    const char* nameSuffix,
+                    const char* testFunction, SkWStream& outFile);
 bool runNextTestSet(State4& state);
 int waitForCompletion();

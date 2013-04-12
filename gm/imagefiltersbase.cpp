@@ -116,7 +116,7 @@ static void draw_bitmap(SkCanvas* canvas, const SkRect& r, SkImageFilter* imf) {
     SkBitmap bm;
     bm.setConfig(SkBitmap::kARGB_8888_Config, bounds.width(), bounds.height());
     bm.allocPixels();
-    bm.eraseColor(0);
+    bm.eraseColor(SK_ColorTRANSPARENT);
     SkCanvas c(bm);
     draw_path(&c, r, NULL);
 
@@ -133,7 +133,7 @@ static void draw_sprite(SkCanvas* canvas, const SkRect& r, SkImageFilter* imf) {
     SkBitmap bm;
     bm.setConfig(SkBitmap::kARGB_8888_Config, bounds.width(), bounds.height());
     bm.allocPixels();
-    bm.eraseColor(0);
+    bm.eraseColor(SK_ColorTRANSPARENT);
     SkCanvas c(bm);
     draw_path(&c, r, NULL);
 
@@ -163,6 +163,14 @@ protected:
         paint.setStyle(SkPaint::kStroke_Style);
         paint.setColor(SK_ColorRED);
         canvas->drawRect(r, paint);
+    }
+
+    virtual uint32_t onGetFlags() const {
+        // Because of the use of drawSprite, this test is excluded
+        // from scaled replay tests because drawSprite ignores the
+        // reciprocal scale that is applied at record time, which is
+        // the intended behavior of drawSprite.
+        return kSkipScaledReplay_Flag;
     }
 
     virtual void onDraw(SkCanvas* canvas) {
@@ -215,5 +223,3 @@ private:
 
 static skiagm::GM* MyFactory(void*) { return new ImageFiltersBaseGM; }
 static skiagm::GMRegistry reg(MyFactory);
-
-

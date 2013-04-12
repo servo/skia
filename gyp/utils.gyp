@@ -5,6 +5,9 @@
       'product_name': 'skia_utils',
       'type': 'static_library',
       'standalone_static_library': 1,
+      'dependencies': [
+        'cityhash.gyp:cityhash',
+      ],
       'include_dirs': [
         '../include/config',
         '../include/core',
@@ -15,6 +18,7 @@
         '../include/utils/unix',
         '../include/utils/win',
         '../include/xml',
+        '../src/core',
         '../src/utils',
       ],
       'sources': [
@@ -31,6 +35,7 @@
         '../include/utils/SkCamera.h',
         '../include/utils/SkCubicInterval.h',
         '../include/utils/SkCullPoints.h',
+        '../include/utils/SkDebugUtils.h',
         '../include/utils/SkDeferredCanvas.h',
         '../include/utils/SkDumpCanvas.h',
         '../include/utils/SkInterpolator.h',
@@ -43,16 +48,25 @@
         '../include/utils/SkParse.h',
         '../include/utils/SkParsePaint.h',
         '../include/utils/SkParsePath.h',
+        '../include/utils/SkPictureUtils.h',
+        '../include/utils/SkRandom.h',
+        '../include/utils/SkRTConf.h',
         '../include/utils/SkProxyCanvas.h',
         '../include/utils/SkUnitMappers.h',
         '../include/utils/SkWGL.h',
 
         '../src/utils/SkBase64.cpp',
         '../src/utils/SkBase64.h',
+        '../src/utils/SkBitmapChecksummer.cpp',
+        '../src/utils/SkBitmapChecksummer.h',
+        '../src/utils/SkBitmapTransformer.cpp',
+        '../src/utils/SkBitmapTransformer.h',
         '../src/utils/SkBitSet.cpp',
         '../src/utils/SkBitSet.h',
         '../src/utils/SkBoundaryPatch.cpp',
         '../src/utils/SkCamera.cpp',
+        '../src/utils/SkCityHash.cpp',
+        '../src/utils/SkCityHash.h',
         '../src/utils/SkCubicInterval.cpp',
         '../src/utils/SkCullPoints.cpp',
         '../src/utils/SkDeferredCanvas.cpp',
@@ -61,6 +75,8 @@
         '../src/utils/SkInterpolator.cpp',
         '../src/utils/SkLayer.cpp',
         '../src/utils/SkMatrix44.cpp',
+        '../src/utils/SkMD5.cpp',
+        '../src/utils/SkMD5.h',
         '../src/utils/SkMeshUtils.cpp',
         '../src/utils/SkNinePatch.cpp',
         '../src/utils/SkNWayCanvas.cpp',
@@ -69,7 +85,11 @@
         '../src/utils/SkParse.cpp',
         '../src/utils/SkParseColor.cpp',
         '../src/utils/SkParsePath.cpp',
+        '../src/utils/SkPictureUtils.cpp',
         '../src/utils/SkProxyCanvas.cpp',
+        '../src/utils/SkSHA1.cpp',
+        '../src/utils/SkSHA1.h',
+        '../src/utils/SkRTConf.cpp',
         '../src/utils/SkThreadUtils.h',
         '../src/utils/SkThreadUtils_pthread.cpp',
         '../src/utils/SkThreadUtils_pthread.h',
@@ -129,12 +149,6 @@
           ],
         }],
         [ 'skia_os in ["linux", "freebsd", "openbsd", "solaris"]', {
-          'link_settings': {
-            'libraries': [
-              '-lGL',
-              '-lGLU',
-            ],
-          },
           'sources!': [
             '../src/utils/SkThreadUtils_pthread_other.cpp',
           ],
@@ -176,12 +190,26 @@
             '../src/utils/win/SkIStream.cpp',
           ],
         }],
-        [ 'skia_nacl == 1', {
+        [ 'skia_os == "nacl"', {
           'sources': [
             '../src/utils/SkThreadUtils_pthread_other.cpp',
           ],
           'sources!': [
             '../src/utils/SkThreadUtils_pthread_linux.cpp',
+            '../src/utils/SkCityHash.cpp',
+            '../src/utils/SkCityHash.h',
+          ],
+          'dependencies!': [
+            # CityHash is not supported on NaCl because the NaCl toolchain is
+            # missing byteswap.h which is needed by CityHash.
+            # TODO(borenet): Find a way to either provide this dependency or
+            # replace it.
+            'cityhash.gyp:cityhash',
+          ],
+        }],
+        [ 'skia_os == "android"', {
+          'sources': [
+            '../src/utils/android/ashmem.cpp',
           ],
         }],
       ],

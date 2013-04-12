@@ -6,6 +6,7 @@
  * found in the LICENSE file.
  */
 #include "SkDevice.h"
+#include "SkDeviceProperties.h"
 #include "SkDraw.h"
 #include "SkImageFilter.h"
 #include "SkMetaData.h"
@@ -23,7 +24,17 @@ SK_DEFINE_INST_COUNT(SkDevice)
 ///////////////////////////////////////////////////////////////////////////////
 
 SkDevice::SkDevice(const SkBitmap& bitmap)
-    : fBitmap(bitmap)
+    : fBitmap(bitmap), fLeakyProperties(SkDeviceProperties::MakeDefault())
+#ifdef SK_DEBUG
+    , fAttachedToCanvas(false)
+#endif
+{
+    fOrigin.setZero();
+    fMetaData = NULL;
+}
+
+SkDevice::SkDevice(const SkBitmap& bitmap, const SkDeviceProperties& deviceProperties)
+    : fBitmap(bitmap), fLeakyProperties(deviceProperties)
 #ifdef SK_DEBUG
     , fAttachedToCanvas(false)
 #endif
@@ -33,8 +44,9 @@ SkDevice::SkDevice(const SkBitmap& bitmap)
 }
 
 SkDevice::SkDevice(SkBitmap::Config config, int width, int height, bool isOpaque)
+    : fLeakyProperties(SkDeviceProperties::MakeDefault())
 #ifdef SK_DEBUG
-    : fAttachedToCanvas(false)
+    , fAttachedToCanvas(false)
 #endif
 {
     fOrigin.setZero();
@@ -44,7 +56,25 @@ SkDevice::SkDevice(SkBitmap::Config config, int width, int height, bool isOpaque
     fBitmap.allocPixels();
     fBitmap.setIsOpaque(isOpaque);
     if (!isOpaque) {
-        fBitmap.eraseColor(0);
+        fBitmap.eraseColor(SK_ColorTRANSPARENT);
+    }
+}
+
+SkDevice::SkDevice(SkBitmap::Config config, int width, int height, bool isOpaque,
+                   const SkDeviceProperties& deviceProperties)
+    : fLeakyProperties(deviceProperties)
+#ifdef SK_DEBUG
+    , fAttachedToCanvas(false)
+#endif
+{
+    fOrigin.setZero();
+    fMetaData = NULL;
+
+    fBitmap.setConfig(config, width, height);
+    fBitmap.allocPixels();
+    fBitmap.setIsOpaque(isOpaque);
+    if (!isOpaque) {
+        fBitmap.eraseColor(SK_ColorTRANSPARENT);
     }
 }
 
@@ -77,7 +107,7 @@ SkDevice* SkDevice::onCreateCompatibleDevice(SkBitmap::Config config,
                                              int width, int height,
                                              bool isOpaque,
                                              Usage usage) {
-    return SkNEW_ARGS(SkDevice,(config, width, height, isOpaque));
+    return SkNEW_ARGS(SkDevice,(config, width, height, isOpaque, fLeakyProperties));
 }
 
 SkMetaData& SkDevice::getMetaData() {
@@ -317,14 +347,24 @@ void SkDevice::drawPaint(const SkDraw& draw, const SkPaint& paint) {
 }
 
 void SkDevice::drawPoints(const SkDraw& draw, SkCanvas::PointMode mode, size_t count,
-                              const SkPoint pts[], const SkPaint& paint) {
+                          const SkPoint pts[], const SkPaint& paint) {
+    CHECK_FOR_NODRAW_ANNOTATION(paint);
     draw.drawPoints(mode, count, pts, paint);
 }
 
-void SkDevice::drawRect(const SkDraw& draw, const SkRect& r,
-                            const SkPaint& paint) {
+void SkDevice::drawRect(const SkDraw& draw, const SkRect& r, const SkPaint& paint) {
     CHECK_FOR_NODRAW_ANNOTATION(paint);
     draw.drawRect(r, paint);
+}
+
+void SkDevice::drawOval(const SkDraw& draw, const SkRect& oval, const SkPaint& paint) {
+    CHECK_FOR_NODRAW_ANNOTATION(paint);
+
+    SkPath path;
+    path.addOval(oval);
+    // call the VIRTUAL version, so any subclasses who do handle drawPath aren't
+    // required to override drawOval.
+    this->drawPath(draw, path, paint, NULL, true);
 }
 
 void SkDevice::drawPath(const SkDraw& draw, const SkPath& path,
@@ -352,51 +392,11 @@ void SkDevice::drawBitmap(const SkDraw& draw, const SkBitmap& bitmap,
 void SkDevice::drawBitmapRect(const SkDraw& draw, const SkBitmap& bitmap,
                               const SkRect* src, const SkRect& dst,
                               const SkPaint& paint) {
-#ifdef SK_SUPPORT_INT_SRCRECT_DRAWBITMAPRECT
-    SkMatrix matrix;
-    // Compute matrix from the two rectangles
-    {
-        SkRect tmpSrc;
-        if (src) {
-            tmpSrc = *src;
-            // if the extract process clipped off the top or left of the
-            // original, we adjust for that here to get the position right.
-            if (tmpSrc.fLeft > 0) {
-                tmpSrc.fRight -= tmpSrc.fLeft;
-                tmpSrc.fLeft = 0;
-            }
-            if (tmpSrc.fTop > 0) {
-                tmpSrc.fBottom -= tmpSrc.fTop;
-                tmpSrc.fTop = 0;
-            }
-        } else {
-            tmpSrc.set(0, 0, SkIntToScalar(bitmap.width()),
-                       SkIntToScalar(bitmap.height()));
-        }
-        matrix.setRectToRect(tmpSrc, dst, SkMatrix::kFill_ScaleToFit);
-    }
-
-    // ensure that src is "valid" before we pass it to our internal routines
-    // and to SkDevice. i.e. sure it is contained inside the original bitmap.
-    SkIRect isrcStorage;
-    SkIRect* isrcPtr = NULL;
-    if (src) {
-        src->roundOut(&isrcStorage);
-        if (!isrcStorage.intersect(0, 0, bitmap.width(), bitmap.height())) {
-            return;
-        }
-        isrcPtr = &isrcStorage;
-    }
-
-    this->drawBitmap(draw, bitmap, isrcPtr, matrix, paint);
-#else
     SkMatrix    matrix;
     SkRect      bitmapBounds, tmpSrc, tmpDst;
     SkBitmap    tmpBitmap;
 
-    bitmapBounds.set(0, 0,
-                     SkIntToScalar(bitmap.width()),
-                     SkIntToScalar(bitmap.height()));
+    bitmapBounds.isetWH(bitmap.width(), bitmap.height());
 
     // Compute matrix from the two rectangles
     if (src) {
@@ -441,6 +441,20 @@ void SkDevice::drawBitmapRect(const SkDraw& draw, const SkBitmap& bitmap,
         if (dx || dy) {
             matrix.preTranslate(dx, dy);
         }
+
+        SkRect extractedBitmapBounds;
+        extractedBitmapBounds.isetWH(bitmapPtr->width(), bitmapPtr->height());
+        if (extractedBitmapBounds == tmpSrc) {
+            // no fractional part in src, we can just call drawBitmap
+            goto USE_DRAWBITMAP;
+        }
+    } else {
+        USE_DRAWBITMAP:
+        // We can go faster by just calling drawBitmap, which will concat the
+        // matrix with the CTM, and try to call drawSprite if it can. If not,
+        // it will make a shader and call drawRect, as we do below.
+        this->drawBitmap(draw, *bitmapPtr, NULL, matrix, paint);
+        return;
     }
 
     // construct a shader, so we can call drawRect with the dst
@@ -459,7 +473,6 @@ void SkDevice::drawBitmapRect(const SkDraw& draw, const SkBitmap& bitmap,
     // Call ourself, in case the subclass wanted to share this setup code
     // but handle the drawRect code themselves.
     this->drawRect(draw, *dstPtr, paintWithShader);
-#endif
 }
 
 void SkDevice::drawSprite(const SkDraw& draw, const SkBitmap& bitmap,
@@ -531,4 +544,3 @@ bool SkDevice::filterTextFlags(const SkPaint& paint, TextFlags* flags) {
     // we're cool with the paint as is
     return false;
 }
-

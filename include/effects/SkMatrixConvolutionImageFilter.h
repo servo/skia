@@ -8,7 +8,7 @@
 #ifndef SkMatrixConvolutionImageFilter_DEFINED
 #define SkMatrixConvolutionImageFilter_DEFINED
 
-#include "SkSingleInputImageFilter.h"
+#include "SkImageFilter.h"
 #include "SkScalar.h"
 #include "SkSize.h"
 #include "SkPoint.h"
@@ -19,7 +19,7 @@
     effects such as sharpening, blurring, edge detection, etc.
  */
 
-class SK_API SkMatrixConvolutionImageFilter : public SkSingleInputImageFilter {
+class SK_API SkMatrixConvolutionImageFilter : public SkImageFilter {
 public:
     /*! \enum TileMode */
     enum TileMode {
@@ -62,7 +62,7 @@ protected:
                                SkBitmap* result, SkIPoint* loc) SK_OVERRIDE;
 
 #if SK_SUPPORT_GPU
-    virtual bool asNewEffect(GrEffect**, GrTexture*) const SK_OVERRIDE;
+    virtual bool asNewEffect(GrEffectRef** effect, GrTexture*) const SK_OVERRIDE;
 #endif
 
 private:
@@ -73,7 +73,7 @@ private:
     SkIPoint  fTarget;
     TileMode  fTileMode;
     bool      fConvolveAlpha;
-    typedef SkSingleInputImageFilter INHERITED;
+    typedef SkImageFilter INHERITED;
 
     template <class PixelFetcher, bool convolveAlpha>
     void filterPixels(const SkBitmap& src, SkBitmap* result, const SkIRect& rect);

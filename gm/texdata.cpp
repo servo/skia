@@ -12,7 +12,7 @@
 
 #if SK_SUPPORT_GPU
 #include "GrContext.h"
-#include "effects/GrSingleTextureEffect.h"
+#include "effects/GrSimpleTextureEffect.h"
 #include "SkColorPriv.h"
 #include "SkDevice.h"
 
@@ -84,7 +84,7 @@ protected:
                 // use RT flag bit because in GL it makes the texture be bottom-up
                 desc.fFlags     = i ? kRenderTarget_GrTextureFlagBit :
                                       kNone_GrTextureFlags;
-                desc.fConfig    = kSkia8888_PM_GrPixelConfig;
+                desc.fConfig    = kSkia8888_GrPixelConfig;
                 desc.fWidth     = 2 * S;
                 desc.fHeight    = 2 * S;
                 GrTexture* texture =
@@ -101,7 +101,7 @@ protected:
 
                 GrPaint paint;
                 paint.setBlendFunc(kOne_GrBlendCoeff, kISA_GrBlendCoeff);
-                GrMatrix vm;
+                SkMatrix vm;
                 if (i) {
                     vm.setRotate(90 * SK_Scalar1,
                                  S * SK_Scalar1,
@@ -110,11 +110,10 @@ protected:
                     vm.reset();
                 }
                 ctx->setMatrix(vm);
-                GrMatrix tm;
+                SkMatrix tm;
                 tm = vm;
                 tm.postIDiv(2*S, 2*S);
-                paint.colorStage(0)->setEffect(SkNEW_ARGS(GrSingleTextureEffect,
-                                                          (texture)), tm)->unref();
+                paint.colorStage(0)->setEffect(GrSimpleTextureEffect::Create(texture, tm))->unref();
 
                 ctx->drawRect(paint, GrRect::MakeWH(2*S, 2*S));
 

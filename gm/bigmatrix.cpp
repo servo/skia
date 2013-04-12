@@ -41,6 +41,7 @@ protected:
 
         bool success = m.invert(&m);
         SkASSERT(success);
+        (void) success; // silence compiler :(
 
         SkPath path;
 
@@ -95,4 +96,3 @@ static GM* MyFactory(void*) { return new BigMatrixGM; }
 static GMRegistry reg(MyFactory);
 
 }
-

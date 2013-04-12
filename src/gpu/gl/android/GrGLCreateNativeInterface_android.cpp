@@ -26,6 +26,7 @@ const GrGLInterface* GrGLCreateNativeInterface() {
         interface->fBindAttribLocation = glBindAttribLocation;
         interface->fBindBuffer = glBindBuffer;
         interface->fBindTexture = glBindTexture;
+        interface->fBindVertexArray = glBindVertexArrayOES;
         interface->fBlendColor = glBlendColor;
         interface->fBlendFunc = glBlendFunc;
         interface->fBufferData = glBufferData;
@@ -36,6 +37,7 @@ const GrGLInterface* GrGLCreateNativeInterface() {
         interface->fColorMask = glColorMask;
         interface->fCompileShader = glCompileShader;
         interface->fCompressedTexImage2D = glCompressedTexImage2D;
+        interface->fCopyTexSubImage2D = glCopyTexSubImage2D;
         interface->fCreateProgram = glCreateProgram;
         interface->fCreateShader = glCreateShader;
         interface->fCullFace = glCullFace;
@@ -43,6 +45,7 @@ const GrGLInterface* GrGLCreateNativeInterface() {
         interface->fDeleteProgram = glDeleteProgram;
         interface->fDeleteShader = glDeleteShader;
         interface->fDeleteTextures = glDeleteTextures;
+        interface->fDeleteVertexArrays = glDeleteVertexArraysOES;
         interface->fDepthMask = glDepthMask;
         interface->fDisable = glDisable;
         interface->fDisableVertexAttribArray = glDisableVertexAttribArray;
@@ -55,6 +58,7 @@ const GrGLInterface* GrGLCreateNativeInterface() {
         interface->fFrontFace = glFrontFace;
         interface->fGenBuffers = glGenBuffers;
         interface->fGenTextures = glGenTextures;
+        interface->fGenVertexArrays = glGenVertexArraysOES;
         interface->fGetBufferParameteriv = glGetBufferParameteriv;
         interface->fGetError = glGetError;
         interface->fGetIntegerv = glGetIntegerv;
@@ -69,7 +73,11 @@ const GrGLInterface* GrGLCreateNativeInterface() {
         interface->fPixelStorei = glPixelStorei;
         interface->fReadPixels = glReadPixels;
         interface->fScissor = glScissor;
+#if GR_GL_USE_NEW_SHADER_SOURCE_SIGNATURE
+        interface->fShaderSource = (GrGLShaderSourceProc) glShaderSource;
+#else
         interface->fShaderSource = glShaderSource;
+#endif
         interface->fStencilFunc = glStencilFunc;
         interface->fStencilFuncSeparate = glStencilFuncSeparate;
         interface->fStencilMask = glStencilMask;
@@ -117,6 +125,10 @@ const GrGLInterface* GrGLCreateNativeInterface() {
         interface->fDeleteRenderbuffers = glDeleteRenderbuffers;
         interface->fFramebufferRenderbuffer = glFramebufferRenderbuffer;
         interface->fFramebufferTexture2D = glFramebufferTexture2D;
+#if GL_IMG_multisampled_render_to_texture
+        interface->fFramebufferTexture2DMultisample = glFramebufferTexture2DMultisampleIMG;
+        interface->fRenderbufferStorageMultisample = glRenderbufferStorageMultisampleIMG;
+#endif
         interface->fGenFramebuffers = glGenFramebuffers;
         interface->fGenRenderbuffers = glGenRenderbuffers;
         interface->fGetFramebufferAttachmentParameteriv = glGetFramebufferAttachmentParameteriv;

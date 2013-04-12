@@ -23,6 +23,7 @@ static int trunc5(int x) {
 
 #define SK_R16_BITS 5
 
+#ifdef SK_DEBUG
 static int round5_slow(int x) {
     int orig = x & 7;
     int fake = x >> 5;
@@ -38,15 +39,17 @@ static int round5_slow(int x) {
     }
     return trunc + bias;
 }
+#endif
 
 static int round5_fast(int x) {
     int result = x + 3 - (x >> 5) + (x >> 7);
     result >>= 3;
-
+#ifdef SK_DEBUG
     {
         int r2 = round5_slow(x);
         SkASSERT(r2 == result);
     }
+#endif
     return result;
 }
 
@@ -101,7 +104,7 @@ static SkBitmap createBitmap(int n) {
     SkBitmap bitmap;
     bitmap.setConfig(SkBitmap::kARGB_8888_Config, n, n);
     bitmap.allocPixels();
-    bitmap.eraseColor(0);
+    bitmap.eraseColor(SK_ColorTRANSPARENT);
 
     SkCanvas canvas(bitmap);
     SkRect r;
@@ -183,7 +186,7 @@ protected:
             SkXfermode::kDstATop_Mode,
             SkXfermode::kXor_Mode,
             SkXfermode::kPlus_Mode,
-            SkXfermode::kMultiply_Mode,
+            SkXfermode::kModulate_Mode,
         };
 
         static const SkColor gColors[] = {
@@ -216,4 +219,3 @@ private:
 
 static SkView* MyFactory() { return new ColorFilterView; }
 static SkViewRegister reg(MyFactory);
-

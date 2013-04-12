@@ -7,108 +7,42 @@
 #ifndef Intersections_DEFINE
 #define Intersections_DEFINE
 
-#include <algorithm> // for std::min
-
 class Intersections {
 public:
     Intersections()
-        : fUsed(0)
-        , fUsed2(0)
-        , fCoincidentUsed(0)
+        : fFlip(0)
+#if SK_DEBUG
+        , fDepth(0)
+#endif
         , fSwap(0)
-        , fFlip(0)
     {
-        // OPTIMIZE: don't need to be initialized in release
+#if SK_DEBUG
+        bzero(fPt, sizeof(fPt));
         bzero(fT, sizeof(fT));
-        bzero(fCoincidentT, sizeof(fCoincidentT));
+        bzero(fIsCoincident, sizeof(fIsCoincident));
+#endif
+        reset();
     }
 
-    void add(double one, double two) {
+    int coincidentUsed() const {
+        if (!fIsCoincident[0]) {
+            SkASSERT(!fIsCoincident[0]);
+            return 0;
+        }
+        int count = 0;
+        SkDEBUGCODE(int count2 = 0;)
         for (int index = 0; index < fUsed; ++index) {
-            if (approximately_equal(fT[fSwap][index], one)
-                    && approximately_equal(fT[fSwap ^ 1][index], two)) {
-                return;
+            if (fIsCoincident[0] & (1 << index)) {
+                ++count;
             }
-        }
-        assert(fUsed < 9);
-        fT[fSwap][fUsed] = one;
-        fT[fSwap ^ 1][fUsed] = two;
-        ++fUsed;
-    }
-
-    // start if index == 0 : end if index == 1
-    void addCoincident(double one, double two) {
-        for (int index = 0; index < fCoincidentUsed; ++index) {
-            if (approximately_equal(fCoincidentT[fSwap][index], one)
-                    && approximately_equal(fCoincidentT[fSwap ^ 1][index], two)) {
-                return;
+    #if SK_DEBUG
+            if (fIsCoincident[1] & (1 << index)) {
+                ++count2;
             }
+    #endif
         }
-        assert(fCoincidentUsed < 9);
-        fCoincidentT[fSwap][fCoincidentUsed] = one;
-        fCoincidentT[fSwap ^ 1][fCoincidentUsed] = two;
-        ++fCoincidentUsed;
-    }
-
-    void addCoincident(double s1, double e1, double s2, double e2) {
-        assert((fCoincidentUsed & 1) != 1);
-        for (int index = 0; index < fCoincidentUsed; index += 2) {
-            double cs1 = fCoincidentT[fSwap][index];
-            double ce1 = fCoincidentT[fSwap][index + 1];
-            bool s1in = approximately_between(cs1, s1, ce1);
-            bool e1in = approximately_between(cs1, e1, ce1);
-            double cs2 = fCoincidentT[fSwap ^ 1][index];
-            double ce2 = fCoincidentT[fSwap ^ 1][index + 1];
-            bool s2in = approximately_between(cs2, s2, ce2);
-            bool e2in = approximately_between(cs2, e2, ce2);
-            if ((s1in | e1in) & (s2in | e2in)) {
-                double lesser1 = std::min(cs1, ce1);
-                index += cs1 > ce1;
-                if (s1in < lesser1) {
-                    fCoincidentT[fSwap][index] = s1in;
-                } else if (e1in < lesser1) {
-                    fCoincidentT[fSwap][index] = e1in;
-                }
-                index ^= 1;
-                double greater1 = fCoincidentT[fSwap][index];
-                if (s1in > greater1) {
-                    fCoincidentT[fSwap][index] = s1in;
-                } else if (e1in > greater1) {
-                    fCoincidentT[fSwap][index] = e1in;
-                }
-                index &= ~1;
-                double lesser2 = std::min(cs2, ce2);
-                index += cs2 > ce2;
-                if (s2in < lesser2) {
-                    fCoincidentT[fSwap ^ 1][index] = s2in;
-                } else if (e2in < lesser2) {
-                    fCoincidentT[fSwap ^ 1][index] = e2in;
-                }
-                index ^= 1;
-                double greater2 = fCoincidentT[fSwap ^ 1][index];
-                if (s2in > greater2) {
-                    fCoincidentT[fSwap ^ 1][index] = s2in;
-                } else if (e2in > greater2) {
-                    fCoincidentT[fSwap ^ 1][index] = e2in;
-                }
-                return;
-            }
-        }
-        assert(fCoincidentUsed < 9);
-        fCoincidentT[fSwap][fCoincidentUsed] = s1;
-        fCoincidentT[fSwap ^ 1][fCoincidentUsed] = s2;
-        ++fCoincidentUsed;
-        fCoincidentT[fSwap][fCoincidentUsed] = e1;
-        fCoincidentT[fSwap ^ 1][fCoincidentUsed] = e2;
-        ++fCoincidentUsed;
-    }
-
-    // FIXME: this is necessary because curve/curve intersections are noisy
-    // remove once curve/curve intersections are improved
-    void cleanUp();
-
-    int coincidentUsed() {
-        return fCoincidentUsed;
+        SkASSERT(count == count2);
+        return count;
     }
 
     void offset(int base, double start, double end) {
@@ -120,81 +54,91 @@ public:
         }
     }
 
-    void insert(double one, double two) {
-        assert(fUsed <= 1 || fT[0][0] < fT[0][1]);
-        int index;
-        for (index = 0; index < fUsed; ++index) {
-            if (approximately_equal(fT[0][index], one)
-                    && approximately_equal(fT[1][index], two)) {
-                return;
-            }
-            if (fT[0][index] > one) {
-                break;
-            }
-        }
-        assert(fUsed < 9);
-        int remaining = fUsed - index;
-        if (remaining > 0) {
-            memmove(&fT[0][index + 1], &fT[0][index], sizeof(fT[0][0]) * remaining);
-            memmove(&fT[1][index + 1], &fT[1][index], sizeof(fT[1][0]) * remaining);
-        }
-        fT[0][index] = one;
-        fT[1][index] = two;
-        ++fUsed;
+    // FIXME : does not respect swap
+    int insert(double one, double two, const _Point& pt);
+
+    // start if index == 0 : end if index == 1
+    void insertCoincident(double one, double two, const _Point& pt) {
+        int index = insertSwap(one, two, pt);
+        int bit = 1 << index;
+        fIsCoincident[0] |= bit;
+        fIsCoincident[1] |= bit;
     }
 
-    // FIXME: all callers should be moved to regular insert. Failures are likely
-    // if two separate callers differ on whether ts are equal or not
-    void insertOne(double t, int side) {
-        int used = side ? fUsed2 : fUsed;
-        assert(used <= 1 || fT[side][0] < fT[side][1]);
-        int index;
-        for (index = 0; index < used; ++index) {
-            if (approximately_equal(fT[side][index], t)) {
-                return;
-            }
-            if (fT[side][index] > t) {
-                break;
-            }
+    void insertCoincidentPair(double s1, double e1, double s2, double e2,
+            const _Point& startPt, const _Point& endPt);
+
+    int insertSwap(double one, double two, const _Point& pt) {
+        if (fSwap) {
+            return insert(two, one, pt);
+        } else {
+            return insert(one, two, pt);
         }
-        assert(used < 9);
-        int remaining = used - index;
-        if (remaining > 0) {
-            memmove(&fT[side][index + 1], &fT[side][index], sizeof(fT[side][0]) * remaining);
-        }
-        fT[side][index] = t;
-        side ? ++fUsed2 : ++fUsed;
     }
 
     bool intersected() const {
         return fUsed > 0;
     }
 
-    bool insertBalanced() const {
-        return fUsed == fUsed2;
+    void removeOne(int index);
+
+    // leaves flip, swap alone
+    void reset() {
+        fUsed = 0;
+        fUnsortable = false;
     }
 
     void swap() {
-        fSwap ^= 1;
+        fSwap ^= true;
     }
 
-    bool swapped() {
+    void swapPts() {
+        int index;
+        for (index = 0; index < fUsed; ++index) {
+            SkTSwap(fT[0][index], fT[1][index]);
+        }
+    }
+
+    bool swapped() const {
         return fSwap;
     }
 
-    int used() {
+    bool unsortable() const {
+        return fUnsortable;
+    }
+
+    int used() const {
         return fUsed;
     }
 
+    void downDepth() {
+        SkASSERT(--fDepth >= 0);
+    }
+
+    void upDepth() {
+        SkASSERT(++fDepth < 16);
+    }
+
+#if SK_DEBUG
+    int depth() const {
+        return fDepth;
+    }
+#endif
+
+    _Point fPt[9];
     double fT[2][9];
-    double fCoincidentT[2][9];
-    int fUsed;
-    int fUsed2;
-    int fCoincidentUsed;
-    int fFlip;
+    unsigned short fIsCoincident[2]; // bit arrays, one bit set for each coincident T
+    unsigned char fUsed;
+    bool fFlip;
+    bool fUnsortable;
+#if SK_DEBUG
+    int fDepth;
+#endif
+protected:
+    // used by addCoincident to remove ordinary intersections in range
+    void remove(double one, double two, const _Point& startPt, const _Point& endPt);
 private:
-    int fSwap;
+    bool fSwap;
 };
 
 #endif
-

@@ -14,7 +14,7 @@
 static void makebm(SkBitmap* bm, SkBitmap::Config config, int w, int h) {
     bm->setConfig(config, w, h);
     bm->allocPixels();
-    bm->eraseColor(0);
+    bm->eraseColor(SK_ColorTRANSPARENT);
 
     SkCanvas    canvas(*bm);
     SkScalar s = SkIntToScalar(w < h ? w : h);
@@ -213,4 +213,3 @@ private:
 
 static SkView* MyFactory() { return new ShaderTextView; }
 static SkViewRegister reg(MyFactory);
-

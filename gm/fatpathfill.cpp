@@ -22,7 +22,7 @@ static SkSurface* new_surface(int width, int height) {
         SkImage::kPMColor_ColorType,
         SkImage::kPremul_AlphaType
     };
-    return SkSurface::NewRaster(info, NULL);
+    return SkSurface::NewRaster(info);
 }
 
 static void draw_pixel_centers(SkCanvas* canvas) {
@@ -41,7 +41,7 @@ static void draw_fatpath(SkCanvas* canvas, SkSurface* surface,
                          const SkPath paths[], int count) {
     SkPaint paint;
 
-    surface->getCanvas()->clear(0);
+    surface->getCanvas()->clear(SK_ColorTRANSPARENT);
     for (int i = 0; i < count; ++i) {
         surface->getCanvas()->drawPath(paths[i], paint);
     }
@@ -81,7 +81,8 @@ protected:
 
         for (int i = 0; i < REPEAT_LOOP; ++i) {
             SkPath line, path;
-            line.moveTo(1, 2); line.lineTo(4 + i, 1);
+            line.moveTo(SkIntToScalar(1), SkIntToScalar(2));
+            line.lineTo(SkIntToScalar(4 + i), SkIntToScalar(1));
             paint.getFillPath(line, &path);
             draw_fatpath(canvas, surface, &path, 1);
 
@@ -96,4 +97,3 @@ private:
 ///////////////////////////////////////////////////////////////////////////////
 
 DEF_GM(return new FatPathFillGM;)
-

@@ -38,7 +38,7 @@ protected:
             int h = SkScalarRound(r.height());
             mask.setConfig(SkBitmap::kARGB_8888_Config, w, h);
             mask.allocPixels();
-            mask.eraseColor(0);
+            mask.eraseColor(SK_ColorTRANSPARENT);
             SkCanvas c(mask);
             SkRect bounds = r;
             bounds.offset(-bounds.fLeft, -bounds.fTop);
@@ -72,4 +72,3 @@ private:
 
 static SkView* MyFactory() { return new LayerMaskView; }
 static SkViewRegister reg(MyFactory);
-
