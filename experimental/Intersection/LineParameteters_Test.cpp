@@ -45,7 +45,8 @@ void LineParameter_Test() {
         const Cubic& cubic = tests[index];
         lineParameters.cubicEndPoints(cubic);
         double denormalizedDistance[2];
-        lineParameters.controlPtDistance(cubic, denormalizedDistance);
+        denormalizedDistance[0] = lineParameters.controlPtDistance(cubic, 1);
+        denormalizedDistance[1] = lineParameters.controlPtDistance(cubic, 2);
         double normalSquared = lineParameters.normalSquared();
         size_t inner;
         for (inner = 0; inner < 2; ++inner) {
@@ -53,10 +54,10 @@ void LineParameter_Test() {
             distSq *= distSq;
             double answersSq = answers[index][inner];
             answersSq *= answersSq;
-            if (approximately_equal(distSq, normalSquared * answersSq)) {
+            if (AlmostEqualUlps(distSq, normalSquared * answersSq)) {
                 continue;
             }
-            printf("%s [%d,%d] denormalizedDistance:%g != answer:%g"
+            SkDebugf("%s [%d,%d] denormalizedDistance:%g != answer:%g"
                     " distSq:%g answerSq:%g normalSquared:%g\n",
                     __FUNCTION__, (int)index, (int)inner,
                     denormalizedDistance[inner], answers[index][inner],
@@ -64,13 +65,13 @@ void LineParameter_Test() {
         }
         lineParameters.normalize();
         double normalizedDistance[2];
-        lineParameters.controlPtDistance(cubic, normalizedDistance);
+        normalizedDistance[0] = lineParameters.controlPtDistance(cubic, 1);
+        normalizedDistance[1] = lineParameters.controlPtDistance(cubic, 2);
         for (inner = 0; inner < 2; ++inner) {
-            if (approximately_equal(fabs(normalizedDistance[inner]),
-                    answers[index][inner])) {
+            if (AlmostEqualUlps(fabs(normalizedDistance[inner]), answers[index][inner])) {
                 continue;
             }
-            printf("%s [%d,%d] normalizedDistance:%1.10g != answer:%g\n",
+            SkDebugf("%s [%d,%d] normalizedDistance:%1.10g != answer:%g\n",
                     __FUNCTION__, (int)index, (int)inner,
                     normalizedDistance[inner], answers[index][inner]);
         }

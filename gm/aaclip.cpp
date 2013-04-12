@@ -9,22 +9,84 @@
 #include "SkCanvas.h"
 #include "SkPath.h"
 
+#include "SkGradientShader.h"
+static void test_shallow_gradient(SkCanvas* canvas, SkScalar width, SkScalar height) {
+    SkColor colors[] = { 0xFF7F7F7F, 0xFF7F7F7F, 0xFF000000 };
+    SkScalar pos[] = { 0, 0.35f, SK_Scalar1 };
+    SkPoint pts[] = { { 0, 0 }, { width, height } };
+    SkShader* s = SkGradientShader::CreateLinear(pts, colors, pos,
+                                                 SK_ARRAY_COUNT(colors),
+                                                 SkShader::kClamp_TileMode);
+    SkPaint paint;
+    paint.setShader(s)->unref();
+    canvas->drawPaint(paint);
+}
+
+#include "SkDashPathEffect.h"
+static void test_giant_dash(SkCanvas* canvas) {
+    SkPaint paint;
+    const SkScalar intervals[] = { SK_Scalar1, SK_Scalar1 };
+
+    paint.setStrokeWidth(2);
+    paint.setPathEffect(new SkDashPathEffect(intervals, 2, 0))->unref();
+
+    SkScalar big = 500 * 1000;
+
+    canvas->drawLine(10, 10, big, 10, paint);
+    canvas->drawLine(-big, 20, 500, 20, paint);
+    canvas->drawLine(-big, 30, big, 30, paint);
+
+    const SkScalar intervals2[] = { 20, 5, 10, 5 };
+    paint.setPathEffect(new SkDashPathEffect(intervals2, 4, 17))->unref();
+
+    canvas->translate(0, 40);
+    SkScalar x = -500;
+    SkScalar width = 3173;
+    for (int i = 0; i < 40; ++i) {
+        if (i > 10)
+        canvas->drawLine(x, 0, x + width, 0, paint);
+        x += 1;
+        canvas->translate(0, 4);
+    }
+}
+
+
+
+// Reproduces bug found here: http://jsfiddle.net/R8Cu5/1/
+//
+#include "SkGradientShader.h"
+static void test_grad(SkCanvas* canvas) {
+    SkPoint pts[] = {
+        { 478.544067f, -84.2041016f },
+        { 602.455933f, 625.204102f },
+    };
+    SkColor colors[] = { SK_ColorBLACK, SK_ColorBLACK, SK_ColorRED, SK_ColorRED };
+    SkScalar pos[] = { 0, 0.3f, 0.3f, 1.0f };
+    SkShader* s = SkGradientShader::CreateLinear(pts, colors, pos, 4, SkShader::kClamp_TileMode);
+    SkPaint p;
+    p.setShader(s)->unref();
+    canvas->drawPaint(p);
+}
+
 static SkCanvas* MakeCanvas(const SkIRect& bounds) {
     SkBitmap bm;
     bm.setConfig(SkBitmap::kARGB_8888_Config, bounds.width(), bounds.height());
     bm.allocPixels();
-    bm.eraseColor(0);
+    bm.eraseColor(SK_ColorTRANSPARENT);
 
     SkCanvas* canvas = new SkCanvas(bm);
     canvas->translate(-SkIntToScalar(bounds.fLeft), -SkIntToScalar(bounds.fTop));
     return canvas;
 }
 
+#ifdef SK_DEBUG
 static void GetBitmap(const SkCanvas* canvas, SkBitmap* bm) {
     *bm = canvas->getDevice()->accessBitmap(false);
 }
+#endif
 
 static void compare_canvas(const SkCanvas* a, const SkCanvas* b) {
+#ifdef SK_DEBUG
     SkBitmap bma, bmb;
     GetBitmap(a, &bma);
     GetBitmap(b, &bmb);
@@ -44,6 +106,7 @@ static void compare_canvas(const SkCanvas* a, const SkCanvas* b) {
             SkASSERT(0xFF000000 == rowb[x]);
         }
     }
+#endif
 }
 
 static void drawRectAsPath(SkCanvas* canvas, const SkRect& r, const SkPaint& p) {
@@ -157,7 +220,18 @@ protected:
         return make_isize(640, 480);
     }
 
-    virtual void onDraw(SkCanvas* canvas) {
+    virtual void onDraw(SkCanvas* canvas) SK_OVERRIDE {
+        if (false) {
+            SkRect bounds;
+            canvas->getClipBounds(&bounds);
+            test_shallow_gradient(canvas, bounds.width(), bounds.height()); return;
+        }
+        if (false) {
+            test_giant_dash(canvas); return;
+        }
+        if (false) {
+            test_grad(canvas); return;
+        }
         if (false) { // avoid bit rot, suppress warning
             test_mask();
         }

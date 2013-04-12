@@ -59,11 +59,11 @@ static void* FakeCreateTLS() {
     return NULL;
 }
 
-static void FakeDeleteTLS(void* unused) {
+static void FakeDeleteTLS(void*) {
     sk_atomic_dec(&gCounter);
 }
 
-static void testTLSDestructor(void* unused) {
+static void testTLSDestructor(void*) {
     SkTLS::Get(FakeCreateTLS, FakeDeleteTLS);
 }
 
@@ -71,7 +71,7 @@ static void TestTLS(skiatest::Reporter* reporter) {
     // TODO: Disabled for now to work around
     // http://code.google.com/p/skia/issues/detail?id=619
     // ('flaky segfault in TLS test on Shuttle_Ubuntu12 buildbots')
-    //test_threads(&thread_main);
+    if( false ) test_threads(&thread_main);
 
     // Test to ensure that at thread destruction, TLS destructors
     // have been called.

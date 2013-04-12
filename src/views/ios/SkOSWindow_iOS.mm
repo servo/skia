@@ -38,10 +38,6 @@ bool SkOSWindow::onEvent(const SkEvent& evt) {
     return this->INHERITED::onEvent(evt);
 }
 
-bool SkOSWindow::onDispatchClick(int x, int y, Click::State state, void* owner) {
-    return this->INHERITED::onDispatchClick(x, y, state, owner);
-}
-
 void SkOSWindow::onSetTitle(const char title[]) {
     [(SkUIView*)fHWND setSkTitle:title];
 }
@@ -55,7 +51,9 @@ void SkOSWindow::onUpdateMenu(SkOSMenu* menu) {
 }
 
 bool SkOSWindow::attach(SkBackEndTypes /* attachType */,
-                        int /* msaaSampleCount */) {
+                        int /* msaaSampleCount */,
+                        AttachmentInfo* info) {
+    [(SkUIView*)fHWND getAttachmentInfo:info];
     bool success = true;
     return success;
 }

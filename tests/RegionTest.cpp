@@ -9,6 +9,73 @@
 #include "SkRegion.h"
 #include "SkRandom.h"
 
+static void Union(SkRegion* rgn, const SkIRect& rect) {
+    rgn->op(rect, SkRegion::kUnion_Op);
+}
+
+#define TEST_NO_INTERSECT(rgn, rect)    REPORTER_ASSERT(reporter, !rgn.intersects(rect))
+#define TEST_INTERSECT(rgn, rect)       REPORTER_ASSERT(reporter, rgn.intersects(rect))
+#define TEST_NO_CONTAINS(rgn, rect)     REPORTER_ASSERT(reporter, !rgn.contains(rect))
+
+// inspired by http://code.google.com/p/skia/issues/detail?id=958
+//
+static void test_fromchrome(skiatest::Reporter* reporter) {
+    SkRegion r;
+    Union(&r, SkIRect::MakeXYWH(0, 0, 1, 1));
+    TEST_NO_INTERSECT(r, SkIRect::MakeXYWH(0, 0, 0, 0));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(0, 0, 2, 2));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(-1, 0, 2, 2));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(-1, -1, 2, 2));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(0, -1, 2, 2));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(-1, -1, 3, 3));
+
+    Union(&r, SkIRect::MakeXYWH(0, 0, 3, 3));
+    Union(&r, SkIRect::MakeXYWH(10, 0, 3, 3));
+    Union(&r, SkIRect::MakeXYWH(0, 10, 13, 3));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(-1, -1, 2, 2));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(2, -1, 2, 2));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(2, 2, 2, 2));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(-1, 2, 2, 2));
+
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(9, -1, 2, 2));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(12, -1, 2, 2));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(12, 2, 2, 2));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(9, 2, 2, 2));
+
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(0, -1, 13, 5));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(1, -1, 11, 5));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(2, -1, 9, 5));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(2, -1, 8, 5));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(3, -1, 8, 5));
+
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(0, 1, 13, 1));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(1, 1, 11, 1));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(2, 1, 9, 1));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(2, 1, 8, 1));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(3, 1, 8, 1));
+
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(0, 0, 13, 13));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(0, 1, 13, 11));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(0, 2, 13, 9));
+    TEST_INTERSECT(r, SkIRect::MakeXYWH(0, 2, 13, 8));
+
+
+    // These test SkRegion::contains(Rect) and SkRegion::contains(Region)
+
+    SkRegion container;
+    Union(&container, SkIRect::MakeXYWH(0, 0, 40, 20));
+    Union(&container, SkIRect::MakeXYWH(30, 20, 10, 20));
+    TEST_NO_CONTAINS(container, SkIRect::MakeXYWH(0, 0, 10, 39));
+    TEST_NO_CONTAINS(container, SkIRect::MakeXYWH(29, 0, 10, 39));
+
+    {
+        SkRegion rgn;
+        Union(&rgn, SkIRect::MakeXYWH(0, 0, 10, 10));
+        Union(&rgn, SkIRect::MakeLTRB(5, 10, 20, 20));
+        TEST_INTERSECT(rgn, SkIRect::MakeXYWH(15, 0, 5, 11));
+    }
+}
+
 static void test_empties(skiatest::Reporter* reporter) {
     SkRegion valid(SkIRect::MakeWH(10, 10));
     SkRegion empty, empty2;
@@ -31,7 +98,7 @@ enum {
     H = 256
 };
 
-static SkIRect randRect(SkRandom& rand) {
+static SkIRect randRect(SkMWCRandom& rand) {
     int x = rand.nextU() % W;
     int y = rand.nextU() % H;
     int w = rand.nextU() % W;
@@ -39,7 +106,7 @@ static SkIRect randRect(SkRandom& rand) {
     return SkIRect::MakeXYWH(x, y, w >> 1, h >> 1);
 }
 
-static void randRgn(SkRandom& rand, SkRegion* rgn, int n) {
+static void randRgn(SkMWCRandom& rand, SkRegion* rgn, int n) {
     rgn->setEmpty();
     for (int i = 0; i < n; ++i) {
         rgn->op(randRect(rand), SkRegion::kUnion_Op);
@@ -116,7 +183,7 @@ static void intersects_proc(skiatest::Reporter* reporter,
 static void test_proc(skiatest::Reporter* reporter,
                       void (*proc)(skiatest::Reporter*,
                                    const SkRegion& a, const SkRegion&)) {
-    SkRandom rand;
+    SkMWCRandom rand;
     for (int i = 0; i < 10000; ++i) {
         SkRegion outer;
         randRgn(rand, &outer, 8);
@@ -126,7 +193,7 @@ static void test_proc(skiatest::Reporter* reporter,
     }
 }
 
-static void rand_rect(SkIRect* rect, SkRandom& rand) {
+static void rand_rect(SkIRect* rect, SkMWCRandom& rand) {
     int bits = 6;
     int shift = 32 - bits;
     rect->set(rand.nextU() >> shift, rand.nextU() >> shift,
@@ -170,7 +237,7 @@ static void TestRegion(skiatest::Reporter* reporter) {
     };
     REPORTER_ASSERT(reporter, test_rects(rects, SK_ARRAY_COUNT(rects)));
 
-    SkRandom rand;
+    SkMWCRandom rand;
     for (int i = 0; i < 1000; i++) {
         SkRegion rgn0, rgn1;
 
@@ -185,6 +252,7 @@ static void TestRegion(skiatest::Reporter* reporter) {
     test_proc(reporter, contains_proc);
     test_proc(reporter, intersects_proc);
     test_empties(reporter);
+    test_fromchrome(reporter);
 }
 
 #include "TestClassDef.h"

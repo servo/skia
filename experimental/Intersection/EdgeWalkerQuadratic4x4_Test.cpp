@@ -8,7 +8,6 @@
 #include "Intersection_Tests.h"
 #include "SkBitmap.h"
 #include "SkCanvas.h"
-#include <assert.h>
 
 
 static void* testSimplify4x4QuadraticsMain(void* data)
@@ -84,7 +83,12 @@ void Simplify4x4QuadraticsThreaded_Test(int& testsRun)
     const char testStr[] = "testQuadratic";
     initializeTests(testStr, sizeof(testStr));
     int testsStart = testsRun;
-    for (int a = 0; a < 16; ++a) {
+    int a = 0;
+#define SKIP_A 0
+#if SKIP_A
+    a = 2;
+#endif
+    for (; a < 16; ++a) {
         for (int b = a ; b < 16; ++b) {
             for (int c = b ; c < 16; ++c) {
                 for (int d = c; d < 16; ++d) {

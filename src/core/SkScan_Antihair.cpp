@@ -89,6 +89,7 @@ static void call_hline_blitter(SkBlitter* blitter, int x, int y, int count,
 class SkAntiHairBlitter {
 public:
     SkAntiHairBlitter() : fBlitter(NULL) {}
+    virtual ~SkAntiHairBlitter() {}
 
     SkBlitter* getBlitter() const { return fBlitter; }
 
@@ -343,10 +344,12 @@ static int any_bad_ints(int a, int b, int c, int d) {
 }
 #endif
 
+#ifdef SK_DEBUG
 static bool canConvertFDot6ToFixed(SkFDot6 x) {
     const int maxDot6 = SK_MaxS32 >> (16 - 6);
     return SkAbs32(x) <= maxDot6;
 }
+#endif
 
 /*
  *  We want the fractional part of ordinate, but we want multiples of 64 to
@@ -1059,4 +1062,3 @@ void SkScan::AntiFrameRect(const SkRect& r, const SkPoint& strokeSize,
         AntiFrameRect(r, strokeSize, &wrap.getRgn(), wrap.getBlitter());
     }
 }
-

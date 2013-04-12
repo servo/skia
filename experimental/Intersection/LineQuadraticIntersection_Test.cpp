@@ -80,8 +80,8 @@ static void testOneOffs() {
             double lineT = intersections.fT[1][inner];
             double lineX, lineY;
             xy_at_t(line, lineT, lineX, lineY);
-            assert(approximately_equal(quadX, lineX)
-                    && approximately_equal(quadY, lineY));
+            SkASSERT(AlmostEqualUlps(quadX, lineX)
+                    && AlmostEqualUlps(quadY, lineY));
         }
     }
 }
@@ -95,7 +95,7 @@ void LineQuadraticIntersection_Test() {
         const _Line& line = lineQuadTests[index].line;
         Quadratic reduce1;
         _Line reduce2;
-        int order1 = reduceOrder(quad, reduce1);
+        int order1 = reduceOrder(quad, reduce1, kReduceOrder_TreatAsFill);
         int order2 = reduceOrder(line, reduce2);
         if (order1 < 3) {
             SkDebugf("%s [%d] quad order=%d\n", __FUNCTION__, (int) index, order1);
@@ -120,12 +120,12 @@ void LineQuadraticIntersection_Test() {
             double tt2 = intersections.fT[1][pt];
             SkASSERT(tt2 >= 0 && tt2 <= 1);
             xy_at_t(line, tt2, t2.x, t2.y);
-            if (!approximately_equal(t1.x, t2.x)) {
+            if (!AlmostEqualUlps(t1.x, t2.x)) {
                 SkDebugf("%s [%d,%d] x!= t1=%1.9g (%1.9g,%1.9g) t2=%1.9g (%1.9g,%1.9g)\n",
                     __FUNCTION__, (int)index, pt, tt1, t1.x, t1.y, tt2, t2.x, t2.y);
                 SkASSERT(0);
             }
-            if (!approximately_equal(t1.y, t2.y)) {
+            if (!AlmostEqualUlps(t1.y, t2.y)) {
                 SkDebugf("%s [%d,%d] y!= t1=%1.9g (%1.9g,%1.9g) t2=%1.9g (%1.9g,%1.9g)\n",
                     __FUNCTION__, (int)index, pt, tt1, t1.x, t1.y, tt2, t2.x, t2.y);
                 SkASSERT(0);
@@ -189,7 +189,7 @@ static void* testQuadLineIntersectMain(void* data)
         int cy = state.c >> 2;
         Quadratic quad = {{ax, ay}, {bx, by}, {cx, cy}};
         Quadratic reduced;
-        int order = reduceOrder(quad, reduced);
+        int order = reduceOrder(quad, reduced, kReduceOrder_TreatAsFill);
         if (order < 3) {
             continue; // skip degenerates
         }

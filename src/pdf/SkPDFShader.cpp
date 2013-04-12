@@ -43,29 +43,29 @@ static void unitToPointsMatrix(const SkPoint pts[2], SkMatrix* matrix) {
 
 /* Assumes t + startOffset is on the stack and does a linear interpolation on t
    between startOffset and endOffset from prevColor to curColor (for each color
-   component), leaving the result in component order on the stack.
+   component), leaving the result in component order on the stack. It assumes
+   there are always 3 components per color.
    @param range                  endOffset - startOffset
    @param curColor[components]   The current color components.
    @param prevColor[components]  The previous color components.
    @param result                 The result ps function.
  */
 static void interpolateColorCode(SkScalar range, SkScalar* curColor,
-                                 SkScalar* prevColor, int components,
-                                 SkString* result) {
+                                 SkScalar* prevColor, SkString* result) {
+    static const int kColorComponents = 3;
+
     // Figure out how to scale each color component.
-    SkAutoSTMalloc<4, SkScalar> multiplierAlloc(components);
-    SkScalar *multiplier = multiplierAlloc.get();
-    for (int i = 0; i < components; i++) {
+    SkScalar multiplier[kColorComponents];
+    for (int i = 0; i < kColorComponents; i++) {
         multiplier[i] = SkScalarDiv(curColor[i] - prevColor[i], range);
     }
 
     // Calculate when we no longer need to keep a copy of the input parameter t.
     // If the last component to use t is i, then dupInput[0..i - 1] = true
     // and dupInput[i .. components] = false.
-    SkAutoSTMalloc<4, bool> dupInputAlloc(components);
-    bool *dupInput = dupInputAlloc.get();
-    dupInput[components - 1] = false;
-    for (int i = components - 2; i >= 0; i--) {
+    bool dupInput[kColorComponents];
+    dupInput[kColorComponents - 1] = false;
+    for (int i = kColorComponents - 2; i >= 0; i--) {
         dupInput[i] = dupInput[i + 1] || multiplier[i + 1] != 0;
     }
 
@@ -73,7 +73,7 @@ static void interpolateColorCode(SkScalar range, SkScalar* curColor,
         result->append("pop ");
     }
 
-    for (int i = 0; i < components; i++) {
+    for (int i = 0; i < kColorComponents; i++) {
         // If the next components needs t and this component will consume a
         // copy, make another copy.
         if (dupInput[i] && multiplier[i] != 0) {
@@ -159,8 +159,7 @@ static void gradientFunctionCode(const SkShader::GradientInfo& info,
         }
 
         interpolateColorCode(info.fColorOffsets[i] - info.fColorOffsets[i - 1],
-                             colorData[i], colorData[i - 1], kColorComponents,
-                             result);
+                             colorData[i], colorData[i - 1], result);
         result->append("}\n");
     }
 
@@ -425,8 +424,11 @@ public:
 
     virtual bool isValid() { return fResources.count() > 0; }
 
-    void getResources(SkTDArray<SkPDFObject*>* resourceList) {
-        GetResourcesHelper(&fResources, resourceList);
+    void getResources(const SkTSet<SkPDFObject*>& knownResourceObjects,
+                      SkTSet<SkPDFObject*>* newResourceObjects) {
+        GetResourcesHelper(&fResources,
+                           knownResourceObjects,
+                           newResourceObjects);
     }
 
 private:
@@ -448,12 +450,15 @@ public:
 
     virtual bool isValid() { return size() > 0; }
 
-    void getResources(SkTDArray<SkPDFObject*>* resourceList) {
-        GetResourcesHelper(&fResources, resourceList);
+    void getResources(const SkTSet<SkPDFObject*>& knownResourceObjects,
+                      SkTSet<SkPDFObject*>* newResourceObjects) {
+        GetResourcesHelper(&fResources.toArray(),
+                           knownResourceObjects,
+                           newResourceObjects);
     }
 
 private:
-    SkTDArray<SkPDFObject*> fResources;
+    SkTSet<SkPDFObject*> fResources;
     SkAutoTDelete<const SkPDFShader::State> fState;
 };
 
@@ -612,8 +617,7 @@ SkPDFFunctionShader::SkPDFFunctionShader(SkPDFShader::State* state)
         return;
     }
 
-    SkRefPtr<SkPDFArray> domain = new SkPDFArray;
-    domain->unref();  // SkRefPtr and new both took a reference.
+    SkAutoTUnref<SkPDFArray> domain(new SkPDFArray);
     domain->reserve(4);
     domain->appendScalar(bbox.fLeft);
     domain->appendScalar(bbox.fRight);
@@ -640,16 +644,14 @@ SkPDFFunctionShader::SkPDFFunctionShader(SkPDFShader::State* state)
         functionCode = codeFunction(*info);
     }
 
-    SkRefPtr<SkPDFStream> function = makePSFunction(functionCode, domain.get());
-    // Pass one reference to fResources, SkRefPtr and new both took a reference.
-    fResources.push(function.get());
-
-    SkRefPtr<SkPDFDict> pdfShader = new SkPDFDict;
-    pdfShader->unref();  // SkRefPtr and new both took a reference.
+    SkAutoTUnref<SkPDFDict> pdfShader(new SkPDFDict);
     pdfShader->insertInt("ShadingType", 1);
     pdfShader->insertName("ColorSpace", "DeviceRGB");
     pdfShader->insert("Domain", domain.get());
-    pdfShader->insert("Function", new SkPDFObjRef(function.get()))->unref();
+
+    SkPDFStream* function = makePSFunction(functionCode, domain.get());
+    pdfShader->insert("Function", new SkPDFObjRef(function))->unref();
+    fResources.push(function);  // Pass ownership to resource list.
 
     insertInt("PatternType", 2);
     insert("Matrix", SkPDFUtils::MatrixToArray(finalMatrix))->unref();
@@ -825,8 +827,7 @@ SkPDFImageShader::SkPDFImageShader(SkPDFShader::State* state) : fState(state) {
         }
     }
 
-    SkRefPtr<SkPDFArray> patternBBoxArray = new SkPDFArray;
-    patternBBoxArray->unref();  // SkRefPtr and new both took a reference.
+    SkAutoTUnref<SkPDFArray> patternBBoxArray(new SkPDFArray);
     patternBBoxArray->reserve(4);
     patternBBoxArray->appendScalar(patternBBox.fLeft);
     patternBBoxArray->appendScalar(patternBBox.fTop);
@@ -834,11 +835,10 @@ SkPDFImageShader::SkPDFImageShader(SkPDFShader::State* state) : fState(state) {
     patternBBoxArray->appendScalar(patternBBox.fBottom);
 
     // Put the canvas into the pattern stream (fContent).
-    SkRefPtr<SkStream> content = pattern.content();
-    content->unref();  // SkRefPtr and content() both took a reference.
-    pattern.getResources(&fResources, false);
-
+    SkAutoTUnref<SkStream> content(pattern.content());
     setData(content.get());
+    pattern.getResources(fResources, &fResources, false);
+
     insertName("Type", "Pattern");
     insertInt("PatternType", 1);
     insertInt("PaintType", 1);

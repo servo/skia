@@ -27,6 +27,7 @@ class SkDraw;
 class SkDrawFilter;
 class SkMetaData;
 class SkPicture;
+class SkRRect;
 class SkSurface_Base;
 
 /** \class SkCanvas
@@ -84,12 +85,6 @@ public:
         of the returned device is not changed by this call.
     */
     SkDevice* getDevice() const;
-
-    /** Specify a device for this canvas to draw into. If it is not null, its
-        reference count is incremented. If the canvas was already holding a
-        device, its reference count is decremented. The new device is returned.
-    */
-    virtual SkDevice* setDevice(SkDevice* device);
 
     /**
      *  saveLayer() can create another device (which is later drawn onto
@@ -345,23 +340,46 @@ public:
     */
     void resetMatrix();
 
-    /** Modify the current clip with the specified rectangle.
-        @param rect The rect to intersect with the current clip
-        @param op The region op to apply to the current clip
-        @return true if the canvas' clip is non-empty
-    */
+    /**
+     *  Modify the current clip with the specified rectangle.
+     *  @param rect The rect to combine with the current clip
+     *  @param op The region op to apply to the current clip
+     *  @param doAntiAlias true if the clip should be antialiased
+     *  @return true if the canvas' clip is non-empty
+     */
     virtual bool clipRect(const SkRect& rect,
                           SkRegion::Op op = SkRegion::kIntersect_Op,
                           bool doAntiAlias = false);
 
-    /** Modify the current clip with the specified path.
-        @param path The path to apply to the current clip
-        @param op The region op to apply to the current clip
-        @return true if the canvas' new clip is non-empty
-    */
+    /**
+     *  Modify the current clip with the specified SkRRect.
+     *  @param rrect The rrect to combine with the current clip
+     *  @param op The region op to apply to the current clip
+     *  @param doAntiAlias true if the clip should be antialiased
+     *  @return true if the canvas' clip is non-empty
+     */
+    virtual bool clipRRect(const SkRRect& rrect,
+                           SkRegion::Op op = SkRegion::kIntersect_Op,
+                           bool doAntiAlias = false);
+
+    /**
+     *  Modify the current clip with the specified path.
+     *  @param path The path to combine with the current clip
+     *  @param op The region op to apply to the current clip
+     *  @param doAntiAlias true if the clip should be antialiased
+     *  @return true if the canvas' new clip is non-empty
+     */
     virtual bool clipPath(const SkPath& path,
                           SkRegion::Op op = SkRegion::kIntersect_Op,
                           bool doAntiAlias = false);
+
+    /** EXPERIMENTAL -- only used for testing
+        Set to false to force clips to be hard, even if doAntiAlias=true is
+        passed to clipRect or clipPath.
+     */
+    void setAllowSoftClip(bool allow) {
+        fAllowSoftClip = allow;
+    }
 
     /** Modify the current clip with the specified region. Note that unlike
         clipRect() and clipPath() which transform their arguments by the current
@@ -575,7 +593,16 @@ public:
         @param oval     The rectangle bounds of the oval to be drawn
         @param paint    The paint used to draw the oval
     */
-    void drawOval(const SkRect& oval, const SkPaint&);
+    virtual void drawOval(const SkRect& oval, const SkPaint&);
+
+    /**
+     *  Draw the specified RRect using the specified paint The rrect will be filled or stroked
+     *  based on the Style in the paint.
+     *
+     *  @param rrect    The round-rect to draw
+     *  @param paint    The paint used to draw the round-rect
+     */
+    virtual void drawRRect(const SkRRect& rrect, const SkPaint& paint);
 
     /** Draw the specified circle using the specified paint. If radius is <= 0,
         then nothing will be drawn. The circle will be filled
@@ -776,10 +803,7 @@ public:
 
     /** Draw the picture into this canvas. This method effective brackets the
         playback of the picture's draw calls with save/restore, so the state
-        of this canvas will be unchanged after this call. This contrasts with
-        the more immediate method SkPicture::draw(), which does not bracket
-        the canvas with save/restore, thus the canvas may be left in a changed
-        state after the call.
+        of this canvas will be unchanged after this call.
         @param picture The recorded drawing commands to playback into this
                        canvas.
     */
@@ -803,7 +827,7 @@ public:
         @param xmode Used if both texs and colors are present. In this
                     case the colors are combined with the texture using mode,
                     before being drawn using the paint. If mode is null, then
-                    kMultiply_Mode is used.
+                    kModulate_Mode is used.
         @param indices If not null, array of indices to reference into the
                     vertex (texs, colors) array.
         @param indexCount number of entries in the indices array (if not null)
@@ -967,6 +991,17 @@ protected:
     // can perform copy-on-write or invalidate any cached images
     void predrawNotify();
 
+    /** DEPRECATED -- use constructor(device)
+
+     Marked as 'protected' to avoid new clients using this before we can
+     completely remove it.
+
+     Specify a device for this canvas to draw into. If it is not null, its
+     reference count is incremented. If the canvas was already holding a
+     device, its reference count is decremented. The new device is returned.
+     */
+    virtual SkDevice* setDevice(SkDevice* device);
+
 private:
     class MCRec;
 
@@ -988,6 +1023,7 @@ private:
         fSurfaceBase = sb;
     }
     friend class SkSurface_Base;
+    friend class SkSurface_Gpu;
 
     bool fDeviceCMDirty;            // cleared by updateDeviceCMCache()
     void updateDeviceCMCache();
@@ -1027,6 +1063,7 @@ private:
      */
     mutable SkRectCompareType fLocalBoundsCompareType;
     mutable bool              fLocalBoundsCompareTypeDirty;
+    bool fAllowSoftClip;
 
     const SkRectCompareType& getLocalClipBoundsCompareType() const {
         if (fLocalBoundsCompareTypeDirty) {
@@ -1071,7 +1108,20 @@ public:
         }
     }
     ~SkAutoCanvasRestore() {
-        fCanvas->restoreToCount(fSaveCount);
+        if (fCanvas) {
+            fCanvas->restoreToCount(fSaveCount);
+        }
+    }
+
+    /**
+     *  Perform the restore now, instead of waiting for the destructor. Will
+     *  only do this once.
+     */
+    void restore() {
+        if (fCanvas) {
+            fCanvas->restoreToCount(fSaveCount);
+            fCanvas = NULL;
+        }
     }
 
 private:

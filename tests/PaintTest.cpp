@@ -29,8 +29,8 @@ static void test_copy(skiatest::Reporter* reporter) {
 
 #ifdef SK_BUILD_FOR_ANDROID
     // the copy constructor should preserve the Generation ID
-    int32_t paintGenID = paint.getGenerationID();
-    int32_t copiedPaintGenID = copiedPaint.getGenerationID();
+    uint32_t paintGenID = paint.getGenerationID();
+    uint32_t copiedPaintGenID = copiedPaint.getGenerationID();
     REPORTER_ASSERT(reporter, paintGenID == copiedPaintGenID);
     REPORTER_ASSERT(reporter, !memcmp(&paint, &copiedPaint, sizeof(paint)));
 #endif
@@ -97,12 +97,27 @@ static void regression_cubic(skiatest::Reporter* reporter) {
     REPORTER_ASSERT(reporter, maxR.contains(strokeR));
 }
 
+// found and fixed for android: not initializing rect for string's of length 0
+static void regression_measureText(skiatest::Reporter* reporter) {
+
+    SkPaint paint;
+    paint.setTextSize(SkFloatToScalar(12.0f));
+
+    SkRect r;
+    r.setLTRB(SK_ScalarNaN, SK_ScalarNaN, SK_ScalarNaN, SK_ScalarNaN);
+
+    // test that the rect was reset
+    paint.measureText("", 0, &r, SkFloatToScalar(1.0f));
+    REPORTER_ASSERT(reporter, r.isEmpty());
+}
+
 static void TestPaint(skiatest::Reporter* reporter) {
     // TODO add general paint tests
     test_copy(reporter);
 
     // regression tests
     regression_cubic(reporter);
+    regression_measureText(reporter);
 }
 
 #include "TestClassDef.h"

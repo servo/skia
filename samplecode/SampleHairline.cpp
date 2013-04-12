@@ -232,7 +232,7 @@ protected:
                      HEIGHT + MARGIN*2);
         bm.allocPixels();
         // this will erase our margin, which we want to always stay 0
-        bm.eraseColor(0);
+        bm.eraseColor(SK_ColorTRANSPARENT);
 
         bm2.setConfig(SkBitmap::kARGB_8888_Config, WIDTH, HEIGHT,
                       bm.rowBytes());
@@ -243,7 +243,7 @@ protected:
         paint.setAntiAlias(fDoAA);
         paint.setStyle(SkPaint::kStroke_Style);
 
-        bm2.eraseColor(0);
+        bm2.eraseColor(SK_ColorTRANSPARENT);
         gProcs[fProcIndex].fProc(&c2, paint, bm);
         canvas->drawBitmap(bm2, SkIntToScalar(10), SkIntToScalar(10), NULL);
 
@@ -261,10 +261,11 @@ protected:
         }
     }
 
-    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y) {
+    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y,
+                                              unsigned modi) {
         fDoAA = !fDoAA;
         this->inval(NULL);
-        return this->INHERITED::onFindClickHandler(x, y);
+        return this->INHERITED::onFindClickHandler(x, y, modi);
     }
 
 
@@ -276,4 +277,3 @@ private:
 
 static SkView* MyFactory() { return new HairlineView; }
 static SkViewRegister reg(MyFactory);
-

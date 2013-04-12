@@ -48,8 +48,9 @@ bool SkOSWindow::onEvent(const SkEvent& evt) {
     return this->INHERITED::onEvent(evt);
 }
 
-bool SkOSWindow::onDispatchClick(int x, int y, Click::State state, void* owner) {
-    return this->INHERITED::onDispatchClick(x, y, state, owner);
+bool SkOSWindow::onDispatchClick(int x, int y, Click::State state, void* owner,
+                                 unsigned modi) {
+    return this->INHERITED::onDispatchClick(x, y, state, owner, modi);
 }
 
 void SkOSWindow::onSetTitle(const char title[]) {
@@ -64,8 +65,8 @@ void SkOSWindow::onUpdateMenu(const SkOSMenu* menu) {
     [(SkNSView*)fHWND onUpdateMenu:menu];
 }
 
-bool SkOSWindow::attach(SkBackEndTypes attachType, int sampleCount) {
-    return [(SkNSView*)fHWND attach:attachType withMSAASampleCount:sampleCount];
+bool SkOSWindow::attach(SkBackEndTypes attachType, int sampleCount, AttachmentInfo* info) {
+    return [(SkNSView*)fHWND attach:attachType withMSAASampleCount:sampleCount andGetInfo:info];
 }
 
 void SkOSWindow::detach() {

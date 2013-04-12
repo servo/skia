@@ -21,10 +21,14 @@ static int coincident_line(const Quadratic& quad, Quadratic& reduction) {
     return 1;
 }
 
-static int vertical_line(const Quadratic& quad, Quadratic& reduction) {
+static int vertical_line(const Quadratic& quad, ReduceOrder_Styles reduceStyle,
+        Quadratic& reduction) {
     double tValue;
     reduction[0] = quad[0];
     reduction[1] = quad[2];
+    if (reduceStyle == kReduceOrder_TreatAsFill) {
+        return 2;
+    }
     int smaller = reduction[1].y > reduction[0].y;
     int larger = smaller ^ 1;
     if (findExtrema(quad[0].y, quad[1].y, quad[2].y, &tValue)) {
@@ -38,10 +42,14 @@ static int vertical_line(const Quadratic& quad, Quadratic& reduction) {
     return 2;
 }
 
-static int horizontal_line(const Quadratic& quad, Quadratic& reduction) {
+static int horizontal_line(const Quadratic& quad, ReduceOrder_Styles reduceStyle,
+        Quadratic& reduction) {
     double tValue;
     reduction[0] = quad[0];
     reduction[1] = quad[2];
+    if (reduceStyle == kReduceOrder_TreatAsFill) {
+        return 2;
+    }
     int smaller = reduction[1].x > reduction[0].x;
     int larger = smaller ^ 1;
     if (findExtrema(quad[0].x, quad[1].x, quad[2].x, &tValue)) {
@@ -55,15 +63,15 @@ static int horizontal_line(const Quadratic& quad, Quadratic& reduction) {
     return 2;
 }
 
-static int check_linear(const Quadratic& quad, Quadratic& reduction,
-        int minX, int maxX, int minY, int maxY) {
+static int check_linear(const Quadratic& quad, ReduceOrder_Styles reduceStyle,
+        int minX, int maxX, int minY, int maxY, Quadratic& reduction) {
     int startIndex = 0;
     int endIndex = 2;
     while (quad[startIndex].approximatelyEqual(quad[endIndex])) {
         --endIndex;
         if (endIndex == 0) {
             printf("%s shouldn't get here if all four points are about equal", __FUNCTION__);
-            assert(0);
+            SkASSERT(0);
         }
     }
     if (!isLinear(quad, startIndex, endIndex)) {
@@ -72,6 +80,9 @@ static int check_linear(const Quadratic& quad, Quadratic& reduction,
     // four are colinear: return line formed by outside
     reduction[0] = quad[0];
     reduction[1] = quad[2];
+    if (reduceStyle == kReduceOrder_TreatAsFill) {
+        return 2;
+    }
     int sameSide;
     bool useX = quad[maxX].x - quad[minX].x >= quad[maxY].y - quad[minY].y;
     if (useX) {
@@ -92,7 +103,7 @@ static int check_linear(const Quadratic& quad, Quadratic& reduction,
     if (root) {
         _Point extrema;
         extrema.x = interp_quad_coords(quad[0].x, quad[1].x, quad[2].x, tValue);
-        extrema.y = interp_quad_coords(quad[0].x, quad[1].x, quad[2].x, tValue);
+        extrema.y = interp_quad_coords(quad[0].y, quad[1].y, quad[2].y, tValue);
         // sameSide > 0 means mid is smaller than either [0] or [2], so replace smaller
         int replace;
         if (useX) {
@@ -100,13 +111,13 @@ static int check_linear(const Quadratic& quad, Quadratic& reduction,
                 return 2;
             }
             replace = (extrema.x < quad[0].x | extrema.x < quad[2].x)
-                    ^ quad[0].x < quad[2].x;
+                    ^ (quad[0].x < quad[2].x);
         } else {
             if (extrema.y < quad[0].y ^ extrema.y < quad[2].y) {
                 return 2;
             }
             replace = (extrema.y < quad[0].y | extrema.y < quad[2].y)
-                    ^ quad[0].y < quad[2].y;
+                    ^ (quad[0].y < quad[2].y);
         }
         reduction[replace] = extrema;
     }
@@ -128,7 +139,7 @@ bool isLinear(const Quadratic& quad, int startIndex, int endIndex) {
     // note that three points in a line doesn't simplify a cubic
 // look for approximation with single quadratic
     // save approximation with multiple quadratics for later
-int reduceOrder(const Quadratic& quad, Quadratic& reduction) {
+int reduceOrder(const Quadratic& quad, Quadratic& reduction, ReduceOrder_Styles reduceStyle) {
     int index, minX, maxX, minY, maxY;
     int minXSet, minYSet;
     minX = maxX = minY = maxY = 0;
@@ -148,10 +159,10 @@ int reduceOrder(const Quadratic& quad, Quadratic& reduction) {
         }
     }
     for (index = 0; index < 3; ++index) {
-        if (approximately_equal(quad[index].x, quad[minX].x)) {
+        if (AlmostEqualUlps(quad[index].x, quad[minX].x)) {
             minXSet |= 1 << index;
         }
-        if (approximately_equal(quad[index].y, quad[minY].y)) {
+        if (AlmostEqualUlps(quad[index].y, quad[minY].y)) {
             minYSet |= 1 << index;
         }
     }
@@ -159,12 +170,12 @@ int reduceOrder(const Quadratic& quad, Quadratic& reduction) {
         if (minYSet == 0x7) { // return 1 if all four are coincident
             return coincident_line(quad, reduction);
         }
-        return vertical_line(quad, reduction);
+        return vertical_line(quad, reduceStyle, reduction);
     }
     if (minYSet == 0xF) { // test for horizontal line
-        return horizontal_line(quad, reduction);
+        return horizontal_line(quad, reduceStyle, reduction);
     }
-    int result = check_linear(quad, reduction, minX, maxX, minY, maxY);
+    int result = check_linear(quad, reduceStyle, minX, maxX, minY, maxY, reduction);
     if (result) {
         return result;
     }

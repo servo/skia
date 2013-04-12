@@ -98,7 +98,7 @@ protected:
         canvas->drawLine(x, y, x + SkIntToScalar(90), y + SkIntToScalar(90), paint);
     }
 
-    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y) {
+    virtual SkView::Click* onFindClickHandler(SkScalar x, SkScalar y, unsigned) SK_OVERRIDE {
         fAlpha = SkScalarRound(y);
         this->inval(NULL);
         return NULL;
@@ -113,4 +113,3 @@ private:
 
 static SkView* MyFactory() { return new LinesView; }
 static SkViewRegister reg(MyFactory);
-

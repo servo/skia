@@ -85,6 +85,17 @@ public:
                         kPerspective_Mask);
     }
 
+    /** Returns true if the matrix contains only translation, rotation or uniform scale
+        Returns false if other transformation types are included or is degenerate
+     */
+    bool isSimilarity(SkScalar tol = SK_ScalarNearlyZero) const;
+
+    /** Returns true if the matrix contains only translation, rotation or scale
+        (non-uniform scale is allowed).
+        Returns false if other transformation types are included or is degenerate
+     */
+    bool preservesRightAngles(SkScalar tol = SK_ScalarNearlyZero) const;
+
     enum {
         kMScaleX,
         kMSkewX,
@@ -173,6 +184,8 @@ public:
     /** Set the matrix to translate by (dx, dy).
     */
     void setTranslate(SkScalar dx, SkScalar dy);
+    void setTranslate(const SkVector& v) { this->setTranslate(v.fX, v.fY); }
+
     /** Set the matrix to scale by sx and sy, with a pivot point at (px, py).
         The pivot point is the coordinate that should remain unchanged by the
         specified transformation.
@@ -525,8 +538,8 @@ public:
     // return the number of bytes read
     uint32_t readFromMemory(const void* buffer);
 
-    void dump() const;
-    void toDumpString(SkString*) const;
+    SkDEVCODE(void dump() const;)
+    SkDEVCODE(void toString(SkString*) const;)
 
     /**
      * Calculates the maximum stretching factor of the matrix. If the matrix has

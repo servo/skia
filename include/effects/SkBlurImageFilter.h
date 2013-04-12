@@ -8,10 +8,10 @@
 #ifndef SkBlurImageFilter_DEFINED
 #define SkBlurImageFilter_DEFINED
 
-#include "SkSingleInputImageFilter.h"
+#include "SkImageFilter.h"
 #include "SkSize.h"
 
-class SK_API SkBlurImageFilter : public SkSingleInputImageFilter {
+class SK_API SkBlurImageFilter : public SkImageFilter {
 public:
     SkBlurImageFilter(SkScalar sigmaX, SkScalar sigmaY, SkImageFilter* input = NULL);
 
@@ -25,11 +25,11 @@ protected:
                                SkBitmap* result, SkIPoint* offset) SK_OVERRIDE;
 
     bool canFilterImageGPU() const SK_OVERRIDE { return true; }
-    virtual GrTexture* onFilterImageGPU(Proxy* proxy, GrTexture* src, const SkRect& rect) SK_OVERRIDE;
+    virtual bool filterImageGPU(Proxy* proxy, const SkBitmap& src, SkBitmap* result) SK_OVERRIDE;
 
 private:
     SkSize   fSigma;
-    typedef SkSingleInputImageFilter INHERITED;
+    typedef SkImageFilter INHERITED;
 };
 
 #endif

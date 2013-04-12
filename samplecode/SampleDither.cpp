@@ -76,7 +76,7 @@ static void make_bm(SkBitmap* bm) {
     bm->eraseColor(SK_ColorBLUE);
     return;
 #else
-    bm->eraseColor(0);
+    bm->eraseColor(SK_ColorTRANSPARENT);
 #endif
 
     SkCanvas c(*bm);
@@ -182,4 +182,3 @@ private:
 
 static SkView* MyFactory() { return new DitherView; }
 static SkViewRegister reg(MyFactory);
-

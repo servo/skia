@@ -7,10 +7,13 @@
 
 #include "Test.h"
 #include "SkPaint.h"
+#include "SkFontStream.h"
+#include "SkStream.h"
 #include "SkTypeface.h"
 #include "SkEndian.h"
 
 //#define DUMP_TABLES
+//#define DUMP_TTC_TABLES
 
 #define kFontTableTag_head          SkSetFourByteTag('h', 'e', 'a', 'd')
 #define kFontTableTag_hhea          SkSetFourByteTag('h', 'h', 'e', 'a')
@@ -25,24 +28,79 @@ static const struct TagSize {
     {   kFontTableTag_maxp,         32 },
 };
 
+// Test that getUnitsPerEm() agrees with a direct lookup in the 'head' table
+// (if that table is available.
 static void test_unitsPerEm(skiatest::Reporter* reporter, SkTypeface* face) {
-    int upem = face->getUnitsPerEm();
-    if (0 == upem) return;
+    int nativeUPEM = face->getUnitsPerEm();;
 
+    int tableUPEM = -1;
     size_t size = face->getTableSize(kFontTableTag_head);
     if (size) {
         SkAutoMalloc storage(size);
         char* ptr = (char*)storage.get();
         face->getTableData(kFontTableTag_head, 0, size, ptr);
         // unitsPerEm is at offset 18 into the 'head' table.
-        int upem2 = SkEndian_SwapBE16(*(uint16_t*)&ptr[18]);
-        REPORTER_ASSERT(reporter, upem2 == upem);
+        tableUPEM = SkEndian_SwapBE16(*(uint16_t*)&ptr[18]);
+    }
+//    SkDebugf("--- typeface returned %d upem [%X]\n", nativeUPEM, face->uniqueID());
+
+    if (tableUPEM >= 0) {
+        REPORTER_ASSERT(reporter, tableUPEM == nativeUPEM);
+    } else {
+        // not sure this is a bug, but lets report it for now as info.
+        SkDebugf("--- typeface returned 0 upem [%X]\n", face->uniqueID());
+    }
+}
+
+static void test_fontstream(skiatest::Reporter* reporter,
+                            SkStream* stream, int ttcIndex) {
+    int n = SkFontStream::GetTableTags(stream, ttcIndex, NULL);
+    SkAutoTArray<SkFontTableTag> array(n);
+
+    int n2 = SkFontStream::GetTableTags(stream, ttcIndex, array.get());
+    REPORTER_ASSERT(reporter, n == n2);
+
+    for (int i = 0; i < n; ++i) {
+#ifdef DUMP_TTC_TABLES
+        SkString str;
+        SkFontTableTag t = array[i];
+        str.appendUnichar((t >> 24) & 0xFF);
+        str.appendUnichar((t >> 16) & 0xFF);
+        str.appendUnichar((t >>  8) & 0xFF);
+        str.appendUnichar((t >>  0) & 0xFF);
+        SkDebugf("[%d:%d] '%s'\n", ttcIndex, i, str.c_str());
+#endif
+        size_t size = SkFontStream::GetTableSize(stream, ttcIndex, array[i]);
+        for (size_t j = 0; j < SK_ARRAY_COUNT(gKnownTableSizes); ++j) {
+            if (gKnownTableSizes[j].fTag == array[i]) {
+                REPORTER_ASSERT(reporter, gKnownTableSizes[j].fSize == size);
+            }
+        }
+    }
+}
+
+static void test_fontstream(skiatest::Reporter* reporter, SkStream* stream) {
+    int count = SkFontStream::CountTTCEntries(stream);
+#ifdef DUMP_TTC_TABLES
+    SkDebugf("CountTTCEntries %d\n", count);
+#endif
+    for (int i = 0; i < count; ++i) {
+        test_fontstream(reporter, stream, i);
+    }
+}
+
+static void test_fontstream(skiatest::Reporter* reporter) {
+    // TODO: replace when we get a tools/resources/fonts/test.ttc
+    const char* name = "/AmericanTypewriter.ttc";
+    SkFILEStream stream(name);
+    if (stream.isValid()) {
+        test_fontstream(reporter, &stream);
     }
 }
 
 static void test_tables(skiatest::Reporter* reporter, SkTypeface* face) {
-    SkFontID fontID = face->uniqueID();
     if (false) { // avoid bit rot, suppress warning
+        SkFontID fontID = face->uniqueID();
         REPORTER_ASSERT(reporter, fontID);
     }
 
@@ -145,7 +203,7 @@ static void test_advances(skiatest::Reporter* reporter) {
     char txt[] = "long.text.with.lots.of.dots.";
 
     for (size_t i = 0; i < SK_ARRAY_COUNT(faces); i++) {
-        SkTypeface* face = SkTypeface::CreateFromName(faces[i], SkTypeface::kNormal);
+        SkAutoTUnref<SkTypeface> face(SkTypeface::CreateFromName(faces[i], SkTypeface::kNormal));
         paint.setTypeface(face);
 
         for (size_t j = 0; j  < SK_ARRAY_COUNT(settings); j++) {
@@ -177,6 +235,7 @@ static void test_advances(skiatest::Reporter* reporter) {
 
 static void TestFontHost(skiatest::Reporter* reporter) {
     test_tables(reporter);
+    test_fontstream(reporter);
     test_advances(reporter);
 }
 

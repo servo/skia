@@ -1,12 +1,9 @@
 /*
- *  SkAntiEdge.cpp
- *  core
+ * Copyright 2011 Google Inc.
  *
- *  Created by Cary Clark on 5/6/11.
- *  Copyright 2011 __MyCompanyName__. All rights reserved.
- *
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
  */
-
 #include "SkAntiEdge.h"
 #include "SkPoint.h"
 
@@ -999,7 +996,7 @@ void CreateSweep(SkBitmap* sweep, SkScalar rectWidth) {
     const int pixelCol = 100;
     sweep->setConfig(SkBitmap::kA8_Config, pixelCol, pixelRow);
     sweep->allocPixels();
-    sweep->eraseColor(0);
+    sweep->eraseColor(SK_ColorTRANSPARENT);
     sweep->lockPixels();
     void* pixels = sweep->getPixels();
     create_sweep((uint8_t*) pixels, pixelRow, pixelCol, rectWidth);
@@ -1011,7 +1008,7 @@ void CreateHorz(SkBitmap* sweep) {
     const int pixelCol = 100;
     sweep->setConfig(SkBitmap::kA8_Config, pixelCol, pixelRow);
     sweep->allocPixels();
-    sweep->eraseColor(0);
+    sweep->eraseColor(SK_ColorTRANSPARENT);
     sweep->lockPixels();
     void* pixels = sweep->getPixels();
     create_horz((uint8_t*) pixels, pixelRow, pixelCol);
@@ -1023,7 +1020,7 @@ void CreateVert(SkBitmap* sweep) {
     const int pixelCol = 100;
     sweep->setConfig(SkBitmap::kA8_Config, pixelCol, pixelRow);
     sweep->allocPixels();
-    sweep->eraseColor(0);
+    sweep->eraseColor(SK_ColorTRANSPARENT);
     sweep->lockPixels();
     void* pixels = sweep->getPixels();
     create_vert((uint8_t*) pixels, pixelRow, pixelCol);
@@ -1035,7 +1032,7 @@ void CreateAngle(SkBitmap* sweep, SkScalar angle) {
     const int pixelCol = 150;
     sweep->setConfig(SkBitmap::kA8_Config, pixelCol, pixelRow);
     sweep->allocPixels();
-    sweep->eraseColor(0);
+    sweep->eraseColor(SK_ColorTRANSPARENT);
     sweep->lockPixels();
     void* pixels = sweep->getPixels();
     create_angle((uint8_t*) pixels, pixelRow, pixelCol, angle);
@@ -1079,4 +1076,3 @@ void SkAntiEdge_Test() {
     test_horz();
     test_vert();
 }
-

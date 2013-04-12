@@ -22,7 +22,7 @@
 static void makebm(SkBitmap* bm, SkBitmap::Config config, int w, int h) {
     bm->setConfig(config, w, h);
     bm->allocPixels();
-    bm->eraseColor(0);
+    bm->eraseColor(SK_ColorTRANSPARENT);
 
     SkCanvas    canvas(*bm);
     SkPoint     pts[] = { { 0, 0 }, { SkIntToScalar(w), SkIntToScalar(h)} };
@@ -64,9 +64,6 @@ public:
     TilingGM()
             : fLooper(SkIntToScalar(1), SkIntToScalar(2), SkIntToScalar(2),
                       0x88000000) {
-        for (size_t i = 0; i < SK_ARRAY_COUNT(gConfigs); i++) {
-            makebm(&fTexture[i], gConfigs[i], gWidth, gHeight);
-        }
     }
 
     SkBitmap    fTexture[SK_ARRAY_COUNT(gConfigs)];
@@ -78,7 +75,13 @@ protected:
 
     SkISize onISize() { return SkISize::Make(880, 560); }
 
-    virtual void onDraw(SkCanvas* canvas) {
+    virtual void onOnceBeforeDraw() SK_OVERRIDE {
+        for (size_t i = 0; i < SK_ARRAY_COUNT(gConfigs); i++) {
+            makebm(&fTexture[i], gConfigs[i], gWidth, gHeight);
+        }
+    }
+
+    virtual void onDraw(SkCanvas* canvas) SK_OVERRIDE {
 
         SkRect r = { 0, 0, SkIntToScalar(gWidth*2), SkIntToScalar(gHeight*2) };
 
@@ -167,14 +170,8 @@ static SkShader* make_grad(SkShader::TileMode tx, SkShader::TileMode ty) {
         case 2:
             return SkGradientShader::CreateSweep(center.fX, center.fY, colors, NULL, SK_ARRAY_COUNT(colors));
     }
-}
 
-static SkShader* make_radial(SkShader::TileMode tx, SkShader::TileMode ty) {
-    SkPoint center = { SkIntToScalar(gWidth)/2, SkIntToScalar(gHeight)/2 };
-    SkScalar rad = SkIntToScalar(gWidth)/2;
-    SkColor colors[] = { SK_ColorRED, SK_ColorGREEN, SK_ColorBLUE };
-
-    return SkGradientShader::CreateRadial(center, rad, colors, NULL, SK_ARRAY_COUNT(colors), tx);
+    return NULL;
 }
 
 typedef SkShader* (*ShaderProc)(SkShader::TileMode, SkShader::TileMode);
@@ -252,13 +249,6 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////
 
-static skiagm::GM* MyFactory(void*) { return new TilingGM; }
-static skiagm::GMRegistry reg(MyFactory);
-
-static skiagm::GM* MyFactory2(void*) { return new Tiling2GM(make_bm, "bitmap"); }
-static skiagm::GMRegistry reg2(MyFactory2);
-
-static skiagm::GM* MyFactory3(void*) { return new Tiling2GM(make_grad, "gradient"); }
-static skiagm::GMRegistry reg3(MyFactory3);
-
-
+DEF_GM( return new TilingGM; )
+DEF_GM( return new Tiling2GM(make_bm, "bitmap"); )
+DEF_GM( return new Tiling2GM(make_grad, "gradient"); )

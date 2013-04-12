@@ -11,9 +11,9 @@
 #include "GrSWMaskHelper.h"
 
 ////////////////////////////////////////////////////////////////////////////////
-bool GrSoftwarePathRenderer::canDrawPath(const SkPath& path,
-                                         GrPathFill fill,
-                                         const GrDrawTarget* target,
+bool GrSoftwarePathRenderer::canDrawPath(const SkPath&,
+                                         const SkStrokeRec&,
+                                         const GrDrawTarget*,
                                          bool antiAlias) const {
     if (!antiAlias || NULL == fContext) {
         // TODO: We could allow the SW path to also handle non-AA paths but
@@ -28,6 +28,13 @@ bool GrSoftwarePathRenderer::canDrawPath(const SkPath& path,
     return true;
 }
 
+GrPathRenderer::StencilSupport GrSoftwarePathRenderer::onGetStencilSupport(
+                                                                        const SkPath&,
+                                                                        const SkStrokeRec&,
+                                                                        const GrDrawTarget*) const {
+    return GrPathRenderer::kNoSupport_StencilSupport;
+}
+
 namespace {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -36,7 +43,7 @@ namespace {
 // path bounds would be empty.
 bool get_path_and_clip_bounds(const GrDrawTarget* target,
                               const SkPath& path,
-                              const GrMatrix& matrix,
+                              const SkMatrix& matrix,
                               GrIRect* devPathBounds,
                               GrIRect* devClipBounds) {
     // compute bounds as intersection of rt size, clip, and path
@@ -107,7 +114,7 @@ void draw_around_inv_path(GrDrawTarget* target,
 ////////////////////////////////////////////////////////////////////////////////
 // return true on success; false on failure
 bool GrSoftwarePathRenderer::onDrawPath(const SkPath& path,
-                                        GrPathFill fill,
+                                        const SkStrokeRec& stroke,
                                         GrDrawTarget* target,
                                         bool antiAlias) {
 
@@ -117,20 +124,20 @@ bool GrSoftwarePathRenderer::onDrawPath(const SkPath& path,
 
     GrDrawState* drawState = target->drawState();
 
-    GrMatrix vm = drawState->getViewMatrix();
+    SkMatrix vm = drawState->getViewMatrix();
 
     GrIRect devPathBounds, devClipBounds;
     if (!get_path_and_clip_bounds(target, path, vm,
                                   &devPathBounds, &devClipBounds)) {
-        if (GrIsFillInverted(fill)) {
+        if (path.isInverseFillType()) {
             draw_around_inv_path(target, devClipBounds, devPathBounds);
         }
         return true;
     }
 
     SkAutoTUnref<GrTexture> texture(
-            GrSWMaskHelper::DrawPathMaskToTexture(fContext, path,
-                                                  devPathBounds, fill,
+            GrSWMaskHelper::DrawPathMaskToTexture(fContext, path, stroke,
+                                                  devPathBounds,
                                                   antiAlias, &vm));
     if (NULL == texture) {
         return false;
@@ -138,7 +145,7 @@ bool GrSoftwarePathRenderer::onDrawPath(const SkPath& path,
 
     GrSWMaskHelper::DrawToTargetWithPathMask(texture, target, devPathBounds);
 
-    if (GrIsFillInverted(fill)) {
+    if (path.isInverseFillType()) {
         draw_around_inv_path(target, devClipBounds, devPathBounds);
     }
 

@@ -124,7 +124,7 @@ int intersectRay(double roots[2]) {
     double C = r[0];
     A += C - 2 * B; // A = a - 2*b + c
     B -= C; // B = -(b - c)
-    return quadraticRoots(A, B, C, roots);
+    return quadraticRootsValidT(A, 2 * B, C, roots);
 }
 
 int intersect() {
@@ -135,7 +135,9 @@ int intersect() {
         double quadT = rootVals[index];
         double lineT = findLineT(quadT);
         if (pinTs(quadT, lineT)) {
-            intersections.insert(quadT, lineT);
+            _Point pt;
+            xy_at_t(line, lineT, pt.x, pt.y);
+            intersections.insert(quadT, lineT, pt);
         }
     }
     return intersections.fUsed;
@@ -148,7 +150,7 @@ int horizontalIntersect(double axisIntercept, double roots[2]) {
     D += F - 2 * E; // D = d - 2*e + f
     E -= F; // E = -(d - e)
     F -= axisIntercept;
-    return quadraticRoots(D, E, F, roots);
+    return quadraticRootsValidT(D, 2 * E, F, roots);
 }
 
 int horizontalIntersect(double axisIntercept, double left, double right, bool flipped) {
@@ -156,12 +158,12 @@ int horizontalIntersect(double axisIntercept, double left, double right, bool fl
     double rootVals[2];
     int roots = horizontalIntersect(axisIntercept, rootVals);
     for (int index = 0; index < roots; ++index) {
-        double x;
+        _Point pt;
         double quadT = rootVals[index];
-        xy_at_t(quad, quadT, x, *(double*) NULL);
-        double lineT = (x - left) / (right - left);
+        xy_at_t(quad, quadT, pt.x, pt.y);
+        double lineT = (pt.x - left) / (right - left);
         if (pinTs(quadT, lineT)) {
-            intersections.insert(quadT, lineT);
+            intersections.insert(quadT, lineT, pt);
         }
     }
     if (flipped) {
@@ -177,7 +179,7 @@ int verticalIntersect(double axisIntercept, double roots[2]) {
     D += F - 2 * E; // D = d - 2*e + f
     E -= F; // E = -(d - e)
     F -= axisIntercept;
-    return quadraticRoots(D, E, F, roots);
+    return quadraticRootsValidT(D, 2 * E, F, roots);
 }
 
 int verticalIntersect(double axisIntercept, double top, double bottom, bool flipped) {
@@ -185,12 +187,12 @@ int verticalIntersect(double axisIntercept, double top, double bottom, bool flip
     double rootVals[2];
     int roots = verticalIntersect(axisIntercept, rootVals);
     for (int index = 0; index < roots; ++index) {
-        double y;
+        _Point pt;
         double quadT = rootVals[index];
-        xy_at_t(quad, quadT, *(double*) NULL, y);
-        double lineT = (y - top) / (bottom - top);
+        xy_at_t(quad, quadT, pt.x, pt.y);
+        double lineT = (pt.y - top) / (bottom - top);
         if (pinTs(quadT, lineT)) {
-            intersections.insert(quadT, lineT);
+            intersections.insert(quadT, lineT, pt);
         }
     }
     if (flipped) {
@@ -207,7 +209,7 @@ void addEndPoints()
     for (int qIndex = 0; qIndex < 3; qIndex += 2) {
         for (int lIndex = 0; lIndex < 2; lIndex++) {
             if (quad[qIndex] == line[lIndex]) {
-                intersections.insert(qIndex >> 1, lIndex);
+                intersections.insert(qIndex >> 1, lIndex, line[lIndex]);
             }
         }
     }
@@ -220,10 +222,10 @@ void addHorizontalEndPoints(double left, double right, double y)
             continue;
         }
         if (quad[qIndex].x == left) {
-            intersections.insert(qIndex >> 1, 0);
+            intersections.insert(qIndex >> 1, 0, quad[qIndex]);
         }
         if (quad[qIndex].x == right) {
-            intersections.insert(qIndex >> 1, 1);
+            intersections.insert(qIndex >> 1, 1, quad[qIndex]);
         }
     }
 }
@@ -235,10 +237,10 @@ void addVerticalEndPoints(double top, double bottom, double x)
             continue;
         }
         if (quad[qIndex].y == top) {
-            intersections.insert(qIndex >> 1, 0);
+            intersections.insert(qIndex >> 1, 0, quad[qIndex]);
         }
         if (quad[qIndex].y == bottom) {
-            intersections.insert(qIndex >> 1, 1);
+            intersections.insert(qIndex >> 1, 1, quad[qIndex]);
         }
     }
 }
@@ -262,21 +264,21 @@ void flip() {
     }
 }
 
-bool pinTs(double& quadT, double& lineT) {
+static bool pinTs(double& quadT, double& lineT) {
     if (!approximately_one_or_less(lineT)) {
         return false;
     }
     if (!approximately_zero_or_more(lineT)) {
         return false;
     }
-    if (quadT < 0) {
+    if (precisely_less_than_zero(quadT)) {
         quadT = 0;
-    } else if (quadT > 1) {
+    } else if (precisely_greater_than_one(quadT)) {
         quadT = 1;
     }
-    if (lineT < 0) {
+    if (precisely_less_than_zero(lineT)) {
         lineT = 0;
-    } else if (lineT > 1) {
+    } else if (precisely_greater_than_one(lineT)) {
         lineT = 1;
     }
     return true;
@@ -298,7 +300,7 @@ static double horizontalIntersect(const Quadratic& quad, const _Point& pt) {
         double x;
         double t = rootVals[index];
         xy_at_t(quad, t, x, *(double*) 0);
-        if (approximately_equal(x, pt.x)) {
+        if (AlmostEqualUlps(x, pt.x)) {
             return t;
         }
     }
@@ -313,7 +315,7 @@ static double verticalIntersect(const Quadratic& quad, const _Point& pt) {
         double y;
         double t = rootVals[index];
         xy_at_t(quad, t, *(double*) 0, y);
-        if (approximately_equal(y, pt.y)) {
+        if (AlmostEqualUlps(y, pt.y)) {
             return t;
         }
     }

@@ -1,19 +1,9 @@
 /*
-    Copyright 2011 Google Inc.
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-         http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
+ * Copyright 2011 Google Inc.
+ *
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
  */
-
 
 #ifndef GrRenderTarget_DEFINED
 #define GrRenderTarget_DEFINED
@@ -149,24 +139,13 @@ public:
 
 protected:
     GrRenderTarget(GrGpu* gpu,
+                   bool isWrapped,
                    GrTexture* texture,
-                   const GrTextureDesc& desc,
-                   Origin origin)
-        : INHERITED(gpu, desc, origin)
+                   const GrTextureDesc& desc)
+        : INHERITED(gpu, isWrapped, desc)
         , fStencilBuffer(NULL)
         , fTexture(texture) {
         fResolveRect.setLargestInverted();
-    }
-
-    friend class GrTexture;
-    // When a texture unrefs an owned render target this func
-    // removes the back pointer. This could be called from
-    // texture's destructor but would have to be done in derived
-    // classes. By the time of texture base destructor it has already
-    // lost its pointer to the rt.
-    void onTextureReleaseRenderTarget() {
-        GrAssert(NULL != fTexture);
-        fTexture = NULL;
     }
 
     // override of GrResource
@@ -174,6 +153,13 @@ protected:
     virtual void onRelease() SK_OVERRIDE;
 
 private:
+    friend class GrTexture;
+    // called by ~GrTexture to remove the non-ref'ed back ptr.
+    void owningTextureDestroyed() {
+        GrAssert(NULL != fTexture);
+        fTexture = NULL;
+    }
+
     GrStencilBuffer*  fStencilBuffer;
     GrTexture*        fTexture; // not ref'ed
 

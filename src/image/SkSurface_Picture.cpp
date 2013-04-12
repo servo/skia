@@ -20,7 +20,7 @@ public:
     virtual ~SkSurface_Picture();
 
     virtual SkCanvas* onNewCanvas() SK_OVERRIDE;
-    virtual SkSurface* onNewSurface(const SkImage::Info&, SkColorSpace*) SK_OVERRIDE;
+    virtual SkSurface* onNewSurface(const SkImage::Info&) SK_OVERRIDE;
     virtual SkImage* onNewImageShapshot() SK_OVERRIDE;
     virtual void onDraw(SkCanvas*, SkScalar x, SkScalar y,
                         const SkPaint*) SK_OVERRIDE;
@@ -28,7 +28,6 @@ public:
 
 private:
     SkPicture*  fPicture;
-    SkPicture*  fRecordingPicture;
 
     typedef SkSurface_Base INHERITED;
 };
@@ -52,7 +51,7 @@ SkCanvas* SkSurface_Picture::onNewCanvas() {
     return canvas;
 }
 
-SkSurface* SkSurface_Picture::onNewSurface(const SkImage::Info& info, SkColorSpace*) {
+SkSurface* SkSurface_Picture::onNewSurface(const SkImage::Info& info) {
     return SkSurface::NewPicture(info.fWidth, info.fHeight);
 }
 
@@ -64,7 +63,7 @@ SkImage* SkSurface_Picture::onNewImageShapshot() {
         info.fWidth = info.fHeight = 0;
         info.fColorType = SkImage::kPMColor_ColorType;
         info.fAlphaType = SkImage::kOpaque_AlphaType;
-        return SkImage::NewRasterCopy(info, NULL, NULL, 0);
+        return SkImage::NewRasterCopy(info, NULL, 0);
     }
 }
 
@@ -91,4 +90,3 @@ SkSurface* SkSurface::NewPicture(int width, int height) {
 
     return SkNEW_ARGS(SkSurface_Picture, (width, height));
 }
-

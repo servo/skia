@@ -13,13 +13,15 @@ void CubicBezierClip_Test() {
         const Cubic& cubic1 = tests[index][0];
         const Cubic& cubic2 = tests[index][1];
         Cubic reduce1, reduce2;
-        int order1 = reduceOrder(cubic1, reduce1, kReduceOrder_NoQuadraticsAllowed);
-        int order2 = reduceOrder(cubic2, reduce2, kReduceOrder_NoQuadraticsAllowed);
+        int order1 = reduceOrder(cubic1, reduce1, kReduceOrder_NoQuadraticsAllowed,
+                kReduceOrder_TreatAsFill);
+        int order2 = reduceOrder(cubic2, reduce2, kReduceOrder_NoQuadraticsAllowed,
+                kReduceOrder_TreatAsFill);
         if (order1 < 4) {
-            printf("%s [%d] cubic1 order=%d\n", __FUNCTION__, (int) index, order1);
+            SkDebugf("%s [%d] cubic1 order=%d\n", __FUNCTION__, (int) index, order1);
         }
         if (order2 < 4) {
-            printf("%s [%d] cubic2 order=%d\n", __FUNCTION__, (int) index, order2);
+            SkDebugf("%s [%d] cubic2 order=%d\n", __FUNCTION__, (int) index, order2);
         }
         if (order1 == 4 && order2 == 4) {
             double minT = 0;

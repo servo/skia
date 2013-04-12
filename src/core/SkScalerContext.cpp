@@ -22,6 +22,9 @@
 #include "SkStroke.h"
 #include "SkThread.h"
 
+#ifdef SK_BUILD_FOR_ANDROID
+    #include "SkTypeface_android.h"
+#endif
 
 #define ComputeBWRowBytes(width)        (((unsigned)(width) + 7) >> 3)
 
@@ -75,11 +78,11 @@ static SkFlattenable* load_flattenable(const SkDescriptor* desc, uint32_t tag) {
     return obj;
 }
 
-SkScalerContext::SkScalerContext(const SkDescriptor* desc)
+SkScalerContext::SkScalerContext(SkTypeface* typeface, const SkDescriptor* desc)
     : fRec(*static_cast<const Rec*>(desc->findEntry(kRec_SkDescriptorTag, NULL)))
 
     , fBaseGlyphCount(0)
-
+    , fTypeface(SkRef(typeface))
     , fPathEffect(static_cast<SkPathEffect*>(load_flattenable(desc, kPathEffect_SkDescriptorTag)))
     , fMaskFilter(static_cast<SkMaskFilter*>(load_flattenable(desc, kMaskFilter_SkDescriptorTag)))
     , fRasterizer(static_cast<SkRasterizer*>(load_flattenable(desc, kRasterizer_SkDescriptorTag)))
@@ -117,26 +120,33 @@ SkScalerContext::~SkScalerContext() {
     SkSafeUnref(fRasterizer);
 }
 
-static SkScalerContext* allocNextContext(const SkScalerContext::Rec& rec) {
-    // fonthost will determine the next possible font to search, based
-    // on the current font in fRec. It will return NULL if ctx is our
-    // last font that can be searched (i.e. ultimate fallback font)
-    uint32_t newFontID = SkFontHost::NextLogicalFont(rec.fFontID, rec.fOrigFontID);
-    if (0 == newFontID) {
+// Return the context associated with the next logical typeface, or NULL if
+// there are no more entries in the fallback chain.
+SkScalerContext* SkScalerContext::allocNextContext() const {
+#ifdef SK_BUILD_FOR_ANDROID
+    SkTypeface* newFace = SkAndroidNextLogicalTypeface(fRec.fFontID,
+                                                       fRec.fOrigFontID);
+    if (0 == newFace) {
         return NULL;
     }
 
-    SkAutoDescriptor    ad(sizeof(rec) + SkDescriptor::ComputeOverhead(1));
+    SkAutoTUnref<SkTypeface> aur(newFace);
+    uint32_t newFontID = newFace->uniqueID();
+
+    SkAutoDescriptor    ad(sizeof(fRec) + SkDescriptor::ComputeOverhead(1));
     SkDescriptor*       desc = ad.getDesc();
 
     desc->init();
     SkScalerContext::Rec* newRec =
     (SkScalerContext::Rec*)desc->addEntry(kRec_SkDescriptorTag,
-                                          sizeof(rec), &rec);
+                                          sizeof(fRec), &fRec);
     newRec->fFontID = newFontID;
     desc->computeChecksum();
 
-    return SkFontHost::CreateScalerContext(desc);
+    return newFace->createScalerContext(desc);
+#else
+    return NULL;
+#endif
 }
 
 /*  Return the next context, creating it if its not already created, but return
@@ -147,7 +157,7 @@ SkScalerContext* SkScalerContext::getNextContext() {
     // if next is null, then either it isn't cached yet, or we're at the
     // end of our possible chain
     if (NULL == next) {
-        next = allocNextContext(fRec);
+        next = this->allocNextContext();
         if (NULL == next) {
             return NULL;
         }
@@ -178,7 +188,35 @@ SkScalerContext* SkScalerContext::getGlyphContext(const SkGlyph& glyph) {
     return ctx;
 }
 
+SkScalerContext* SkScalerContext::getContextFromChar(SkUnichar uni,
+                                                     uint16_t* glyphID) {
+    SkScalerContext* ctx = this;
+    for (;;) {
+        const uint16_t glyph = ctx->generateCharToGlyph(uni);
+        if (glyph) {
+            if (NULL != glyphID) {
+                *glyphID = glyph;
+            }
+            break;  // found it
+        }
+        ctx = ctx->getNextContext();
+        if (NULL == ctx) {
+            return NULL;
+        }
+    }
+    return ctx;
+}
+
 #ifdef SK_BUILD_FOR_ANDROID
+SkFontID SkScalerContext::findTypefaceIdForChar(SkUnichar uni) {
+    SkScalerContext* ctx = this->getContextFromChar(uni, NULL);
+    if (NULL != ctx) {
+        return ctx->fRec.fFontID;
+    } else {
+        return 0;
+    }
+}
+
 /*  This loops through all available fallback contexts (if needed) until it
     finds some context that can handle the unichar and return it.
 
@@ -186,21 +224,13 @@ SkScalerContext* SkScalerContext::getGlyphContext(const SkGlyph& glyph) {
     char of a run.
  */
 unsigned SkScalerContext::getBaseGlyphCount(SkUnichar uni) {
-    SkScalerContext* ctx = this;
-    unsigned glyphID;
-    for (;;) {
-        glyphID = ctx->generateCharToGlyph(uni);
-        if (glyphID) {
-            break;  // found it
-        }
-        ctx = ctx->getNextContext();
-        if (NULL == ctx) {
-            SkDebugf("--- no context for char %x\n", uni);
-            // just return the original context (this)
-            return this->fBaseGlyphCount;
-        }
+    SkScalerContext* ctx = this->getContextFromChar(uni, NULL);
+    if (NULL != ctx) {
+        return ctx->fBaseGlyphCount;
+    } else {
+        SkDEBUGF(("--- no context for char %x\n", uni));
+        return this->fBaseGlyphCount;
     }
-    return ctx->fBaseGlyphCount;
 }
 #endif
 
@@ -208,20 +238,14 @@ unsigned SkScalerContext::getBaseGlyphCount(SkUnichar uni) {
     finds some context that can handle the unichar. If all fail, returns 0
  */
 uint16_t SkScalerContext::charToGlyphID(SkUnichar uni) {
-    SkScalerContext* ctx = this;
-    unsigned glyphID;
-    for (;;) {
-        glyphID = ctx->generateCharToGlyph(uni);
-        if (glyphID) {
-            break;  // found it
-        }
-        ctx = ctx->getNextContext();
-        if (NULL == ctx) {
-            return 0;   // no more contexts, return missing glyph
-        }
+
+    uint16_t tempID;
+    SkScalerContext* ctx = this->getContextFromChar(uni, &tempID);
+    if (NULL == ctx) {
+        return 0; // no more contexts, return missing glyph
     }
     // add the ctx's base, making glyphID unique for chain of contexts
-    glyphID += ctx->fBaseGlyphCount;
+    unsigned glyphID = tempID + ctx->fBaseGlyphCount;
     // check for overflow of 16bits, since our glyphID cannot exceed that
     if (glyphID > 0xFFFF) {
         glyphID = 0;
@@ -448,7 +472,11 @@ static void generateMask(const SkMask& mask, const SkPath& path,
     bm.setConfig(config, dstW, dstH, dstRB);
 
     if (0 == dstRB) {
-        bm.allocPixels();
+        if (!bm.allocPixels()) {
+            // can't allocate offscreen, so empty the mask and return
+            sk_bzero(mask.fImage, mask.computeImageSize());
+            return;
+        }
         bm.lockPixels();
     } else {
         bm.setPixels(mask.fImage);
@@ -634,7 +662,7 @@ void SkScalerContext::internalGetPath(const SkGlyph& glyph, SkPath* fillPath,
 
         if (fPathEffect) {
             SkPath effectPath;
-            if (fPathEffect->filterPath(&effectPath, localPath, &rec)) {
+            if (fPathEffect->filterPath(&effectPath, localPath, &rec, NULL)) {
                 localPath.swap(effectPath);
             }
         }
@@ -683,11 +711,9 @@ void SkScalerContext::internalGetPath(const SkGlyph& glyph, SkPath* fillPath,
 
 
 void SkScalerContextRec::getMatrixFrom2x2(SkMatrix* dst) const {
-    dst->reset();
-    dst->setScaleX(fPost2x2[0][0]);
-    dst->setSkewX( fPost2x2[0][1]);
-    dst->setSkewY( fPost2x2[1][0]);
-    dst->setScaleY(fPost2x2[1][1]);
+    dst->setAll(fPost2x2[0][0], fPost2x2[0][1], 0,
+                fPost2x2[1][0], fPost2x2[1][1], 0,
+                0,              0,              SkScalarToPersp(SK_Scalar1));
 }
 
 void SkScalerContextRec::getLocalMatrix(SkMatrix* m) const {
@@ -724,7 +750,8 @@ SkAxisAlignment SkComputeAxisAlignmentForHText(const SkMatrix& matrix) {
 
 class SkScalerContext_Empty : public SkScalerContext {
 public:
-    SkScalerContext_Empty(const SkDescriptor* desc) : SkScalerContext(desc) {}
+    SkScalerContext_Empty(SkTypeface* face, const SkDescriptor* desc)
+        : SkScalerContext(face, desc) {}
 
 protected:
     virtual unsigned generateGlyphCount() SK_OVERRIDE {
@@ -754,14 +781,14 @@ protected:
 
 extern SkScalerContext* SkCreateColorScalerContext(const SkDescriptor* desc);
 
-SkScalerContext* SkScalerContext::Create(const SkDescriptor* desc) {
+SkScalerContext* SkTypeface::createScalerContext(const SkDescriptor* desc) const {
     SkScalerContext* c = NULL;  //SkCreateColorScalerContext(desc);
     if (NULL == c) {
-        c = SkFontHost::CreateScalerContext(desc);
+        c = this->onCreateScalerContext(desc);
     }
     if (NULL == c) {
-        c = SkNEW_ARGS(SkScalerContext_Empty, (desc));
+        c = SkNEW_ARGS(SkScalerContext_Empty,
+                       (const_cast<SkTypeface*>(this), desc));
     }
     return c;
 }
-

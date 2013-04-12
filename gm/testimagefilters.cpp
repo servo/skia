@@ -13,6 +13,8 @@
 
 #include "SkBlurImageFilter.h"
 #include "SkColorFilterImageFilter.h"
+#include "SkMergeImageFilter.h"
+#include "SkOffsetImageFilter.h"
 #include "SkTestImageFilters.h"
 
 #define FILTER_WIDTH    SkIntToScalar(150)
@@ -140,5 +142,3 @@ private:
 
 static skiagm::GM* MyFactory(void*) { return new TestImageFiltersGM; }
 static skiagm::GMRegistry reg(MyFactory);
-
-

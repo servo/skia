@@ -11,7 +11,8 @@
 #ifndef GrTHashCache_DEFINED
 #define GrTHashCache_DEFINED
 
-#include "GrTDArray.h"
+#include "GrTypes.h"
+#include "SkTDArray.h"
 
 // GrTDefaultFindFunctor implements the default find behavior for
 // GrTHashTable (i.e., return the first resource that matches the
@@ -19,7 +20,7 @@
 template <typename T> class GrTDefaultFindFunctor {
 public:
     // always accept the first element examined
-    bool operator()(const T* elem) const { return true; }
+    bool operator()(const T*) const { return true; }
 };
 
 /**
@@ -58,7 +59,8 @@ public:
 #endif
 
     // testing
-    const GrTDArray<T*>& getArray() const { return fSorted; }
+    const SkTDArray<T*>& getArray() const { return fSorted; }
+    SkTDArray<T*>& getArray() { return fSorted; }
 private:
     enum {
         kHashCount = 1 << kHashBits,
@@ -73,7 +75,7 @@ private:
     }
 
     mutable T* fHash[kHashCount];
-    GrTDArray<T*> fSorted;
+    SkTDArray<T*> fSorted;
 
     // search fSorted, and return the found index, or ~index of where it
     // should be inserted
@@ -226,13 +228,6 @@ void GrTHashTable<T, Key, kHashBits>::unrefAll() {
 #if GR_DEBUG
 template <typename T, typename Key, size_t kHashBits>
 void GrTHashTable<T, Key, kHashBits>::validate() const {
-    for (size_t i = 0; i < GR_ARRAY_COUNT(fHash); i++) {
-        if (fHash[i]) {
-            unsigned hashIndex = hash2Index(Key::GetHash(*fHash[i]));
-            GrAssert(hashIndex == i);
-        }
-    }
-
     int count = fSorted.count();
     for (int i = 1; i < count; i++) {
         GrAssert(Key::LT(*fSorted[i - 1], *fSorted[i]) ||
@@ -249,4 +244,3 @@ bool GrTHashTable<T, Key, kHashBits>::contains(T* elem) const {
 #endif
 
 #endif
-

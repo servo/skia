@@ -10,6 +10,11 @@
 #include "SkBitmap.h"
 #include "SkFlattenableBuffers.h"
 #include "SkRect.h"
+#if SK_SUPPORT_GPU
+#include "GrContext.h"
+#include "GrTexture.h"
+#include "SkImageFilterUtils.h"
+#endif
 
 SK_DEFINE_INST_COUNT(SkImageFilter)
 
@@ -104,11 +109,45 @@ bool SkImageFilter::onFilterImage(Proxy*, const SkBitmap&, const SkMatrix&,
 }
 
 bool SkImageFilter::canFilterImageGPU() const {
-    return false;
+    return this->asNewEffect(NULL, NULL);
 }
 
-GrTexture* SkImageFilter::onFilterImageGPU(Proxy* proxy, GrTexture* texture, const SkRect& rect) {
-    return NULL;
+bool SkImageFilter::filterImageGPU(Proxy* proxy, const SkBitmap& src, SkBitmap* result) {
+#if SK_SUPPORT_GPU
+    SkBitmap input;
+    SkASSERT(fInputCount == 1);
+    if (!SkImageFilterUtils::GetInputResultGPU(this->getInput(0), proxy, src, &input)) {
+        return false;
+    }
+    GrTexture* srcTexture = (GrTexture*) input.getTexture();
+    SkRect rect;
+    src.getBounds(&rect);
+    GrContext* context = srcTexture->getContext();
+
+    GrTextureDesc desc;
+    desc.fFlags = kRenderTarget_GrTextureFlagBit,
+    desc.fWidth = input.width();
+    desc.fHeight = input.height();
+    desc.fConfig = kRGBA_8888_GrPixelConfig;
+
+    GrAutoScratchTexture dst(context, desc);
+    GrContext::AutoMatrix am;
+    am.setIdentity(context);
+    GrContext::AutoRenderTarget art(context, dst.texture()->asRenderTarget());
+    GrContext::AutoClip acs(context, rect);
+    GrEffectRef* effect;
+    this->asNewEffect(&effect, srcTexture);
+    SkASSERT(effect);
+    SkAutoUnref effectRef(effect);
+    GrPaint paint;
+    paint.colorStage(0)->setEffect(effect);
+    context->drawRect(paint, rect);
+    SkAutoTUnref<GrTexture> resultTex(dst.detach());
+    SkImageFilterUtils::WrapTexture(resultTex, input.width(), input.height(), result);
+    return true;
+#else
+    return false;
+#endif
 }
 
 bool SkImageFilter::onFilterBounds(const SkIRect& src, const SkMatrix& ctm,
@@ -117,10 +156,10 @@ bool SkImageFilter::onFilterBounds(const SkIRect& src, const SkMatrix& ctm,
     return true;
 }
 
-bool SkImageFilter::asNewEffect(GrEffect**, GrTexture*) const {
+bool SkImageFilter::asNewEffect(GrEffectRef**, GrTexture*) const {
     return false;
 }
 
-SkColorFilter* SkImageFilter::asColorFilter() const {
-    return NULL;
+bool SkImageFilter::asColorFilter(SkColorFilter**) const {
+    return false;
 }

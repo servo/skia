@@ -17,16 +17,16 @@
 #include "SkTRegistry.h"
 
 #define DEF_GM(code) \
-    static skiagm::GM*          SK_MACRO_APPEND_LINE(F_)(void* p) { code; } \
+    static skiagm::GM*          SK_MACRO_APPEND_LINE(F_)(void*) { code; } \
     static skiagm::GMRegistry   SK_MACRO_APPEND_LINE(R_)(SK_MACRO_APPEND_LINE(F_));
 
 namespace skiagm {
 
-        static inline SkISize make_isize(int w, int h) {
-                SkISize sz;
-                sz.set(w, h);
-                return sz;
-        }
+    static inline SkISize make_isize(int w, int h) {
+        SkISize sz;
+        sz.set(w, h);
+        return sz;
+    }
 
     class GM {
     public:
@@ -34,11 +34,13 @@ namespace skiagm {
         virtual ~GM();
 
         enum Flags {
-            kSkipPDF_Flag       = 1 << 0,
-            kSkipPicture_Flag   = 1 << 1,
-            kSkipPipe_Flag      = 1 << 2,
-            kSkipTiled_Flag     = 1 << 3,
-            kSkip565_Flag       = 1 << 4,
+            kSkipPDF_Flag           = 1 << 0,
+            kSkipPicture_Flag       = 1 << 1,
+            kSkipPipe_Flag          = 1 << 2,
+            kSkipTiled_Flag         = 1 << 3,
+            kSkip565_Flag           = 1 << 4,
+            kSkipScaledReplay_Flag  = 1 << 5,
+            kSkipGPU_Flag           = 1 << 6,
         };
 
         void draw(SkCanvas*);
@@ -50,6 +52,13 @@ namespace skiagm {
 
         uint32_t getFlags() const {
             return this->onGetFlags();
+        }
+
+        SkScalar width() {
+            return SkIntToScalar(this->getISize().width());
+        }
+        SkScalar height() {
+            return SkIntToScalar(this->getISize().width());
         }
 
         // TODO(vandebo) Instead of exposing this, we should run all the GMs
@@ -71,9 +80,15 @@ namespace skiagm {
             gResourcePath = resourcePath;
         }
 
+        bool isCanvasDeferred() const { return fCanvasIsDeferred; }
+        void setCanvasIsDeferred(bool isDeferred) {
+            fCanvasIsDeferred = isDeferred;
+        }
+
     protected:
         static SkString gResourcePath;
 
+        virtual void onOnceBeforeDraw() {}
         virtual void onDraw(SkCanvas*) = 0;
         virtual void onDrawBackground(SkCanvas*);
         virtual SkISize onISize() = 0;
@@ -84,6 +99,8 @@ namespace skiagm {
     private:
         SkString fShortName;
         SkColor  fBGColor;
+        bool     fCanvasIsDeferred; // work-around problem in srcmode.cpp
+        bool     fHaveCalledOnceBeforeDraw;
     };
 
     typedef SkTRegistry<GM*, void*> GMRegistry;

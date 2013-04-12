@@ -14,7 +14,7 @@ namespace skiagm {
 static void makebm(SkBitmap* bm, SkBitmap::Config config, int w, int h) {
     bm->setConfig(config, w, h);
     bm->allocPixels();
-    bm->eraseColor(0);
+    bm->eraseColor(SK_ColorTRANSPARENT);
 
     SkCanvas    canvas(*bm);
     SkScalar    s = SkIntToScalar(SkMin32(w, h));
@@ -118,7 +118,7 @@ protected:
 
                 canvas->drawText(kText, kTextLen, 0, 0, fillPaint);
                 canvas->drawText(kText, kTextLen, 0, 0, outlinePaint);
-                int w = fillPaint.measureText(kText, kTextLen);
+                SkScalar w = fillPaint.measureText(kText, kTextLen);
                 canvas->translate(w + 10.f, 0.f);
                 ++i;
                 if (!(i % 2)) {

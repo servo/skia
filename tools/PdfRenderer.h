@@ -22,7 +22,6 @@
 
 class SkBitmap;
 class SkCanvas;
-class SkGLContext;
 class SkPDFDevice;
 
 namespace sk_tools {
@@ -39,7 +38,7 @@ public:
         , fPDFDevice(NULL)
         {}
 
-    bool write(const SkString& path) const;
+    void write(SkWStream* stream) const;
 
 protected:
     SkCanvas* setupCanvas();

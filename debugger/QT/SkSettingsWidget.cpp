@@ -59,20 +59,34 @@ SkSettingsWidget::SkSettingsWidget() : QWidget()
 
     fRasterCheckBox.setChecked(true);
 
+    fOverdrawVizLabel.setText("     Overdraw Viz: ");
+    fOverdrawVizLabel.setMinimumWidth(178);
+    fOverdrawVizLabel.setMaximumWidth(178);
+
+#if SK_SUPPORT_GPU
     fGLLabel.setText("OpenGL: ");
     fGLLabel.setMinimumWidth(178);
     fGLLabel.setMaximumWidth(178);
+#endif
 
     fRasterLayout.addWidget(&fRasterLabel);
     fRasterLayout.addWidget(&fRasterCheckBox);
 
+    fOverdrawVizLayout.addWidget(&fOverdrawVizLabel);
+    fOverdrawVizLayout.addWidget(&fOverdrawVizCheckBox);
+
+#if SK_SUPPORT_GPU
     fGLLayout.addWidget(&fGLLabel);
     fGLLayout.addWidget(&fGLCheckBox);
+#endif
 
     fCanvasLayout.setSpacing(6);
     fCanvasLayout.setContentsMargins(11,11,11,11);
     fCanvasLayout.addLayout(&fRasterLayout);
+    fCanvasLayout.addLayout(&fOverdrawVizLayout);
+#if SK_SUPPORT_GPU
     fCanvasLayout.addLayout(&fGLLayout);
+#endif
 
     // Command Toggle
     fCommandToggle.setText("Command Scrolling Preferences");
@@ -151,12 +165,6 @@ QRadioButton* SkSettingsWidget::getVisibilityButton() {
     return &fVisibleOn;
 }
 
-void SkSettingsWidget::setZoomText(int scaleFactor) {
-    if(scaleFactor == 1 || scaleFactor == -1) {
-        fZoomBox.setText("100%");
-    } else if (scaleFactor > 1) {
-        fZoomBox.setText(QString::number(scaleFactor*100).append("%"));
-    } else if (scaleFactor < -1) {
-        fZoomBox.setText(QString::number(100 / pow(2.0f, (-scaleFactor - 1))).append("%"));
-    }
+void SkSettingsWidget::setZoomText(float scale) {
+    fZoomBox.setText(QString::number(scale*100, 'f', 0).append("%"));
 }

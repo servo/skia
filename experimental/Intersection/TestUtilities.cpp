@@ -4,6 +4,8 @@
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  */
+
+#include "CubicUtilities.h"
 #include "CurveIntersection.h"
 #include "TestUtilities.h"
 
@@ -61,4 +63,3 @@ bool controls_inside(const Cubic& cubic) {
      && ((cubic[0].y <= cubic[1].y && cubic[0].y <= cubic[2].y && cubic[1].y <= cubic[3].y && cubic[2].y <= cubic[3].y)
      ||  (cubic[0].y >= cubic[1].y && cubic[0].y >= cubic[2].y && cubic[1].y >= cubic[3].y && cubic[2].x >= cubic[3].y));
 }
-
