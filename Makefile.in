@@ -348,7 +348,7 @@ SKIA_UTILS_CXX_SRC=\
 endif
 
 ifeq ($(OSTYPE),linux)
-	CXXFLAGS += $(shell pkg-config --cflags freetype2)
+	CXXFLAGS += -DSK_SAMPLES_FOR_X $(shell pkg-config --cflags freetype2)
 
 SKIA_GL_CXX_SRC += \
 	$(addprefix src/gpu/,\
@@ -357,11 +357,9 @@ SKIA_GL_CXX_SRC += \
 SKIA_PORTS_CXX_SRC=\
 	$(addprefix src/ports/,\
 		SkDebug_stdio.cpp \
-		SkFontDescriptor.cpp \
 		SkFontHost_FreeType_common.cpp \
 		SkFontHost_FreeType.cpp \
 		SkFontHost_linux.cpp \
-		SkFontHost_tables.cpp \
 		SkOSFile_stdio.cpp \
 		SkThread_pthread.cpp)
 
