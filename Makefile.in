@@ -359,7 +359,8 @@ SKIA_PORTS_CXX_SRC=\
 		SkDebug_stdio.cpp \
 		SkFontHost_FreeType_common.cpp \
 		SkFontHost_FreeType.cpp \
-		SkFontHost_linux.cpp \
+		SkFontHost_fontconfig.cpp \
+		SkFontConfigInterface_direct.cpp \
 		SkOSFile_stdio.cpp \
 		SkThread_pthread.cpp)
 
