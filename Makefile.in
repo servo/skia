@@ -8,6 +8,7 @@ CXXFLAGS+=\
 	-O3 \
 	-mssse3 \
 	-Wno-c++11-extensions \
+	-DSK_A32_SHIFT=24 -DSK_R32_SHIFT=16 -DSK_G32_SHIFT=8 -DSK_B32_SHIFT=0 \
 	-I$(VPATH)/include/config \
 	-I$(VPATH)/include/core \
 	-I$(VPATH)/include/effects \
@@ -327,7 +328,7 @@ SKIA_OPTS_CXX_SRC=\
 		opts_check_SSE2.cpp)
 
 ifeq ($(OSTYPE),darwin)
-CXXFLAGS+=-I$(VPATH)/include/utils/mac 
+CXXFLAGS+=-I$(VPATH)/include/utils/mac
 
 SKIA_GL_CXX_SRC += \
 	$(addprefix src/gpu/,\
@@ -348,7 +349,7 @@ SKIA_UTILS_CXX_SRC=\
 endif
 
 ifeq ($(OSTYPE),linux)
-	CXXFLAGS += -DSK_SAMPLES_FOR_X $(shell pkg-config --cflags freetype2)
+	CXXFLAGS += $(shell pkg-config --cflags freetype2)
 
 SKIA_GL_CXX_SRC += \
 	$(addprefix src/gpu/,\
