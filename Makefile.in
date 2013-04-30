@@ -7,7 +7,6 @@ CXXFLAGS+=\
 	-fPIC \
 	-O3 \
 	-mssse3 \
-	-Wno-c++11-extensions \
 	-DSK_A32_SHIFT=24 -DSK_R32_SHIFT=16 -DSK_G32_SHIFT=8 -DSK_B32_SHIFT=0 \
 	-I$(VPATH)/include/config \
 	-I$(VPATH)/include/core \
@@ -21,6 +20,12 @@ CXXFLAGS+=\
 	-I$(VPATH)/include/utils \
 	-iquote $(VPATH)/src/gpu \
 	$(NULL)
+
+USE_CLANG = $(shell $(CXX) --version|grep -c 'clang')
+
+ifeq ($(USE_CLANG),1)
+    CXXFLAGS += -Wno-c++11-extensions
+endif
 
 UNAME=$(shell uname)
 
