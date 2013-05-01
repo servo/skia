@@ -8,6 +8,7 @@ CXXFLAGS+=\
 	-O3 \
 	-mssse3 \
 	-DSK_A32_SHIFT=24 -DSK_R32_SHIFT=16 -DSK_G32_SHIFT=8 -DSK_B32_SHIFT=0 \
+	-DSK_DEBUG -DGR_DEBUG=1 -DGR_GL_LOG_CALLS=1 -DGR_GL_LOG_CALLS_START=1 \
 	-I$(VPATH)/include/config \
 	-I$(VPATH)/include/core \
 	-I$(VPATH)/include/effects \
@@ -306,7 +307,16 @@ SKIA_GL_CXX_SRC=\
 		gl/GrGpuGL.cpp \
 		gl/GrGpuGL_program.cpp \
 		gl/SkGLContextHelper.cpp \
-		gl/SkNullGLContext.cpp)
+		gl/SkNullGLContext.cpp \
+		gl/debug/GrBufferObj.cpp \
+		gl/debug/GrDebugGL.cpp \
+		gl/debug/GrFrameBufferObj.cpp \
+		gl/debug/GrGLCreateDebugInterface.cpp \
+		gl/debug/GrProgramObj.cpp \
+		gl/debug/GrShaderObj.cpp \
+		gl/debug/GrTextureObj.cpp \
+		gl/debug/GrTextureUnitObj.cpp \
+		gl/debug/SkDebugGLContext.cpp)
 
 SKIA_IMAGE_CXX_SRC=\
 	$(addprefix src/image/,\
@@ -338,6 +348,7 @@ CXXFLAGS+=-I$(VPATH)/include/utils/mac
 SKIA_GL_CXX_SRC += \
 	$(addprefix src/gpu/,\
 		gl/mac/GrGLCreateNativeInterface_mac.cpp \
+		gl/mac/SkNativeSharedGLContext_mac.cpp \
 		gl/mac/SkNativeGLContext_mac.cpp)
 
 SKIA_PORTS_CXX_SRC=\

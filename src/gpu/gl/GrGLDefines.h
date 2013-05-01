@@ -879,4 +879,6 @@
 #define GR_GL_PATH_GEN_COLOR_FORMAT                         0x90B2
 #define GR_GL_PATH_GEN_COMPONENTS                           0x90B3
 
+#define GR_GL_TEXTURE_RECTANGLE_ARB                         0x84F5
+
 #endif
