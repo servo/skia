@@ -1,12 +1,8 @@
 VPATH=%VPATH%
 
-CC ?= gcc
-CXX ?= g++
-
 CXXFLAGS+=\
 	-fPIC \
 	-O3 \
-	-mssse3 \
 	-DSK_A32_SHIFT=24 -DSK_R32_SHIFT=16 -DSK_G32_SHIFT=8 -DSK_B32_SHIFT=0 \
 	-I$(VPATH)/include/config \
 	-I$(VPATH)/include/core \
@@ -21,18 +17,26 @@ CXXFLAGS+=\
 	-iquote $(VPATH)/src/gpu \
 	$(NULL)
 
+ifeq ($(CFG_CPUTYPE), i686)
+    CXXFLAGS += -mssse3
+endif
+ifeq ($(CFG_CPUTYPE), x86_64)
+    CXXFLAGS += -mssse3
+endif
+
 USE_CLANG = $(shell $(CXX) --version|grep -c 'clang')
 
 ifeq ($(USE_CLANG),1)
     CXXFLAGS += -Wno-c++11-extensions
 endif
 
-UNAME=$(shell uname)
-
-ifeq ($(UNAME),Darwin)
+ifeq ($(CFG_OSTYPE),apple-darwin)
     OSTYPE=darwin
 endif
-ifeq ($(UNAME),Linux)
+ifeq ($(CFG_OSTYPE),unknown-linux-gnu)
+    OSTYPE=linux
+endif
+ifeq ($(CFG_OSTYPE),linux-androideabi)
     OSTYPE=linux
 endif
 
@@ -322,8 +326,7 @@ SKIA_IMAGE_CXX_SRC=\
 		SkSurface_Picture.cpp \
 		SkSurface_Raster.cpp)
 
-# FIXME: This is very x86-specific.
-SKIA_OPTS_CXX_SRC=\
+SKIA_OPTS_CXX_SRC_x86=\
 	$(addprefix src/opts/,\
 		SkBitmapProcState_opts_SSE2.cpp \
 		SkBitmapProcState_opts_SSSE3.cpp \
@@ -331,6 +334,13 @@ SKIA_OPTS_CXX_SRC=\
 		SkBlitRow_opts_SSE2.cpp \
 		SkUtils_opts_SSE2.cpp \
 		opts_check_SSE2.cpp)
+
+SKIA_OPTS_CXX_SRC_arm=\
+        $(addprefix src/opts/,\
+        SkBitmapProcState_opts_arm.cpp \
+        SkBlitRow_opts_none.cpp \
+        SkUtils_opts_none.cpp \
+        opts_check_arm.cpp)
 
 ifeq ($(OSTYPE),darwin)
 CXXFLAGS+=-I$(VPATH)/include/utils/mac
@@ -354,6 +364,7 @@ SKIA_UTILS_CXX_SRC=\
 endif
 
 ifeq ($(OSTYPE),linux)
+ifneq ($(CFG_TARGET_TRIPLE),arm-linux-androideabi)
 	CXXFLAGS += $(shell pkg-config --cflags freetype2)
 
 SKIA_GL_CXX_SRC += \
@@ -374,6 +385,29 @@ SKIA_UTILS_CXX_SRC=\
 	$(addprefix src/utils/,\
 		SkOSFile.cpp)
 
+else
+	CXXFLAGS += -I$(VPATH)/../../src/libfreetype2/include
+	CXXFLAGS += -I$(VPATH)/../../src/libexpat/expat/lib
+
+SKIA_GL_CXX_SRC += \
+	$(addprefix src/gpu/,\
+		gl/GrGLCreateNativeInterface_none.cpp)
+
+SKIA_PORTS_CXX_SRC=\
+	$(addprefix src/ports/,\
+		SkDebug_android.cpp \
+		SkFontHost_FreeType_common.cpp \
+		SkFontHost_FreeType.cpp \
+		SkFontHost_android.cpp \
+		SkOSFile_stdio.cpp \
+		FontHostConfiguration_android.cpp \
+		SkThread_pthread.cpp)
+
+SKIA_UTILS_CXX_SRC=\
+	$(addprefix src/utils/,\
+		SkOSFile.cpp)
+
+endif
 endif
 
 SKIA_SRC=\
@@ -382,10 +416,19 @@ SKIA_SRC=\
 	$(SKIA_EFFECTS_CXX_SRC) \
 	$(SKIA_GL_CXX_SRC) \
 	$(SKIA_IMAGE_CXX_SRC) \
-	$(SKIA_OPTS_CXX_SRC) \
 	$(SKIA_PORTS_CXX_SRC) \
 	$(SKIA_UTILS_CXX_SRC) \
 	$(NULL)
+
+ifeq ($(CFG_CPUTYPE), i686)
+	SKIA_SRC += $(SKIA_OPTS_CXX_SRC_x86)
+endif
+ifeq ($(CFG_CPUTYPE), x86_64)
+	SKIA_SRC += $(SKIA_OPTS_CXX_SRC_x86)
+endif
+ifeq ($(CFG_CPUTYPE), arm)
+	SKIA_SRC += $(SKIA_OPTS_CXX_SRC_arm)
+endif
 
 SKIA_OBJS=$(patsubst %.cpp,%.o,$(SKIA_SRC))
 
