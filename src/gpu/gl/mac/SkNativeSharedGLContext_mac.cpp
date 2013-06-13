@@ -44,7 +44,6 @@ void SkNativeSharedGLContext::destroyGLContext() {
 const GrGLInterface* SkNativeSharedGLContext::createGLContext() {
     SkASSERT(NULL == fContext);
 
-    SkDebugf("fSharedContext = %d", fSharedContext);
     CGLPixelFormatObj pixFormat = CGLGetPixelFormat(fSharedContext);
 
     if (NULL == pixFormat) {
