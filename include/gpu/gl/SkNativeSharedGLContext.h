@@ -57,6 +57,7 @@ public:
         return CGLGetCurrentContext();
         #elif defined(SK_BUILD_FOR_ANDROID) || defined(SK_BUILD_FOR_NACL)
         #elif defined(SK_BUILD_FOR_UNIX)
+        return glXGetCurrentContext();
         #endif
     }
 
