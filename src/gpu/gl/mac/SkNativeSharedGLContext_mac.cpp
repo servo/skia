@@ -8,16 +8,6 @@
 #include "gl/SkNativeSharedGLContext.h"
 #include "gl/GrGLUtil.h"
 
-SkNativeSharedGLContext::AutoContextRestore::AutoContextRestore() {
-    fOldCGLContext = CGLGetCurrentContext();
-}
-
-SkNativeSharedGLContext::AutoContextRestore::~AutoContextRestore() {
-    CGLSetCurrentContext(fOldCGLContext);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLSharedContext sharedContext)
     : fContext(NULL)
     , fGrContext(NULL)
