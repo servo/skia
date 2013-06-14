@@ -57,32 +57,9 @@ public:
         return CGLGetCurrentContext();
         #elif defined(SK_BUILD_FOR_ANDROID) || defined(SK_BUILD_FOR_NACL)
         #elif defined(SK_BUILD_FOR_UNIX)
+        return glXGetCurrentContext();
         #endif
     }
-
-    class AutoContextRestore {
-    public:
-        AutoContextRestore();
-        ~AutoContextRestore();
-
-    private:
-    #if defined(SK_BUILD_FOR_MAC)
-        CGLContextObj fOldCGLContext;
-    #elif defined(SK_BUILD_FOR_ANDROID) || defined(SK_BUILD_FOR_NACL)
-        EGLContext fOldEGLContext;
-        EGLDisplay fOldDisplay;
-        EGLSurface fOldSurface;
-    #elif defined(SK_BUILD_FOR_UNIX)
-        GLXContext fOldGLXContext;
-        Display* fOldDisplay;
-        GLXDrawable fOldDrawable;
-    #elif defined(SK_BUILD_FOR_WIN32)
-        HDC fOldHDC;
-        HGLRC fOldHGLRC;
-    #elif defined(SK_BUILD_FOR_IOS)
-        void* fEAGLContext;
-    #endif
-    };
 
 protected:
     virtual const GrGLInterface *createGLContext();

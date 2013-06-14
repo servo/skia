@@ -16,10 +16,26 @@ SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLSharedContext sharedContext
     , fFBO(0)
     , fColorBufferID(0)
     , fDepthStencilBufferID(0) {
+
+    fDisplay = XOpenDisplay(NULL);
+    SkASSERT(NULL != fDisplay);
+    int screen = DefaultScreen(fDisplay);
+    GLint att[] = {
+        GLX_RGBA,
+        GLX_DEPTH_SIZE, 24,
+        None
+    };
+    XVisualInfo *visinfo = glXChooseVisual(fDisplay, screen, att);
+    Drawable root = RootWindow(fDisplay, screen);
+    fPixmap = XCreatePixmap(fDisplay, root, 10, 10, visinfo->depth);
+    fGlxPixmap = glXCreateGLXPixmap(fDisplay, visinfo, fPixmap);
 }
 
 SkNativeSharedGLContext::~SkNativeSharedGLContext() {
     this->destroyGLContext();
+    glXDestroyGLXPixmap(fDisplay, fGlxPixmap);
+    XFreePixmap(fDisplay, fPixmap);
+    if (fDisplay) XCloseDisplay(fDisplay);
     if (fGrContext) {
         fGrContext->Release();
     }
@@ -27,28 +43,31 @@ SkNativeSharedGLContext::~SkNativeSharedGLContext() {
 
 void SkNativeSharedGLContext::destroyGLContext() {
     if (NULL != fContext) {
-        CGLReleaseContext(fContext);
+        glXDestroyContext(fDisplay, fContext);
     }
 }
 
 const GrGLInterface* SkNativeSharedGLContext::createGLContext() {
     SkASSERT(NULL == fContext);
 
-    CGLPixelFormatObj pixFormat = CGLGetPixelFormat(fSharedContext);
+    XVisualInfo *visinfo;
+    int screen = DefaultScreen(fDisplay);
+    GLint att[] = {
+        GLX_RGBA,
+        GLX_DEPTH_SIZE, 24,
+        None
+    };
 
-    if (NULL == pixFormat) {
-        SkDebugf("CGLGetPixelFormat failed.");
-        return NULL;
-    }
-
-    CGLError err = CGLCreateContext(pixFormat, fSharedContext, &fContext);
+    visinfo = glXChooseVisual(fDisplay, screen, att);
+    fContext = glXCreateContext(fDisplay, visinfo, fSharedContext, true);
 
     if (NULL == fContext) {
-        SkDebugf("CGLCreateContext failed with %s.", CGLErrorString(err));
+        SkDebugf("glXCreateContext failed with %d.", fContext);
         return NULL;
     }
 
-    CGLSetCurrentContext(fContext);
+    
+    glXMakeCurrent(fDisplay, fGlxPixmap, fContext);
 
     const GrGLInterface* interface = GrGLCreateNativeInterface();
     if (NULL == interface) {
@@ -184,7 +203,7 @@ GrContext *SkNativeSharedGLContext::getGrContext() {
 }
 
 void SkNativeSharedGLContext::makeCurrent() const {
-    CGLSetCurrentContext(fContext);
+    glXMakeCurrent(fDisplay, fGlxPixmap, fContext);
 }
 
 void SkNativeSharedGLContext::flush() const {
