@@ -3,12 +3,24 @@ VPATH=%VPATH%
 CC ?= gcc
 CXX ?= g++
 
+ifeq ($(CFG_ENABLE_DEBUG),1)
+CXXFLAGS += \
+	-g \
+	-DSK_DEBUG \
+	-DGR_DEBUG=1 \
+	-DGR_GL_LOG_CALLS=1 \
+	-DGR_GL_LOG_CALLS_START=1 \
+	$(NULL)
+else
+CXXFLAGS += \
+	-O3 \
+	$(NULL)
+endif
+
 CXXFLAGS+=\
 	-fPIC \
-	-O3 \
 	-mssse3 \
 	-DSK_A32_SHIFT=24 -DSK_R32_SHIFT=16 -DSK_G32_SHIFT=8 -DSK_B32_SHIFT=0 \
-	-DSK_DEBUG -DGR_DEBUG=1 -DGR_GL_LOG_CALLS=1 -DGR_GL_LOG_CALLS_START=1 \
 	-I$(VPATH)/include/config \
 	-I$(VPATH)/include/core \
 	-I$(VPATH)/include/effects \
