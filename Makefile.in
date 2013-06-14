@@ -369,7 +369,9 @@ ifeq ($(OSTYPE),linux)
 
 SKIA_GL_CXX_SRC += \
 	$(addprefix src/gpu/,\
-		gl/GrGLCreateNativeInterface_none.cpp)
+		gl/unix/GrGLCreateNativeInterface_unix.cpp \
+		gl/unix/SkNativeSharedGLContext_unix.cpp \
+		gl/unix/SkNativeGLContext_unix.cpp)
 
 SKIA_PORTS_CXX_SRC=\
 	$(addprefix src/ports/,\
