@@ -23,6 +23,12 @@ SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLSharedContext sharedContext
 }
 
 SkNativeSharedGLContext::~SkNativeSharedGLContext() {
+    if (fGL) {
+        SK_GL_NOERRCHECK(*this, DeleteFramebuffers(1, &fFBO));
+        SK_GL_NOERRCHECK(*this, DeleteTextures(1, &fColorBufferID));
+        SK_GL_NOERRCHECK(*this, DeleteRenderbuffers(1, &fDepthStencilBufferID));
+    }
+    SkSafeUnref(fGL);
     this->destroyGLContext();
     if (fGrContext) {
         fGrContext->Release();
