@@ -18,14 +18,14 @@ SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLSharedContext sharedContext
     , fGL(NULL)
     , fSharedContext(sharedContext)
     , fFBO(0)
-    , fColorBufferID(0)
+    , fTextureID(0)
     , fDepthStencilBufferID(0) {
 }
 
 SkNativeSharedGLContext::~SkNativeSharedGLContext() {
     if (fGL) {
         SK_GL_NOERRCHECK(*this, DeleteFramebuffers(1, &fFBO));
-        SK_GL_NOERRCHECK(*this, DeleteTextures(1, &fColorBufferID));
+        SK_GL_NOERRCHECK(*this, DeleteTextures(1, &fTextureID));
         SK_GL_NOERRCHECK(*this, DeleteRenderbuffers(1, &fDepthStencilBufferID));
     }
     SkSafeUnref(fGL);
@@ -166,7 +166,7 @@ bool SkNativeSharedGLContext::init(const int width, const int height) {
         if (GR_GL_FRAMEBUFFER_COMPLETE != status ||
             GR_GL_NO_ERROR != error) {
             fFBO = 0;
-            fColorBufferID = 0;
+            fTextureID = 0;
             fDepthStencilBufferID = 0;
             fGL->unref();
             fGL = NULL;

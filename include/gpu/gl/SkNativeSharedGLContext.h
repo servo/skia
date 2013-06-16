@@ -87,7 +87,6 @@ private:
     GrGLExtensions fExtensions;
     GrGLuint fFBO;
     GrGLuint fTextureID;
-    GrGLuint fColorBufferID;
     GrGLuint fDepthStencilBufferID;
 
     const GrGLInterface* fGL;
