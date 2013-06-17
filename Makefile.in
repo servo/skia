@@ -14,6 +14,8 @@ CXXFLAGS += \
 else
 CXXFLAGS += \
 	-O3 \
+	-DSK_RELEASE \
+	-DGR_RELEASE=1 \
 	$(NULL)
 endif
 
@@ -365,10 +367,10 @@ SKIA_GL_CXX_SRC += \
 
 SKIA_PORTS_CXX_SRC=\
 	$(addprefix src/ports/,\
-		SkDebug_stdio.cpp \
 		SkFontHost_mac.cpp \
 		SkOSFile_stdio.cpp \
-		SkThread_pthread.cpp)
+		SkThread_pthread.cpp \
+		SkDebug_stdio.cpp)
 
 SKIA_UTILS_CXX_SRC=\
 	$(addprefix src/utils/mac/,\
@@ -387,18 +389,17 @@ SKIA_GL_CXX_SRC += \
 
 SKIA_PORTS_CXX_SRC=\
 	$(addprefix src/ports/,\
-		SkDebug_stdio.cpp \
 		SkFontHost_FreeType_common.cpp \
 		SkFontHost_FreeType.cpp \
 		SkFontHost_fontconfig.cpp \
 		SkFontConfigInterface_direct.cpp \
 		SkOSFile_stdio.cpp \
-		SkThread_pthread.cpp)
+		SkThread_pthread.cpp \
+		SkDebug_stdio.cpp)
 
 SKIA_UTILS_CXX_SRC=\
 	$(addprefix src/utils/,\
 		SkOSFile.cpp)
-
 endif
 
 SKIA_SRC=\
@@ -432,5 +433,5 @@ check:
 
 .PHONY: clean
 clean:
-	rm -f *.o *.a */*/*.o
+	find . -name '*.o' -or -name '*.a' | xargs rm -f
 
