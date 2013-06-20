@@ -25,7 +25,8 @@ SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLSharedContext sharedContext
 SkNativeSharedGLContext::~SkNativeSharedGLContext() {
     if (fGL) {
         SK_GL_NOERRCHECK(*this, DeleteFramebuffers(1, &fFBO));
-        SK_GL_NOERRCHECK(*this, DeleteTextures(1, &fTextureID));
+        if (fTextureID)
+            SK_GL_NOERRCHECK(*this, DeleteTextures(1, &fTextureID));
         SK_GL_NOERRCHECK(*this, DeleteRenderbuffers(1, &fDepthStencilBufferID));
     }
     SkSafeUnref(fGL);
@@ -193,6 +194,22 @@ GrContext *SkNativeSharedGLContext::getGrContext() {
     }
 }
 
+GrGLuint SkNativeSharedGLContext::stealTextureID() {
+    // Unbind the texture from the framebuffer.
+    if (fGL && fFBO) {
+        SK_GL(*this, BindFramebuffer(GR_GL_FRAMEBUFFER, fFBO));
+        SK_GL(*this, FramebufferTexture2D(GR_GL_FRAMEBUFFER,
+                                          GR_GL_COLOR_ATTACHMENT0,
+                                          GR_GL_TEXTURE_2D,
+                                          0,
+                                          0));
+    }
+
+    GrGLuint textureID = fTextureID;
+    fTextureID = 0;
+    return textureID;
+}
+
 void SkNativeSharedGLContext::makeCurrent() const {
     CGLSetCurrentContext(fContext);
 }
@@ -201,3 +218,4 @@ void SkNativeSharedGLContext::flush() const {
     this->makeCurrent();
     SK_GL(*this, Flush());
 }
+
