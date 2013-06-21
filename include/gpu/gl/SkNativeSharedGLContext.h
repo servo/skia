@@ -61,6 +61,17 @@ public:
         #endif
     }
 
+    // Returns the texture and releases it. After this call, the caller is
+    // responsible for destroying the texture.
+    //
+    // If this call is called more than once, invocations after the first will
+    // return zero and do nothing.
+    //
+    // Any rendering that takes place after this call will result in rendering
+    // to a framebuffer bound to no attachment at all (i.e. an incomplete
+    // framebuffer), which will result in OpenGL errors.
+    GrGLuint stealTextureID();
+
 protected:
     virtual const GrGLInterface *createGLContext();
     virtual void destroyGLContext();
