@@ -10,6 +10,7 @@
 
 #include "SkGLContextHelper.h"
 #include "GrContext.h"
+#include "gl/GrGLUtil.h"
 
 #if defined(SK_BUILD_FOR_MAC)
     #include <OpenGL/OpenGL.h>
@@ -70,7 +71,21 @@ public:
     // Any rendering that takes place after this call will result in rendering
     // to a framebuffer bound to no attachment at all (i.e. an incomplete
     // framebuffer), which will result in OpenGL errors.
-    GrGLuint stealTextureID();
+    GrGLuint stealTextureID() {
+        // Unbind the texture from the framebuffer.
+        if (fGL && fFBO) {
+            SK_GL(*this, BindFramebuffer(GR_GL_FRAMEBUFFER, fFBO));
+            SK_GL(*this, FramebufferTexture2D(GR_GL_FRAMEBUFFER,
+                                              GR_GL_COLOR_ATTACHMENT0,
+                                              GR_GL_TEXTURE_2D,
+                                              0,
+                                              0));
+        }
+
+        GrGLuint textureID = fTextureID;
+        fTextureID = 0;
+        return textureID;
+    }
 
 protected:
     virtual const GrGLInterface *createGLContext();
