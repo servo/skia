@@ -8,7 +8,7 @@
 #include "gl/SkNativeSharedGLContext.h"
 #include "gl/GrGLUtil.h"
 
-SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLSharedContext sharedContext)
+SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLSharedContext sharedContext, void *extra)
     : fContext(NULL)
     , fGrContext(NULL)
     , fGL(NULL)
@@ -17,7 +17,7 @@ SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLSharedContext sharedContext
     , fTextureID(0)
     , fDepthStencilBufferID(0) {
 
-    fDisplay = XOpenDisplay(NULL);
+    fDisplay = (Display *)extra;
     SkASSERT(NULL != fDisplay);
     int screen = DefaultScreen(fDisplay);
     GLint att[] = {
@@ -41,7 +41,6 @@ SkNativeSharedGLContext::~SkNativeSharedGLContext() {
     this->destroyGLContext();
     glXDestroyGLXPixmap(fDisplay, fGlxPixmap);
     XFreePixmap(fDisplay, fPixmap);
-    if (fDisplay) XCloseDisplay(fDisplay);
     if (fGrContext) {
         fGrContext->Release();
     }

@@ -12,7 +12,7 @@
 // to rebase our Skia changes onto later versions.
 #define GR_GL_TEXTURE_RECTANGLE_ARB                         0x84F5
 
-SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLSharedContext sharedContext)
+SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLSharedContext sharedContext, void *extra)
     : fContext(NULL)
     , fGrContext(NULL)
     , fGL(NULL)

@@ -36,7 +36,7 @@ typedef GLXContext GrGLSharedContext;
 
 class SkNativeSharedGLContext : public SkRefCnt {
 public:
-    explicit SkNativeSharedGLContext(GrGLSharedContext sharedContext);
+    explicit SkNativeSharedGLContext(GrGLSharedContext sharedContext, void *extra);
     virtual ~SkNativeSharedGLContext();
 
     virtual bool init(const int width, const int height);
