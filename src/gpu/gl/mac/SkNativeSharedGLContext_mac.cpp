@@ -8,7 +8,7 @@
 #include "gl/SkNativeSharedGLContext.h"
 #include "gl/GrGLUtil.h"
 
-SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLSharedContext sharedContext)
+SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLSharedContext sharedContext, void *extra)
     : fContext(NULL)
     , fGrContext(NULL)
     , fGL(NULL)
