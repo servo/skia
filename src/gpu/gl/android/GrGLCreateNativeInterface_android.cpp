@@ -26,7 +26,7 @@ const GrGLInterface* GrGLCreateNativeInterface() {
         interface->fBindAttribLocation = glBindAttribLocation;
         interface->fBindBuffer = glBindBuffer;
         interface->fBindTexture = glBindTexture;
-        interface->fBindVertexArray = glBindVertexArrayOES;
+        //interface->fBindVertexArray = glBindVertexArrayOES;
         interface->fBlendColor = glBlendColor;
         interface->fBlendFunc = glBlendFunc;
         interface->fBufferData = glBufferData;
@@ -45,7 +45,7 @@ const GrGLInterface* GrGLCreateNativeInterface() {
         interface->fDeleteProgram = glDeleteProgram;
         interface->fDeleteShader = glDeleteShader;
         interface->fDeleteTextures = glDeleteTextures;
-        interface->fDeleteVertexArrays = glDeleteVertexArraysOES;
+        //interface->fDeleteVertexArrays = glDeleteVertexArraysOES;
         interface->fDepthMask = glDepthMask;
         interface->fDisable = glDisable;
         interface->fDisableVertexAttribArray = glDisableVertexAttribArray;
@@ -58,7 +58,7 @@ const GrGLInterface* GrGLCreateNativeInterface() {
         interface->fFrontFace = glFrontFace;
         interface->fGenBuffers = glGenBuffers;
         interface->fGenTextures = glGenTextures;
-        interface->fGenVertexArrays = glGenVertexArraysOES;
+        //interface->fGenVertexArrays = glGenVertexArraysOES;
         interface->fGetBufferParameteriv = glGetBufferParameteriv;
         interface->fGetError = glGetError;
         interface->fGetIntegerv = glGetIntegerv;
@@ -126,8 +126,8 @@ const GrGLInterface* GrGLCreateNativeInterface() {
         interface->fFramebufferRenderbuffer = glFramebufferRenderbuffer;
         interface->fFramebufferTexture2D = glFramebufferTexture2D;
 #if GL_IMG_multisampled_render_to_texture
-        interface->fFramebufferTexture2DMultisample = glFramebufferTexture2DMultisampleIMG;
-        interface->fRenderbufferStorageMultisample = glRenderbufferStorageMultisampleIMG;
+        //interface->fFramebufferTexture2DMultisample = glFramebufferTexture2DMultisampleIMG;
+        //interface->fRenderbufferStorageMultisample = glRenderbufferStorageMultisampleIMG;
 #endif
         interface->fGenFramebuffers = glGenFramebuffers;
         interface->fGenRenderbuffers = glGenRenderbuffers;

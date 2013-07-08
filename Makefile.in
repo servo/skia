@@ -421,7 +421,9 @@ ifeq ($(OSTYPE),android)
 
 SKIA_GL_CXX_SRC += \
         $(addprefix src/gpu/,\
-                gl/GrGLCreateNativeInterface_none.cpp)
+                gl/android/GrGLCreateNativeInterface_android.cpp \
+                gl/android/SkNativeGLContext_android.cpp \
+                gl/android/SkNativeSharedGLContext_android.cpp)
 
 SKIA_PORTS_CXX_SRC=\
         $(addprefix src/ports/,\
