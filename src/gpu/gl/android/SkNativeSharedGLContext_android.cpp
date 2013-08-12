@@ -221,6 +221,22 @@ GrContext *SkNativeSharedGLContext::getGrContext() {
     }
 }
 
+GrGLuint SkNativeSharedGLContext::stealTextureID() {
+    // Unbind the texture from the framebuffer.
+    if (fGL && fFBO) {
+        SK_GL(*this, BindFramebuffer(GR_GL_FRAMEBUFFER, fFBO));
+        SK_GL(*this, FramebufferTexture2D(GR_GL_FRAMEBUFFER,
+                    GR_GL_COLOR_ATTACHMENT0,
+                    GR_GL_TEXTURE_2D,
+                    0,
+                    0));
+    }
+
+    GrGLuint textureID = fTextureID;
+    fTextureID = 0;
+    return textureID;
+}
+
 void SkNativeSharedGLContext::makeCurrent() const {
     if (!eglMakeCurrent(fDisplay, fSurface, fSurface, fContext)) {
         SkDebugf("Could not set the context.\n");
