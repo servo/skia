@@ -26,7 +26,9 @@ const GrGLInterface* GrGLCreateNativeInterface() {
         interface->fBindAttribLocation = glBindAttribLocation;
         interface->fBindBuffer = glBindBuffer;
         interface->fBindTexture = glBindTexture;
+#ifndef SK_BUILD_FOR_ANDROID
         interface->fBindVertexArray = glBindVertexArrayOES;
+#endif
         interface->fBlendColor = glBlendColor;
         interface->fBlendFunc = glBlendFunc;
         interface->fBufferData = glBufferData;
@@ -45,7 +47,9 @@ const GrGLInterface* GrGLCreateNativeInterface() {
         interface->fDeleteProgram = glDeleteProgram;
         interface->fDeleteShader = glDeleteShader;
         interface->fDeleteTextures = glDeleteTextures;
+#ifndef SK_BUILD_FOR_ANDROID
         interface->fDeleteVertexArrays = glDeleteVertexArraysOES;
+#endif
         interface->fDepthMask = glDepthMask;
         interface->fDisable = glDisable;
         interface->fDisableVertexAttribArray = glDisableVertexAttribArray;
@@ -58,7 +62,9 @@ const GrGLInterface* GrGLCreateNativeInterface() {
         interface->fFrontFace = glFrontFace;
         interface->fGenBuffers = glGenBuffers;
         interface->fGenTextures = glGenTextures;
+#ifndef SK_BUILD_FOR_ANDROID
         interface->fGenVertexArrays = glGenVertexArraysOES;
+#endif
         interface->fGetBufferParameteriv = glGetBufferParameteriv;
         interface->fGetError = glGetError;
         interface->fGetIntegerv = glGetIntegerv;
@@ -126,8 +132,10 @@ const GrGLInterface* GrGLCreateNativeInterface() {
         interface->fFramebufferRenderbuffer = glFramebufferRenderbuffer;
         interface->fFramebufferTexture2D = glFramebufferTexture2D;
 #if GL_IMG_multisampled_render_to_texture
+#ifndef SK_BUILD_FOR_ANDROID
         interface->fFramebufferTexture2DMultisample = glFramebufferTexture2DMultisampleIMG;
         interface->fRenderbufferStorageMultisample = glRenderbufferStorageMultisampleIMG;
+#endif
 #endif
         interface->fGenFramebuffers = glGenFramebuffers;
         interface->fGenRenderbuffers = glGenRenderbuffers;
