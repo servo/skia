@@ -33,6 +33,13 @@ SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLSharedContext sharedContext
 
 SkNativeSharedGLContext::~SkNativeSharedGLContext() {
     if (fGL) {
+        // We need this thread to grab the GLX context before we can make
+        // OpenGL calls.  But glXMakeCurrent() will flush the old context,
+        // which might have been uninitialized.  Calling with (None, NULL)
+        // first solves this problem (somehow).
+        glXMakeCurrent(fDisplay, None, NULL);
+        glXMakeCurrent(fDisplay, fGlxPixmap, fContext);
+
         SK_GL_NOERRCHECK(*this, DeleteFramebuffers(1, &fFBO));
         SK_GL_NOERRCHECK(*this, DeleteTextures(1, &fTextureID));
         SK_GL_NOERRCHECK(*this, DeleteRenderbuffers(1, &fDepthStencilBufferID));
