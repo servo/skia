@@ -3,7 +3,7 @@ VPATH=%VPATH%
 CC ?= gcc
 CXX ?= g++
 
-ifeq ($(CFG_ENABLE_DEBUG),1)
+ifeq ($(CFG_ENABLE_DEBUG_SKIA),1)
 CXXFLAGS += \
 	-g \
 	-DSK_DEBUG \
