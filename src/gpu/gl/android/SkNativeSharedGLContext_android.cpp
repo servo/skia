@@ -216,7 +216,7 @@ GrContext *SkNativeSharedGLContext::getGrContext() {
         if (fGrContext == NULL) {
             return NULL;
         }
-        fGrContext->AddRef();
+        // No need to AddRef; the GrContext is created with refcount = 1.
         return fGrContext;
     }
 }
