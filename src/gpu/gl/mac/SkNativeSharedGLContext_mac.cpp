@@ -7,18 +7,21 @@
  */
 #include "gl/SkNativeSharedGLContext.h"
 #include "gl/GrGLUtil.h"
+#include <CoreFoundation/CoreFoundation.h>
+#include <OpenGL/CGLIOSurface.h>
 
 // This is defined here instead of in GrGLDefines.h, to make it easier
 // to rebase our Skia changes onto later versions.
 #define GR_GL_TEXTURE_RECTANGLE_ARB                         0x84F5
 
-SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLSharedContext sharedContext, void *extra)
+SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLNativeContext& nativeContext)
     : fContext(NULL)
+    , fPixelFormat(nativeContext.fPixelFormat)
+    , fIOSurface(NULL)
+    , fTextureID(0)
     , fGrContext(NULL)
     , fGL(NULL)
-    , fSharedContext(sharedContext)
     , fFBO(0)
-    , fTextureID(0)
     , fDepthStencilBufferID(0) {
 }
 
@@ -42,17 +45,15 @@ void SkNativeSharedGLContext::destroyGLContext() {
     }
 }
 
-const GrGLInterface* SkNativeSharedGLContext::createGLContext() {
+const GrGLInterface* SkNativeSharedGLContext::createGLContext(const int width, const int height) {
     SkASSERT(NULL == fContext);
 
-    CGLPixelFormatObj pixFormat = CGLGetPixelFormat(fSharedContext);
-
-    if (NULL == pixFormat) {
+    if (NULL == fPixelFormat) {
         SkDebugf("CGLGetPixelFormat failed.");
         return NULL;
     }
 
-    CGLError err = CGLCreateContext(pixFormat, fSharedContext, &fContext);
+    CGLError err = CGLCreateContext(fPixelFormat, NULL, &fContext);
 
     if (NULL == fContext) {
         SkDebugf("CGLCreateContext failed with %s.", CGLErrorString(err));
@@ -77,7 +78,7 @@ bool SkNativeSharedGLContext::init(const int width, const int height) {
         this->destroyGLContext();
     }
 
-    fGL = this->createGLContext();
+    fGL = this->createGLContext(width, height);
     if (fGL) {
         const GrGLubyte* temp;
 
@@ -99,22 +100,57 @@ bool SkNativeSharedGLContext::init(const int width, const int height) {
             SK_GL_RET(*this, error, GetError());
         } while (GR_GL_NO_ERROR != error);
 
+        SK_GL(*this, Enable(GR_GL_TEXTURE_RECTANGLE_ARB));
+
         SK_GL(*this, GenFramebuffers(1, &fFBO));
         SK_GL(*this, BindFramebuffer(GR_GL_FRAMEBUFFER, fFBO));
         SK_GL(*this, GenTextures(1, &fTextureID));
-        SK_GL(*this, BindTexture(GR_GL_TEXTURE_2D, fTextureID));
-        SK_GL(*this, TexImage2D(GR_GL_TEXTURE_2D, 0,
-                                GR_GL_RGBA,
-                                width, height, 0,
-                                GR_GL_RGBA, GR_GL_UNSIGNED_BYTE, 
-                                NULL));
-        SK_GL(*this, TexParameteri(GR_GL_TEXTURE_2D, GR_GL_TEXTURE_WRAP_S, GR_GL_CLAMP_TO_EDGE));
-        SK_GL(*this, TexParameteri(GR_GL_TEXTURE_2D, GR_GL_TEXTURE_WRAP_T, GR_GL_CLAMP_TO_EDGE));
-        SK_GL(*this, TexParameteri(GR_GL_TEXTURE_2D, GR_GL_TEXTURE_MAG_FILTER, GR_GL_NEAREST));
-        SK_GL(*this, TexParameteri(GR_GL_TEXTURE_2D, GR_GL_TEXTURE_MIN_FILTER, GR_GL_NEAREST));
+        SK_GL(*this, BindTexture(GR_GL_TEXTURE_RECTANGLE_ARB, fTextureID));
+
+        // Create the IOSurface and bind it to this texture.
+        const void *surfacePropertyKeys[5] = {
+            kIOSurfaceWidth,
+            kIOSurfaceHeight,
+            kIOSurfaceBytesPerRow,
+            kIOSurfaceBytesPerElement,
+            kIOSurfaceIsGlobal
+        };
+        int stride = width * 4, bpp = 4;
+        const void *surfacePropertyValues[5] = {
+            CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &width),
+            CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &height),
+            CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &stride),
+            CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &bpp),
+            kCFBooleanTrue
+        };
+        CFDictionaryRef surfaceProperties =
+            CFDictionaryCreate(kCFAllocatorDefault,
+                               surfacePropertyKeys,
+                               surfacePropertyValues,
+                               5,
+                               &kCFTypeDictionaryKeyCallBacks,
+                               &kCFTypeDictionaryValueCallBacks);
+        fIOSurface = IOSurfaceCreate(surfaceProperties);
+        CFRelease(surfaceProperties);
+
+        CGLTexImageIOSurface2D(fContext,
+                               GR_GL_TEXTURE_RECTANGLE_ARB,
+                               GR_GL_RGBA,
+                               width,
+                               height,
+                               GR_GL_BGRA,
+                               0x8367, // UNSIGNED_INT_8_8_8_8_REV
+                               fIOSurface,
+                               0);
+
+        SK_GL(*this, TexParameteri(GR_GL_TEXTURE_RECTANGLE_ARB, GR_GL_TEXTURE_WRAP_S, GR_GL_CLAMP_TO_EDGE));
+        SK_GL(*this, TexParameteri(GR_GL_TEXTURE_RECTANGLE_ARB, GR_GL_TEXTURE_WRAP_T, GR_GL_CLAMP_TO_EDGE));
+        SK_GL(*this, TexParameteri(GR_GL_TEXTURE_RECTANGLE_ARB, GR_GL_TEXTURE_MAG_FILTER, GR_GL_NEAREST));
+        SK_GL(*this, TexParameteri(GR_GL_TEXTURE_RECTANGLE_ARB, GR_GL_TEXTURE_MIN_FILTER, GR_GL_NEAREST));
+
         SK_GL(*this, FramebufferTexture2D(GR_GL_FRAMEBUFFER,
                                           GR_GL_COLOR_ATTACHMENT0,
-                                          GR_GL_TEXTURE_2D,
+                                          GR_GL_TEXTURE_RECTANGLE_ARB,
                                           fTextureID, 0));
         SK_GL(*this, GenRenderbuffers(1, &fDepthStencilBufferID));
         SK_GL(*this, BindRenderbuffer(GR_GL_RENDERBUFFER, fDepthStencilBufferID));
@@ -194,20 +230,21 @@ GrContext *SkNativeSharedGLContext::getGrContext() {
     }
 }
 
-GrGLuint SkNativeSharedGLContext::stealTextureID() {
+GrGLSharedSurface SkNativeSharedGLContext::stealSurface() {
     // Unbind the texture from the framebuffer.
     if (fGL && fFBO) {
         SK_GL(*this, BindFramebuffer(GR_GL_FRAMEBUFFER, fFBO));
         SK_GL(*this, FramebufferTexture2D(GR_GL_FRAMEBUFFER,
                                           GR_GL_COLOR_ATTACHMENT0,
-                                          GR_GL_TEXTURE_2D,
+                                          GR_GL_TEXTURE_RECTANGLE_ARB,
                                           0,
                                           0));
     }
 
-    GrGLuint textureID = fTextureID;
+    IOSurfaceRef surface = fIOSurface;
     fTextureID = 0;
-    return textureID;
+    fIOSurface = NULL;
+    return surface;
 }
 
 void SkNativeSharedGLContext::makeCurrent() const {

@@ -8,27 +8,17 @@
 #include "gl/SkNativeSharedGLContext.h"
 #include "gl/GrGLUtil.h"
 
-SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLSharedContext sharedContext, void *extra)
+SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLNativeContext& nativeContext)
     : fContext(NULL)
+    , fDisplay(nativeContext.fDisplay)
+    , fVisualInfo(nativeContext.fVisualInfo)
     , fGrContext(NULL)
     , fGL(NULL)
-    , fSharedContext(sharedContext)
     , fFBO(0)
     , fTextureID(0)
-    , fDepthStencilBufferID(0) {
-
-    fDisplay = (Display *)extra;
-    SkASSERT(NULL != fDisplay);
-    int screen = DefaultScreen(fDisplay);
-    GLint att[] = {
-        GLX_RGBA,
-        GLX_DEPTH_SIZE, 24,
-        None
-    };
-    XVisualInfo *visinfo = glXChooseVisual(fDisplay, screen, att);
-    Drawable root = RootWindow(fDisplay, screen);
-    fPixmap = XCreatePixmap(fDisplay, root, 10, 10, visinfo->depth);
-    fGlxPixmap = glXCreateGLXPixmap(fDisplay, visinfo, fPixmap);
+    , fDepthStencilBufferID(0)
+    , fPixmap(0)
+    , fGlxPixmap(0) {
 }
 
 SkNativeSharedGLContext::~SkNativeSharedGLContext() {
@@ -46,39 +36,42 @@ SkNativeSharedGLContext::~SkNativeSharedGLContext() {
     }
     SkSafeUnref(fGL);
     this->destroyGLContext();
-    glXDestroyGLXPixmap(fDisplay, fGlxPixmap);
-    XFreePixmap(fDisplay, fPixmap);
+    if (fGlxPixmap) {
+        glXDestroyGLXPixmap(fDisplay, fGlxPixmap);
+    }
+    if (fPixmap) {
+        XFreePixmap(fDisplay, fPixmap);
+    }
     if (fGrContext) {
         fGrContext->Release();
     }
 }
 
 void SkNativeSharedGLContext::destroyGLContext() {
+    glXMakeCurrent(fDisplay, None, NULL);
     if (NULL != fContext) {
         glXDestroyContext(fDisplay, fContext);
     }
 }
 
-const GrGLInterface* SkNativeSharedGLContext::createGLContext() {
+const GrGLInterface* SkNativeSharedGLContext::createGLContext(const int width, const int height) {
     SkASSERT(NULL == fContext);
 
-    XVisualInfo *visinfo;
+    // Create the base pixmap and GLX pixmap.
+    //
+    // TODO(pcwalton): This is inefficient. It would be better to have the caller pass in the
+    // pixmap.
     int screen = DefaultScreen(fDisplay);
-    GLint att[] = {
-        GLX_RGBA,
-        GLX_DEPTH_SIZE, 24,
-        None
-    };
+    Drawable root = RootWindow(fDisplay, screen);
+    fPixmap = XCreatePixmap(fDisplay, root, width, height, fVisualInfo->depth);
+    fGlxPixmap = glXCreateGLXPixmap(fDisplay, fVisualInfo, fPixmap);
 
-    visinfo = glXChooseVisual(fDisplay, screen, att);
-    fContext = glXCreateContext(fDisplay, visinfo, fSharedContext, true);
-
+    fContext = glXCreateContext(fDisplay, fVisualInfo, NULL, true);
     if (NULL == fContext) {
         SkDebugf("glXCreateContext failed with %d.", fContext);
         return NULL;
     }
 
-    
     glXMakeCurrent(fDisplay, fGlxPixmap, fContext);
 
     const GrGLInterface* interface = GrGLCreateNativeInterface();
@@ -91,13 +84,16 @@ const GrGLInterface* SkNativeSharedGLContext::createGLContext() {
     return interface;
 }
 
-bool SkNativeSharedGLContext::init(const int width, const int height) {
+bool SkNativeSharedGLContext::init(int width, int height) {
+    width = width <= 0 ? 1 : width;
+    height = height <= 0 ? 1 : height;
+
     if (fGL) {
         fGL->unref();
         this->destroyGLContext();
     }
 
-    fGL = this->createGLContext();
+    fGL = this->createGLContext(width, height);
     if (fGL) {
         const GrGLubyte* temp;
 
@@ -130,12 +126,13 @@ bool SkNativeSharedGLContext::init(const int width, const int height) {
                                 NULL));
         SK_GL(*this, TexParameteri(GR_GL_TEXTURE_2D, GR_GL_TEXTURE_WRAP_S, GR_GL_CLAMP_TO_EDGE));
         SK_GL(*this, TexParameteri(GR_GL_TEXTURE_2D, GR_GL_TEXTURE_WRAP_T, GR_GL_CLAMP_TO_EDGE));
-        SK_GL(*this, TexParameteri(GR_GL_TEXTURE_2D, GR_GL_TEXTURE_MAG_FILTER, GR_GL_NEAREST));
-        SK_GL(*this, TexParameteri(GR_GL_TEXTURE_2D, GR_GL_TEXTURE_MIN_FILTER, GR_GL_NEAREST));
+        SK_GL(*this, TexParameteri(GR_GL_TEXTURE_2D, GR_GL_TEXTURE_MAG_FILTER, GR_GL_LINEAR));
+        SK_GL(*this, TexParameteri(GR_GL_TEXTURE_2D, GR_GL_TEXTURE_MIN_FILTER, GR_GL_LINEAR));
         SK_GL(*this, FramebufferTexture2D(GR_GL_FRAMEBUFFER,
                                           GR_GL_COLOR_ATTACHMENT0,
                                           GR_GL_TEXTURE_2D,
                                           fTextureID, 0));
+
         SK_GL(*this, GenRenderbuffers(1, &fDepthStencilBufferID));
         SK_GL(*this, BindRenderbuffer(GR_GL_RENDERBUFFER, fDepthStencilBufferID));
 
@@ -177,15 +174,14 @@ bool SkNativeSharedGLContext::init(const int width, const int height) {
                                              GR_GL_RENDERBUFFER,
                                              fDepthStencilBufferID));
         SK_GL(*this, Viewport(0, 0, width, height));
+
         SK_GL(*this, ClearStencil(0));
         SK_GL(*this, Clear(GR_GL_STENCIL_BUFFER_BIT));
 
         SK_GL_RET(*this, error, GetError());
         GrGLenum status;
         SK_GL_RET(*this, status, CheckFramebufferStatus(GR_GL_FRAMEBUFFER));
-
-        if (GR_GL_FRAMEBUFFER_COMPLETE != status ||
-            GR_GL_NO_ERROR != error) {
+        if (GR_GL_FRAMEBUFFER_COMPLETE != status || GR_GL_NO_ERROR != error) {
             fFBO = 0;
             fTextureID = 0;
             fDepthStencilBufferID = 0;
@@ -214,22 +210,6 @@ GrContext *SkNativeSharedGLContext::getGrContext() {
     }
 }
 
-GrGLuint SkNativeSharedGLContext::stealTextureID() {
-    // Unbind the texture from the framebuffer.
-    if (fGL && fFBO) {
-        SK_GL(*this, BindFramebuffer(GR_GL_FRAMEBUFFER, fFBO));
-        SK_GL(*this, FramebufferTexture2D(GR_GL_FRAMEBUFFER,
-                                          GR_GL_COLOR_ATTACHMENT0,
-                                          GR_GL_TEXTURE_2D,
-                                          0,
-                                          0));
-    }
-
-    GrGLuint textureID = fTextureID;
-    fTextureID = 0;
-    return textureID;
-}
-
 void SkNativeSharedGLContext::makeCurrent() const {
     glXMakeCurrent(fDisplay, fGlxPixmap, fContext);
 }
@@ -238,3 +218,31 @@ void SkNativeSharedGLContext::flush() const {
     this->makeCurrent();
     SK_GL(*this, Flush());
 }
+
+GrGLSharedSurface SkNativeSharedGLContext::stealSurface() {
+    // Render the texture to the default framebuffer.
+    int viewport[4];
+    SK_GL(*this, GetIntegerv(GR_GL_VIEWPORT, viewport));
+    int width = viewport[2], height = viewport[3];
+    SK_GL(*this, BindFramebuffer(GR_GL_READ_FRAMEBUFFER, fFBO));
+    SK_GL(*this, BindFramebuffer(GR_GL_DRAW_FRAMEBUFFER, 0));
+    SK_GL(*this, BlitFramebuffer(0,
+                                 0,
+                                 width,
+                                 height,
+                                 0,
+                                 0,
+                                 width,
+                                 height,
+                                 GR_GL_COLOR_BUFFER_BIT,
+                                 GR_GL_NEAREST));
+    SK_GL(*this, Flush());
+    SK_GL(*this, BindFramebuffer(GR_GL_FRAMEBUFFER, 0));
+
+    Pixmap pixmap = fPixmap;
+    glXDestroyGLXPixmap(fDisplay, fGlxPixmap);
+    fGlxPixmap = 0;
+    fPixmap = 0;
+    return pixmap;
+}
+
