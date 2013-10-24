@@ -285,3 +285,4 @@ void SkNativeGLContext::makeCurrent() const {
         SkDebugf("Could not set the context.\n");
     }
 }
+
