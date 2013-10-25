@@ -22,6 +22,18 @@ SkNativeSharedGLContext::SkNativeSharedGLContext(GrGLNativeContext& nativeContex
 }
 
 SkNativeSharedGLContext::~SkNativeSharedGLContext() {
+    if (fGlxPixmap) {
+        destroyGLResources();
+    }
+    if (fPixmap) {
+        XFreePixmap(fDisplay, fPixmap);
+    }
+    if (fGrContext) {
+        fGrContext->Release();
+    }
+}
+
+void SkNativeSharedGLContext::destroyGLResources() {
     if (fGL) {
         // We need this thread to grab the GLX context before we can make
         // OpenGL calls.  But glXMakeCurrent() will flush the old context,
@@ -36,15 +48,9 @@ SkNativeSharedGLContext::~SkNativeSharedGLContext() {
     }
     SkSafeUnref(fGL);
     this->destroyGLContext();
-    if (fGlxPixmap) {
-        glXDestroyGLXPixmap(fDisplay, fGlxPixmap);
-    }
-    if (fPixmap) {
-        XFreePixmap(fDisplay, fPixmap);
-    }
-    if (fGrContext) {
-        fGrContext->Release();
-    }
+
+    glXDestroyGLXPixmap(fDisplay, fGlxPixmap);
+    fGlxPixmap = 0;
 }
 
 void SkNativeSharedGLContext::destroyGLContext() {
@@ -240,8 +246,7 @@ GrGLSharedSurface SkNativeSharedGLContext::stealSurface() {
     SK_GL(*this, BindFramebuffer(GR_GL_FRAMEBUFFER, 0));
 
     Pixmap pixmap = fPixmap;
-    glXDestroyGLXPixmap(fDisplay, fGlxPixmap);
-    fGlxPixmap = 0;
+    destroyGLResources();
     fPixmap = 0;
     return pixmap;
 }
