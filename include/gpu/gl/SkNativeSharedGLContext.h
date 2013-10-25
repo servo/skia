@@ -103,6 +103,8 @@ private:
     XVisualInfo *fVisualInfo;
     Pixmap fPixmap;
     GLXPixmap fGlxPixmap;
+
+    void destroyGLResources();
 #else
 #error "No shared contexts on this platform."
 #endif
