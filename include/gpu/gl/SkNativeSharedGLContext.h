@@ -17,6 +17,7 @@
 #elif defined(SK_BUILD_FOR_ANDROID) || defined(SK_BUILD_FOR_NACL)
     #include <GLES2/gl2.h>
     #include <EGL/egl.h>
+    #include <EGL/eglext.h>
 #elif defined(SK_BUILD_FOR_UNIX)
     #include <X11/Xlib.h>
     #include <GL/glx.h>
@@ -32,9 +33,11 @@ struct GrGLNativeContext {
 typedef CGLContextObj GrGLSharedContext;
 typedef IOSurfaceRef GrGLSharedSurface;
 #elif defined(SK_BUILD_FOR_ANDROID)
+struct GrGLNativeContext {
+    EGLDisplay *fDisplay;
+};
 typedef EGLContext GrGLSharedContext;
-typedef void* GrGLPixelFormat;
-typedef void* GrGLSharedSurface;
+typedef EGLImageKHR GrGLSharedSurface;
 #elif defined(SK_BUILD_FOR_UNIX)
 struct GrGLNativeContext {
     Display *fDisplay;
@@ -97,6 +100,7 @@ private:
     EGLContext fContext;
     EGLDisplay fDisplay;
     EGLSurface fSurface;
+    EGLImageKHR fEGLImage;
 #elif defined(SK_BUILD_FOR_UNIX)
     GLXContext fContext;
     Display* fDisplay;

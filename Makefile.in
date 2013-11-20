@@ -418,6 +418,7 @@ ifeq ($(OSTYPE),android)
         CXXFLAGS += -I$(VPATH)/../../../platform/android/libfreetype2/include
         CXXFLAGS += -I$(VPATH)/../../../platform/android/libexpat/expat/lib
         CXXFLAGS += -DSK_BUILD_FOR_ANDROID
+        CXXFLAGS += -DEGL_EGLEXT_PROTOTYPES
 
 SKIA_GL_CXX_SRC += \
         $(addprefix src/gpu/,\
