@@ -31,6 +31,8 @@ SkNativeSharedGLContext::~SkNativeSharedGLContext() {
     if (fGrContext) {
         fGrContext->Release();
     }
+    SkSafeUnref(fGL);
+    this->destroyGLContext();
 }
 
 void SkNativeSharedGLContext::destroyGLResources() {
@@ -46,9 +48,8 @@ void SkNativeSharedGLContext::destroyGLResources() {
         SK_GL_NOERRCHECK(*this, DeleteTextures(1, &fTextureID));
         SK_GL_NOERRCHECK(*this, DeleteRenderbuffers(1, &fDepthStencilBufferID));
     }
-    SkSafeUnref(fGL);
-    this->destroyGLContext();
 
+    glXMakeCurrent(fDisplay, None, NULL);
     glXDestroyGLXPixmap(fDisplay, fGlxPixmap);
     fGlxPixmap = 0;
 }
