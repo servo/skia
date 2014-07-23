@@ -49,6 +49,7 @@ void SkNativeSharedGLContext::destroyGLResources() {
         SK_GL_NOERRCHECK(*this, DeleteRenderbuffers(1, &fDepthStencilBufferID));
     }
 
+    glXMakeCurrent(fDisplay, None, NULL);
     glXDestroyGLXPixmap(fDisplay, fGlxPixmap);
     fGlxPixmap = 0;
 }
