@@ -1,0 +1,12 @@
+[package]
+
+name = "skia-sys"
+version = "0.0.20130412"
+authors = ["The Skia Project Developers"]
+
+build = "make -f makefile.cargo"
+
+[lib]
+
+name = "skia-sys"
+path = "lib.rs"
