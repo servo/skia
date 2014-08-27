@@ -466,4 +466,5 @@ $(OUT_DIR)/%.o: %.cpp
 	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) -o $@ $<
 
 $(OUT_DIR)/libskia.a: $(SKIA_OBJS)
+	cp -R include $(OUT_DIR)
 	$(AR) rcs $@ $(SKIA_OBJS)
