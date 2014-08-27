@@ -12,3 +12,7 @@ platform_tools/chromeos/toolchain
 third_party/externals
 tools/bug_chomper/oauth_client_secret.json
 xcodebuild
+Makefile
+/doc
+/target
+/Cargo.lock
