@@ -4,7 +4,7 @@ name = "skia-sys"
 version = "0.0.20130412"
 authors = ["The Skia Project Developers"]
 
-build = "make -f makefile.cargo"
+build = "make -f makefile.cargo -j4"
 
 [lib]
 
