@@ -10,3 +10,10 @@ build = "make -f makefile.cargo -j4"
 
 name = "skia-sys"
 path = "lib.rs"
+
+[dependencies.freetype-sys]
+git = "https://github.com/servo/libfreetype2"
+
+[dependencies.expat-sys]
+git = "https://github.com/servo/libexpat"
+
