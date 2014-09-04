@@ -1,5 +1,14 @@
-CC ?= gcc
+ifeq (androideabi,$(findstring androideabi,$(TARGET)))
+
+CXX := $(TARGET)-g++
+AR := $(TARGET)-ar
+
+else
+
 CXX ?= g++
+AR ?= ar
+
+endif
 
 ifeq ($(CFG_ENABLE_DEBUG_SKIA),1)
 CXXFLAGS += \
@@ -17,9 +26,14 @@ CXXFLAGS += \
 	$(NULL)
 endif
 
+FREETYPE_OUTDIR = $(shell find $(OUT_DIR)/.. -name 'freetype-sys-*' -type d)
+EXPAT_OUTDIR = $(shell find $(OUT_DIR)/.. -name 'expat-sys-*' -type d)
+
 CXXFLAGS+=\
 	-fPIC \
 	-DSK_A32_SHIFT=24 -DSK_R32_SHIFT=16 -DSK_G32_SHIFT=8 -DSK_B32_SHIFT=0 \
+        -I$(FREETYPE_OUTDIR)/include \
+        -I$(EXPAT_OUTDIR)/include \
 	-Iinclude/config \
 	-Iinclude/core \
 	-Iinclude/effects \
@@ -411,8 +425,6 @@ SKIA_UTILS_CXX_SRC=\
 endif
 
 ifeq ($(OSTYPE),android)
-        CXXFLAGS += -I$(VPATH)/../../../platform/android/libfreetype2/include
-        CXXFLAGS += -I$(VPATH)/../../../platform/android/libexpat/expat/lib
         CXXFLAGS += -DSK_BUILD_FOR_ANDROID
         CXXFLAGS += -DEGL_EGLEXT_PROTOTYPES
 
