@@ -98,7 +98,7 @@
  *  To specify a different default font cache limit, define this. If this is
  *  undefined, skia will use a built-in value.
  */
-//#define SK_DEFAULT_FONT_CACHE_LIMIT   (1024 * 1024)
+#define SK_DEFAULT_FONT_CACHE_LIMIT   (12 * 1024 * 1024)
 
 /*
  *  To specify the default size of the image cache, undefine this and set it to
