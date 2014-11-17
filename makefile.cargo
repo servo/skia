@@ -52,10 +52,6 @@ ifeq ($(USE_CLANG),1)
     CXXFLAGS += -Wno-c++11-extensions
 endif
 
-ifneq (arm,$(findstring arm,$(TARGET)))
-	CXXFLAGS += -mssse3
-endif
-
 ifeq (darwin,$(findstring darwin,$(TARGET)))
     OSTYPE=darwin
 endif
@@ -362,14 +358,30 @@ SKIA_IMAGE_CXX_SRC=\
 		SkSurface_Raster.cpp)
 
 # FIXME: This is very x86-specific.
-SKIA_OPTS_CXX_SRC_X86=\
+# Seperate *_SSE2.cpp and *_SSSE3.cpp files since they need to
+# be compiled with different sse flags. The reasoning is explained
+# in ./gyp/opts.gyp
+SKIA_OPTS_CXX_SRC_X86_SSE2=\
 	$(addprefix src/opts/,\
 		SkBitmapProcState_opts_SSE2.cpp \
-		SkBitmapProcState_opts_SSSE3.cpp \
 		SkBlitRect_opts_SSE2.cpp \
 		SkBlitRow_opts_SSE2.cpp \
-		SkUtils_opts_SSE2.cpp \
-		opts_check_SSE2.cpp)
+		SkUtils_opts_SSE2.cpp)
+
+$(patsubst %.cpp,$(OUT_DIR)/%.o,$(SKIA_OPTS_CXX_SRC_X86_SSE2)): CXXFLAGS+=-msse2
+
+SKIA_OPTS_CXX_SRC_X86_SSSE3=\
+	$(addprefix src/opts/,\
+		SkBitmapProcState_opts_SSSE3.cpp)
+
+$(patsubst %.cpp,$(OUT_DIR)/%.o,$(SKIA_OPTS_CXX_SRC_X86_SSSE3)): CXXFLAGS+=-mssse3
+
+# according to the comments in opt_check_sse2.cpp, it
+# needs to be compiled without any sse flags
+SKIA_OPTS_CXX_SRC_X86=\
+	src/opts/opts_check_SSE2.cpp \
+	$(SKIA_OPTS_CXX_SRC_X86_SSSE3) \
+	$(SKIA_OPTS_CXX_SRC_X86_SSE2)
 
 SKIA_OPTS_CXX_SRC_ARM=\
         $(addprefix src/opts/,\
