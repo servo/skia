@@ -16,82 +16,70 @@ CXXFLAGS += \
 	-DSK_DEBUG \
 	-DGR_DEBUG=1 \
 	-DGR_GL_LOG_CALLS=1 \
-	-DGR_GL_LOG_CALLS_START=1 \
-	$(NULL)
+	-DGR_GL_LOG_CALLS_START=1
 else
 CXXFLAGS += \
 	-O3 \
 	-DSK_RELEASE \
-	-DGR_RELEASE=1 \
-	$(NULL)
+	-DGR_RELEASE=1
 endif
 
 FREETYPE_OUTDIR = $(shell find $(OUT_DIR)/.. -name 'freetype-sys-*' -type d)
 EXPAT_OUTDIR = $(shell find $(OUT_DIR)/.. -name 'expat-sys-*' -type d)
-
-CXXFLAGS+=\
+CXXFLAGS += \
 	-fPIC \
 	-DSK_A32_SHIFT=24 -DSK_R32_SHIFT=16 -DSK_G32_SHIFT=8 -DSK_B32_SHIFT=0 \
-        -I$(FREETYPE_OUTDIR)/include \
-        -I$(EXPAT_OUTDIR)/include \
+	-DGR_GL_USE_NEW_SHADER_SOURCE_SIGNATURE=1 \
+	-I$(FREETYPE_OUTDIR)/include \
+	-I$(EXPAT_OUTDIR)/include \
 	-Iinclude/config \
 	-Iinclude/core \
 	-Iinclude/effects \
 	-Iinclude/gpu \
-	-Iinclude/lazy \
+	-Iinclude/images \
+	-Iinclude/pathops \
+	-Iinclude/pipe \
 	-Iinclude/ports \
+	-Iinclude/utils \
 	-Isrc/core \
 	-Isrc/image \
+	-Isrc/opts \
+	-Isrc/ports \
 	-Isrc/sfnt \
-	-Iinclude/utils \
-	-iquote src/gpu \
-	$(NULL)
+	-Isrc/utils \
+	-Ithird_party/etc1 \
+	-Ithird_party/ktx \
+	-iquote src/gpu
 
 USE_CLANG = $(shell $(CXX) --version|grep -c 'clang')
 ifeq ($(USE_CLANG),1)
     CXXFLAGS += -Wno-c++11-extensions
 endif
 
-ifneq (arm,$(findstring arm,$(TARGET)))
-	CXXFLAGS += -mssse3
-endif
-
-ifeq (darwin,$(findstring darwin,$(TARGET)))
-    OSTYPE=darwin
-endif
-ifeq (linux,$(findstring linux,$(TARGET)))
-    OSTYPE=linux
-endif
-ifeq (androideabi,$(findstring androideabi,$(TARGET)))
-    OSTYPE=android
-endif
-
-SKIA_CORE_CXX_SRC=\
+SKIA_CORE_CXX_SRC = \
 	$(addprefix src/core/,\
-		Sk64.cpp \
 		SkAAClip.cpp \
 		SkAdvancedTypefaceMetrics.cpp \
 		SkAlphaRuns.cpp \
 		SkAnnotation.cpp \
-		SkBBoxHierarchy.cpp \
+		SkBBHFactory.cpp \
 		SkBBoxHierarchyRecord.cpp \
 		SkBBoxRecord.cpp \
 		SkBitmap.cpp \
+		SkBitmapDevice.cpp \
+		SkBitmapFilter.cpp \
 		SkBitmapHeap.cpp \
 		SkBitmapProcShader.cpp \
 		SkBitmapProcState.cpp \
 		SkBitmapProcState_matrixProcs.cpp \
-		SkBitmapSampler.cpp \
+		SkBitmapScaler.cpp \
 		SkBitmap_scroll.cpp \
 		SkBlitMask_D32.cpp \
 		SkBlitRow_D16.cpp \
 		SkBlitRow_D32.cpp \
-		SkBlitRow_D4444.cpp \
-		SkBlitter.cpp \
-		SkBlitter_4444.cpp \
-		SkBlitter_A1.cpp \
 		SkBlitter_A8.cpp \
 		SkBlitter_ARGB32.cpp \
+		SkBlitter.cpp \
 		SkBlitter_RGB16.cpp \
 		SkBlitter_Sprite.cpp \
 		SkBuffer.cpp \
@@ -103,26 +91,31 @@ SKIA_CORE_CXX_SRC=\
 		SkColorTable.cpp \
 		SkComposeShader.cpp \
 		SkConfig8888.cpp \
-		SkCordic.cpp \
+		SkConvolver.cpp \
 		SkCubicClipper.cpp \
 		SkData.cpp \
+		SkDataTable.cpp \
 		SkDebug.cpp \
 		SkDeque.cpp \
 		SkDevice.cpp \
+		SkDeviceLooper.cpp \
 		SkDeviceProfile.cpp \
+		SkDistanceFieldGen.cpp \
 		SkDither.cpp \
 		SkDraw.cpp \
-		SkEdge.cpp \
+		SkDrawLooper.cpp \
 		SkEdgeBuilder.cpp \
 		SkEdgeClipper.cpp \
+		SkEdge.cpp \
 		SkError.cpp \
-		SkFDStream.cpp \
 		SkFilterProc.cpp \
+		SkFilterShader.cpp \
 		SkFlate.cpp \
 		SkFlattenable.cpp \
-		SkFlattenableBuffers.cpp \
-		SkFloat.cpp \
+		SkFlattenableSerialization.cpp \
 		SkFloatBits.cpp \
+		SkFloat.cpp \
+		SkFont.cpp \
 		SkFontDescriptor.cpp \
 		SkFontHost.cpp \
 		SkFontStream.cpp \
@@ -130,51 +123,57 @@ SKIA_CORE_CXX_SRC=\
 		SkGlyphCache.cpp \
 		SkGraphics.cpp \
 		SkImageFilter.cpp \
-		SkImageFilterUtils.cpp \
+		SkImageGenerator.cpp \
+		SkImageInfo.cpp \
 		SkInstCnt.cpp \
 		SkLineClipper.cpp \
+		SkLocalMatrixShader.cpp \
 		SkMallocPixelRef.cpp \
 		SkMask.cpp \
 		SkMaskFilter.cpp \
 		SkMaskGamma.cpp \
 		SkMath.cpp \
+		SkMatrixClipStateMgr.cpp \
 		SkMatrix.cpp \
-		SkMemory_stdlib.cpp \
 		SkMetaData.cpp \
-		SkOrderedReadBuffer.cpp \
-		SkOrderedWriteBuffer.cpp \
+		SkMipMap.cpp \
 		SkPackBits.cpp \
 		SkPaint.cpp \
+		SkPaintOptionsAndroid.cpp \
 		SkPaintPriv.cpp \
 		SkPath.cpp \
 		SkPathEffect.cpp \
 		SkPathHeap.cpp \
 		SkPathMeasure.cpp \
+		SkPathRef.cpp \
 		SkPicture.cpp \
 		SkPictureFlat.cpp \
 		SkPicturePlayback.cpp \
 		SkPictureRecord.cpp \
+		SkPictureRecorder.cpp \
+		SkPictureShader.cpp \
 		SkPictureStateTree.cpp \
 		SkPixelRef.cpp \
 		SkPoint.cpp \
 		SkProcSpriteBlitter.cpp \
 		SkPtrRecorder.cpp \
 		SkQuadClipper.cpp \
-		SkRRect.cpp \
-		SkRTree.cpp \
+		SkQuadTree.cpp \
 		SkRasterClip.cpp \
 		SkRasterizer.cpp \
+		SkReadBuffer.cpp \
 		SkRect.cpp \
-		SkRefCnt.cpp \
 		SkRefDict.cpp \
 		SkRegion.cpp \
 		SkRegion_path.cpp \
-		SkRegion_rects.cpp \
+		SkRRect.cpp \
+		SkRTree.cpp \
 		SkScalar.cpp \
+		SkScaledImageCache.cpp \
 		SkScalerContext.cpp \
-		SkScan.cpp \
-		SkScan_AntiPath.cpp \
 		SkScan_Antihair.cpp \
+		SkScan_AntiPath.cpp \
+		SkScan.cpp \
 		SkScan_Hairline.cpp \
 		SkScan_Path.cpp \
 		SkShader.cpp \
@@ -186,32 +185,39 @@ SKIA_CORE_CXX_SRC=\
 		SkStroke.cpp \
 		SkStrokeRec.cpp \
 		SkStrokerPriv.cpp \
+		SkTileGrid.cpp \
 		SkTLS.cpp \
 		SkTSearch.cpp \
-		SkTileGrid.cpp \
-		SkTileGridPicture.cpp \
-		SkTypeface.cpp \
 		SkTypefaceCache.cpp \
+		SkTypeface.cpp \
 		SkUnPreMultiply.cpp \
-		SkUtils.cpp \
 		SkUtilsArm.cpp \
+		SkUtils.cpp \
+		SkValidatingReadBuffer.cpp \
+		SkVertState.cpp \
+		SkWriteBuffer.cpp \
 		SkWriter32.cpp \
-		SkXfermode.cpp)
+		SkXfermode.cpp \
+	)
 
-SKIA_SFNT_CXX_SRC=\
-	$(addprefix src/sfnt/,\
-		SkOTTable_name.cpp \
-		SkOTUtils.cpp)
-
-SKIA_EFFECTS_CXX_SRC=\
+SKIA_EFFECTS_CXX_SRC = \
 	$(addprefix src/effects/,\
+		gradients/SkBitmapCache.cpp \
+		gradients/SkClampRange.cpp \
+		gradients/SkGradientShader.cpp \
+		gradients/SkLinearGradient.cpp \
+		gradients/SkRadialGradient.cpp \
+		gradients/SkSweepGradient.cpp \
+		gradients/SkTwoPointConicalGradient.cpp \
+		gradients/SkTwoPointConicalGradient_gpu.cpp \
+		gradients/SkTwoPointRadialGradient.cpp \
 		Sk1DPathEffect.cpp \
 		Sk2DPathEffect.cpp \
+		SkAlphaThresholdFilter.cpp \
 		SkArithmeticMode.cpp \
 		SkAvoidXfermode.cpp \
 		SkBicubicImageFilter.cpp \
 		SkBitmapSource.cpp \
-		SkBlendImageFilter.cpp \
 		SkBlurDrawLooper.cpp \
 		SkBlurImageFilter.cpp \
 		SkBlurMask.cpp \
@@ -220,23 +226,29 @@ SKIA_EFFECTS_CXX_SRC=\
 		SkColorFilters.cpp \
 		SkColorMatrix.cpp \
 		SkColorMatrixFilter.cpp \
+		SkComposeImageFilter.cpp \
 		SkCornerPathEffect.cpp \
 		SkDashPathEffect.cpp \
 		SkDiscretePathEffect.cpp \
 		SkDisplacementMapEffect.cpp \
+		SkDropShadowImageFilter.cpp \
 		SkEmbossMask.cpp \
 		SkEmbossMaskFilter.cpp \
-		SkKernel33MaskFilter.cpp \
+		SkGpuBlurUtils.cpp \
 		SkLayerDrawLooper.cpp \
 		SkLayerRasterizer.cpp \
+		SkLerpXfermode.cpp \
 		SkLightingImageFilter.cpp \
+		SkLumaColorFilter.cpp \
 		SkMagnifierImageFilter.cpp \
 		SkMatrixConvolutionImageFilter.cpp \
+		SkMatrixImageFilter.cpp \
 		SkMergeImageFilter.cpp \
 		SkMorphologyImageFilter.cpp \
 		SkOffsetImageFilter.cpp \
 		SkPaintFlagsDrawFilter.cpp \
 		SkPerlinNoiseShader.cpp \
+		SkPictureImageFilter.cpp \
 		SkPixelXorXfermode.cpp \
 		SkPorterDuff.cpp \
 		SkRectShaderImageFilter.cpp \
@@ -244,99 +256,27 @@ SKIA_EFFECTS_CXX_SRC=\
 		SkTableColorFilter.cpp \
 		SkTableMaskFilter.cpp \
 		SkTestImageFilters.cpp \
+		SkTileImageFilter.cpp \
 		SkTransparentShader.cpp \
-		gradients/SkBitmapCache.cpp \
-		gradients/SkClampRange.cpp \
-		gradients/SkGradientShader.cpp \
-		gradients/SkLinearGradient.cpp \
-		gradients/SkRadialGradient.cpp \
-		gradients/SkSweepGradient.cpp \
-		gradients/SkTwoPointConicalGradient.cpp \
-		gradients/SkTwoPointRadialGradient.cpp)
+		SkXfermodeImageFilter.cpp \
+	)
 
-SKIA_GL_CXX_SRC=\
+SKIA_GL_CXX_SRC = \
 	$(addprefix src/gpu/,\
-		GrAAConvexPathRenderer.cpp \
-		GrAAHairLinePathRenderer.cpp \
-		GrAARectRenderer.cpp \
-		GrAddPathRenderers_default.cpp \
-		GrAllocPool.cpp \
-		GrAtlas.cpp \
-		GrBufferAllocPool.cpp \
-		GrCacheID.cpp \
-		GrClipData.cpp \
-		GrClipMaskCache.cpp \
-		GrClipMaskManager.cpp \
-		GrContext.cpp \
-		GrDefaultPathRenderer.cpp \
-		GrDrawState.cpp \
-		GrDrawTarget.cpp \
-		GrEffect.cpp \
-		GrGeometryBuffer.cpp \
-		GrGpu.cpp \
-		GrGpuFactory.cpp \
-		GrInOrderDrawBuffer.cpp \
-		GrMemory.cpp \
-		GrMemoryPool.cpp \
-		GrOvalRenderer.cpp \
-		GrPath.cpp \
-		GrPathRenderer.cpp \
-		GrPathRendererChain.cpp \
-		GrPathUtils.cpp \
-		GrRectanizer.cpp \
-		GrRectanizer_fifo.cpp \
-		GrReducedClip.cpp \
-		GrRenderTarget.cpp \
-		GrResource.cpp \
-		GrResourceCache.cpp \
-		GrSWMaskHelper.cpp \
-		GrSoftwarePathRenderer.cpp \
-		GrStencil.cpp \
-		GrStencilAndCoverPathRenderer.cpp \
-		GrStencilBuffer.cpp \
-		GrSurface.cpp \
-		GrTextContext.cpp \
-		GrTextStrike.cpp \
-		GrTexture.cpp \
-		GrTextureAccess.cpp \
-		SkGpuDevice.cpp \
-		SkGr.cpp \
-		SkGrFontScaler.cpp \
-		SkGrPixelRef.cpp \
-		SkGrTexturePixelRef.cpp \
+		effects/GrBezierEffect.cpp \
+		effects/GrBicubicEffect.cpp \
 		effects/GrConfigConversionEffect.cpp \
+		effects/GrConvexPolyEffect.cpp \
 		effects/GrConvolutionEffect.cpp \
+		effects/GrCustomCoordsTextureEffect.cpp \
+		effects/GrDashingEffect.cpp \
+		effects/GrDistanceFieldTextureEffect.cpp \
+		effects/GrOvalEffect.cpp \
+		effects/GrRRectEffect.cpp \
 		effects/GrSimpleTextureEffect.cpp \
 		effects/GrSingleTextureEffect.cpp \
-		effects/GrTextureDomainEffect.cpp \
+		effects/GrTextureDomain.cpp \
 		effects/GrTextureStripAtlas.cpp \
-		gl/GrGLBufferImpl.cpp \
-		gl/GrGLCaps.cpp \
-		gl/GrGLContext.cpp \
-		gl/GrGLCreateNullInterface.cpp \
-		gl/GrGLDefaultInterface_native.cpp \
-		gl/GrGLEffect.cpp \
-		gl/GrGLEffectMatrix.cpp \
-		gl/GrGLExtensions.cpp \
-		gl/GrGLIndexBuffer.cpp \
-		gl/GrGLInterface.cpp \
-		gl/GrGLNoOpInterface.cpp \
-		gl/GrGLPath.cpp \
-		gl/GrGLProgram.cpp \
-		gl/GrGLProgramDesc.cpp \
-		gl/GrGLRenderTarget.cpp \
-		gl/GrGLSL.cpp \
-		gl/GrGLShaderBuilder.cpp \
-		gl/GrGLStencilBuffer.cpp \
-		gl/GrGLTexture.cpp \
-		gl/GrGLUniformManager.cpp \
-		gl/GrGLUtil.cpp \
-		gl/GrGLVertexArray.cpp \
-		gl/GrGLVertexBuffer.cpp \
-		gl/GrGpuGL.cpp \
-		gl/GrGpuGL_program.cpp \
-		gl/SkGLContextHelper.cpp \
-		gl/SkNullGLContext.cpp \
 		gl/debug/GrBufferObj.cpp \
 		gl/debug/GrDebugGL.cpp \
 		gl/debug/GrFrameBufferObj.cpp \
@@ -345,137 +285,364 @@ SKIA_GL_CXX_SRC=\
 		gl/debug/GrShaderObj.cpp \
 		gl/debug/GrTextureObj.cpp \
 		gl/debug/GrTextureUnitObj.cpp \
-		gl/debug/SkDebugGLContext.cpp)
+		gl/debug/SkDebugGLContext.cpp \
+		gl/GrGLAssembleInterface.cpp \
+		gl/GrGLBufferImpl.cpp \
+		gl/GrGLCaps.cpp \
+		gl/GrGLContext.cpp \
+		gl/GrGLCreateNullInterface.cpp \
+		gl/GrGLDefaultInterface_native.cpp \
+		gl/GrGLExtensions.cpp \
+		gl/GrGLIndexBuffer.cpp \
+		gl/GrGLInterface.cpp \
+		gl/GrGLNoOpInterface.cpp \
+		gl/GrGLPath.cpp \
+		gl/GrGLProgram.cpp \
+		gl/GrGLProgramDesc.cpp \
+		gl/GrGLProgramEffects.cpp \
+		gl/GrGLRenderTarget.cpp \
+		gl/GrGLShaderBuilder.cpp \
+		gl/GrGLSL.cpp \
+		gl/GrGLStencilBuffer.cpp \
+		gl/GrGLTexture.cpp \
+		gl/GrGLUniformManager.cpp \
+		gl/GrGLUtil.cpp \
+		gl/GrGLVertexArray.cpp \
+		gl/GrGLVertexBuffer.cpp \
+		gl/GrGpuGL.cpp \
+		gl/GrGpuGL_program.cpp \
+		gl/GrGLNameAllocator.cpp \
+		gl/SkGLContextHelper.cpp \
+		gl/SkNullGLContext.cpp \
+		GrAAConvexPathRenderer.cpp \
+		GrAAHairLinePathRenderer.cpp \
+		GrAARectRenderer.cpp \
+		GrAddPathRenderers_default.cpp \
+		GrAllocPool.cpp \
+		GrAtlas.cpp \
+		GrBitmapTextContext.cpp \
+		GrBlend.cpp \
+		GrBufferAllocPool.cpp \
+		GrCacheID.cpp \
+		GrClipData.cpp \
+		GrClipMaskCache.cpp \
+		GrClipMaskManager.cpp \
+		GrContext.cpp \
+		GrDefaultPathRenderer.cpp \
+		GrDistanceFieldTextContext.cpp \
+		GrDrawState.cpp \
+		GrDrawTarget.cpp \
+		GrEffect.cpp \
+		GrGpu.cpp \
+		GrGpuFactory.cpp \
+		GrGpuObject.cpp \
+		GrInOrderDrawBuffer.cpp \
+		GrLayerCache.cpp \
+		GrMemoryPool.cpp \
+		GrOvalRenderer.cpp \
+		GrPaint.cpp \
+		GrPath.cpp \
+		GrPathRendererChain.cpp \
+		GrPathRenderer.cpp \
+		GrPathUtils.cpp \
+		GrPictureUtils.cpp \
+		GrRectanizer_pow2.cpp \
+		GrRectanizer_skyline.cpp \
+		GrReducedClip.cpp \
+		GrRenderTarget.cpp \
+		GrResourceCache.cpp \
+		GrSoftwarePathRenderer.cpp \
+		GrStencilAndCoverPathRenderer.cpp \
+		GrStencilBuffer.cpp \
+		GrStencil.cpp \
+		GrSurface.cpp \
+		GrSWMaskHelper.cpp \
+		GrTest.cpp \
+		GrTextContext.cpp \
+		GrTextStrike.cpp \
+		GrTextureAccess.cpp \
+		GrTexture.cpp \
+		GrTraceMarker.cpp \
+		SkGpuDevice.cpp \
+		SkGr.cpp \
+		SkGrFontScaler.cpp \
+		SkGrPixelRef.cpp \
+		SkGrTexturePixelRef.cpp \
+	)
 
-SKIA_IMAGE_CXX_SRC=\
+SKIA_IMAGE_CXX_SRC = \
 	$(addprefix src/image/,\
-		SkDataPixelRef.cpp \
-		SkImage.cpp \
-		SkImagePriv.cpp \
 		SkImage_Codec.cpp \
+		SkImage.cpp \
 		SkImage_Gpu.cpp \
-		SkImage_Picture.cpp \
+		SkImagePriv.cpp \
 		SkImage_Raster.cpp \
 		SkSurface.cpp \
 		SkSurface_Gpu.cpp \
-		SkSurface_Picture.cpp \
-		SkSurface_Raster.cpp)
+		SkSurface_Raster.cpp \
+	)
 
-# FIXME: This is very x86-specific.
-SKIA_OPTS_CXX_SRC_X86=\
+SKIA_OPTS_CXX_SRC_X86 = \
 	$(addprefix src/opts/,\
+		SkBitmapFilter_opts_SSE2.cpp \
 		SkBitmapProcState_opts_SSE2.cpp \
 		SkBitmapProcState_opts_SSSE3.cpp \
 		SkBlitRect_opts_SSE2.cpp \
 		SkBlitRow_opts_SSE2.cpp \
+		SkBlurImage_opts_SSE2.cpp \
+		SkMorphology_opts_SSE2.cpp \
 		SkUtils_opts_SSE2.cpp \
-		opts_check_SSE2.cpp)
+		SkXfermode_opts_SSE2.cpp \
+		opts_check_x86.cpp \
+	)
 
-SKIA_OPTS_CXX_SRC_ARM=\
-        $(addprefix src/opts/,\
-		SkBitmapProcState_opts_arm.cpp \
+SKIA_OPTS_CXX_SRC_ARM = \
+	$(addprefix src/opts/,\
+		SkBitmapProcState_opts_none.cpp \
+		SkBlitMask_opts_none.cpp \
 		SkBlitRow_opts_none.cpp \
+		SkBlurImage_opts_none.cpp \
+		SkMorphology_opts_none.cpp \
 		SkUtils_opts_none.cpp \
-		opts_check_arm.cpp )
+		SkXfermode_opts_none.cpp \
+	)
 
-ifeq ($(OSTYPE),darwin)
-CXXFLAGS+=-Iinclude/utils/mac
+SKIA_PATHOPS_CXX_SRC = \
+	$(addprefix src/pathops/,\
+		SkAddIntersections.cpp \
+		SkDCubicIntersection.cpp \
+		SkDCubicLineIntersection.cpp \
+		SkDCubicToQuads.cpp \
+		SkDLineIntersection.cpp \
+		SkDQuadImplicit.cpp \
+		SkDQuadIntersection.cpp \
+		SkDQuadLineIntersection.cpp \
+		SkIntersections.cpp \
+		SkOpAngle.cpp \
+		SkOpContour.cpp \
+		SkOpEdgeBuilder.cpp \
+		SkOpSegment.cpp \
+		SkPathOpsBounds.cpp \
+		SkPathOpsCommon.cpp \
+		SkPathOpsCubic.cpp \
+		SkPathOpsDebug.cpp \
+		SkPathOpsLine.cpp \
+		SkPathOpsOp.cpp \
+		SkPathOpsPoint.cpp \
+		SkPathOpsQuad.cpp \
+		SkPathOpsRect.cpp \
+		SkPathOpsSimplify.cpp \
+		SkPathOpsTriangle.cpp \
+		SkPathOpsTypes.cpp \
+		SkPathWriter.cpp \
+		SkQuarticRoot.cpp \
+		SkReduceOrder.cpp \
+	)
+
+SKIA_SFNT_CXX_SRC = \
+	$(addprefix src/sfnt/,\
+		SkOTTable_name.cpp \
+		SkOTUtils.cpp \
+	)
+
+SKIA_UTILS_CXX_SRC = \
+	$(addprefix src/utils/,\
+		SkBase64.cpp \
+		SkBitmapHasher.cpp \
+		SkBitSet.cpp \
+		SkBoundaryPatch.cpp \
+		SkCamera.cpp \
+		SkCanvasStack.cpp \
+		SkCanvasStateUtils.cpp \
+		SkCondVar.cpp \
+		SkCountdown.cpp \
+		SkCubicInterval.cpp \
+		SkCullPoints.cpp \
+		SkDashPath.cpp \
+		SkDumpCanvas.cpp \
+		SkEventTracer.cpp \
+		SkFrontBufferedStream.cpp \
+		SkGatherPixelRefsAndRects.cpp \
+		SkInterpolator.cpp \
+		SkLayer.cpp \
+		SkMatrix22.cpp \
+		SkMatrix44.cpp \
+		SkMD5.cpp \
+		SkMeshUtils.cpp \
+		SkNinePatch.cpp \
+		SkNullCanvas.cpp \
+		SkNWayCanvas.cpp \
+		SkOSFile.cpp \
+		SkParseColor.cpp \
+		SkParse.cpp \
+		SkParsePath.cpp \
+		SkPathUtils.cpp \
+		SkPDFRasterizer.cpp \
+		SkPictureUtils.cpp \
+		SkProxyCanvas.cpp \
+		SkRTConf.cpp \
+		SkTextureCompressor.cpp \
+		SkSHA1.cpp \
+	)
+
+SKIA_THIRDPARTY_CXX_SRC = \
+	$(addprefix third_party/,\
+		etc1/etc1.cpp \
+		ktx/ktx.cpp \
+	)
+
+ifeq (darwin,$(findstring darwin,$(TARGET)))
+CXXFLAGS += \
+	-Iinclude/utils/mac \
+	-DSK_USE_POSIX_THREADS
 
 SKIA_GL_CXX_SRC += \
 	$(addprefix src/gpu/,\
 		gl/mac/GrGLCreateNativeInterface_mac.cpp \
 		gl/mac/SkNativeSharedGLContext_mac.cpp \
-		gl/mac/SkNativeGLContext_mac.cpp)
+		gl/mac/SkNativeGLContext_mac.cpp \
+	)
 
-SKIA_PORTS_CXX_SRC=\
+SKIA_PORTS_CXX_SRC = \
 	$(addprefix src/ports/,\
+		SkDebug_stdio.cpp \
+		SkDebug_stdio.cpp \
 		SkFontHost_mac.cpp \
+		SkGlobalInitialization_default.cpp \
+		SkImageDecoder_empty.cpp \
+		SkMemory_malloc.cpp \
+		SkOSFile_posix.cpp \
 		SkOSFile_stdio.cpp \
-		SkThread_pthread.cpp \
-		SkDebug_stdio.cpp)
+		SkTLS_pthread.cpp \
+	)
 
-SKIA_UTILS_CXX_SRC=\
+SKIA_FONTS_CXX_SRC =
+
+SKIA_UTILS_CXX_SRC += \
 	$(addprefix src/utils/mac/,\
 		SkCreateCGImageRef.cpp \
-		SkStream_mac.cpp)
+		SkStream_mac.cpp \
+	)
 endif
 
-ifeq ($(OSTYPE),linux)
-	CXXFLAGS += $(shell pkg-config --cflags freetype2)
+ifeq (androideabi,$(findstring androideabi,$(TARGET)))
+CXXFLAGS += \
+	-DSK_BUILD_FOR_ANDROID \
+	-DEGL_EGLEXT_PROTOTYPES
 
+SKIA_GL_CXX_SRC += \
+	$(addprefix src/gpu/,\
+		gl/android/GrGLCreateNativeInterface_android.cpp \
+		gl/android/SkNativeGLContext_android.cpp \
+		gl/android/SkNativeSharedGLContext_android.cpp \
+	)
+
+SKIA_PORTS_CXX_SRC = \
+	$(addprefix src/ports/,\
+		SkDebug_android.cpp \
+		SkFontConfigInterface_android.cpp \
+		SkFontConfigParser_android.cpp \
+		SkFontHost_FreeType.cpp \
+		SkFontHost_FreeType_common.cpp \
+		SkGlobalInitialization_default.cpp \
+		SkImageDecoder_empty.cpp \
+		SkMemory_malloc.cpp \
+		SkOSFile_posix.cpp \
+		SkOSFile_stdio.cpp \
+		SkTLS_pthread.cpp \
+	)
+
+SKIA_FONTS_CXX_SRC =
+
+else
+
+ifeq (linux,$(findstring linux,$(TARGET)))
 SKIA_GL_CXX_SRC += \
 	$(addprefix src/gpu/,\
 		gl/unix/GrGLCreateNativeInterface_unix.cpp \
 		gl/unix/SkNativeSharedGLContext_unix.cpp \
-		gl/unix/SkNativeGLContext_unix.cpp)
+		gl/unix/SkNativeGLContext_unix.cpp \
+	)
 
-SKIA_PORTS_CXX_SRC=\
+SKIA_PORTS_CXX_SRC = \
 	$(addprefix src/ports/,\
-		SkFontHost_FreeType_common.cpp \
-		SkFontHost_FreeType.cpp \
-		SkFontHost_fontconfig.cpp \
+		SkDebug_stdio.cpp \
 		SkFontConfigInterface_direct.cpp \
+		SkFontHost_FreeType.cpp \
+		SkFontHost_FreeType_common.cpp \
+		SkFontHost_fontconfig.cpp \
+		SkGlobalInitialization_default.cpp \
+		SkImageDecoder_empty.cpp \
+		SkMemory_malloc.cpp \
+		SkOSFile_posix.cpp \
 		SkOSFile_stdio.cpp \
-		SkThread_pthread.cpp \
-		SkDebug_stdio.cpp)
+		SkTLS_pthread.cpp \
+	)
 
-SKIA_UTILS_CXX_SRC=\
-	$(addprefix src/utils/,\
-		SkOSFile.cpp)
+SKIA_FONTS_CXX_SRC = \
+	$(addprefix src/fonts/,\
+		SkFontMgr_fontconfig.cpp \
+	)
 endif
 
-ifeq ($(OSTYPE),android)
-        CXXFLAGS += -DSK_BUILD_FOR_ANDROID
-        CXXFLAGS += -DEGL_EGLEXT_PROTOTYPES
-
-SKIA_GL_CXX_SRC += \
-        $(addprefix src/gpu/,\
-                gl/android/GrGLCreateNativeInterface_android.cpp \
-                gl/android/SkNativeGLContext_android.cpp \
-                gl/android/SkNativeSharedGLContext_android.cpp)
-
-SKIA_PORTS_CXX_SRC=\
-        $(addprefix src/ports/,\
-                SkDebug_android.cpp \
-                SkFontHost_FreeType_common.cpp \
-                SkFontHost_FreeType.cpp \
-                SkFontHost_android.cpp \
-                SkOSFile_stdio.cpp \
-                FontHostConfiguration_android.cpp \
-                SkThread_pthread.cpp)
-
-SKIA_UTILS_CXX_SRC=\
-        $(addprefix src/utils/,\
-                SkOSFile.cpp)
 endif
 
-SKIA_SRC=\
+SKIA_SRC = \
 	$(SKIA_CORE_CXX_SRC) \
-	$(SKIA_SFNT_CXX_SRC) \
 	$(SKIA_EFFECTS_CXX_SRC) \
+	$(SKIA_FONTS_CXX_SRC) \
 	$(SKIA_GL_CXX_SRC) \
 	$(SKIA_IMAGE_CXX_SRC) \
+	$(SKIA_PATHOPS_CXX_SRC) \
 	$(SKIA_PORTS_CXX_SRC) \
-	$(SKIA_UTILS_CXX_SRC) \
-	$(NULL)
+	$(SKIA_SFNT_CXX_SRC) \
+	$(SKIA_THIRDPARTY_CXX_SRC) \
+	$(SKIA_UTILS_CXX_SRC)
 
-ifeq (i686,$(findstring i686,$(TARTET)))
-	SKIA_SRC += $(SKIA_OPTS_CXX_SRC_X86)
+ifeq (i686,$(findstring i686,$(TARGET)))
+	supports_sse = true
 endif
 ifeq (x86_64,$(findstring x86_64,$(TARGET)))
-	SKIA_SRC += $(SKIA_OPTS_CXX_SRC_X86)
+	supports_sse = true
 endif
-ifeq (arm,$(findstring arm,$(TARGET)))
-        SKIA_SRC += $(SKIA_OPTS_CXX_SRC_ARM)
+ifeq (true,$(supports_sse))
+	SKIA_SRC += \
+		$(SKIA_OPTS_CXX_SRC_X86)
+	PROCESSOR_EXTENSION_CXXFLAGS += \
+	-msse2 \
+	-mfpmath=sse
 endif
 
-SKIA_OBJS=$(patsubst %.cpp,$(OUT_DIR)/%.o,$(SKIA_SRC))
+ifeq (arm,$(findstring arm,$(TARGET)))
+	SKIA_SRC += \
+		$(SKIA_OPTS_CXX_SRC_ARM)
+	PROCESSOR_EXTENSION_CXXFLAGS =
+endif
+
+SKIA_OBJS = $(patsubst %.cpp,$(OUT_DIR)/%.o,$(SKIA_SRC))
 
 .PHONY: all
 all: $(OUT_DIR)/libskia.a
 
-$(OUT_DIR)/%.o: %.cpp
+$(OUT_DIR)/src/ports/SkAtomics_sync.h: src/ports/*.h
+	mkdir -p $(OUT_DIR)/src/ports
+	cp src/ports/*.h $(OUT_DIR)/src/ports
+
+# opts_check_x86.cpp should not be build with SSE2 instructions enabled, as it is
+# used to check for whether the processor supports SSE2 instructions. So we do not
+# activate any processor extensions when building the file.
+$(OUT_DIR)/%opts_check_x86.o: %opts_check_x86.cpp $(OUT_DIR)/src/ports/SkAtomics_sync.h
 	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) -o $@ $<
+
+# Files that are suffixed in SSE3 require SSE3 to compile, but we cannot rely on
+# those extensions for all processors. We only enable those extensions when compiling
+# that file. Skia will not call the code if it does not detect SSE3 support
+# at runtime.
+$(OUT_DIR)/%SSE3.o: %SSE3.cpp $(OUT_DIR)/src/ports/SkAtomics_sync.h
+	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -mssse3 -o $@ $<
+
+$(OUT_DIR)/%.o: %.cpp $(OUT_DIR)/src/ports/SkAtomics_sync.h
+	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -o $@ $<
 
 $(OUT_DIR)/libskia.a: $(SKIA_OBJS)
 	cp -R include $(OUT_DIR)
