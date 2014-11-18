@@ -62,7 +62,7 @@ public:
     virtual void flush() const;
 
     virtual bool hasExtension(const char* extensionName) const {
-        GrAssert(NULL != fGL);
+        SkASSERT(NULL != fGL);
         return fExtensions.has(extensionName);
     }
 

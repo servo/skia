@@ -30,7 +30,7 @@ SkNativeSharedGLContext::~SkNativeSharedGLContext() {
     SkSafeUnref(fGL);
     this->destroyGLContext();
     if (fGrContext) {
-        fGrContext->Release();
+        fGrContext->unref();
     }
 }
 
@@ -102,17 +102,16 @@ bool SkNativeSharedGLContext::init(int width, int height) {
     if (fGL) {
         const GrGLubyte* temp;
 
-        GrGLBinding bindingInUse = GrGLGetBindingInUse(this->gl());
+        SK_GL_RET(*this, temp, GetString(GR_GL_VERSION));
+        const char* versionStr = reinterpret_cast<const char*>(temp);
+        GrGLStandard standard = GrGLGetStandardInUseFromString(versionStr);
+        GrGLVersion version = GrGLGetVersionFromString(versionStr);
 
-        if (!fGL->validate(bindingInUse) || !fExtensions.init(bindingInUse, fGL)) {
+        if (!fGL->validate() || !fExtensions.init(standard, this->gl()->fFunctions.fGetString, this->gl()->fFunctions.fGetStringi, this->gl()->fFunctions.fGetIntegerv)) {
             fGL = NULL;
             this->destroyGLContext();
             return false;
         }
-
-        SK_GL_RET(*this, temp, GetString(GR_GL_VERSION));
-        const char* versionStr = reinterpret_cast<const char*>(temp);
-        GrGLVersion version = GrGLGetVersionFromString(versionStr);
 
         // clear any existing GL erorrs
         GrGLenum error;
@@ -149,7 +148,7 @@ bool SkNativeSharedGLContext::init(int width, int height) {
         // in binding a packed format an FBO. However, we can't rely on packed
         // depth stencil being available.
         bool supportsPackedDepthStencil;
-        if (kES2_GrGLBinding == bindingInUse) {
+        if (kGLES_GrGLStandard == standard) {
             supportsPackedDepthStencil = this->hasExtension("GL_OES_packed_depth_stencil");
         } else {
             supportsPackedDepthStencil = version >= GR_GL_VER(3,0) ||
@@ -160,7 +159,7 @@ bool SkNativeSharedGLContext::init(int width, int height) {
         if (supportsPackedDepthStencil) {
             // ES2 requires sized internal formats for RenderbufferStorage
             // On Desktop we let the driver decide.
-            GrGLenum format = kES2_GrGLBinding == bindingInUse ?
+            GrGLenum format = kGLES_GrGLStandard == standard ?
                                     GR_GL_DEPTH24_STENCIL8 :
                                     GR_GL_DEPTH_STENCIL;
             SK_GL(*this, RenderbufferStorage(GR_GL_RENDERBUFFER,
@@ -171,7 +170,7 @@ bool SkNativeSharedGLContext::init(int width, int height) {
                                                  GR_GL_RENDERBUFFER,
                                                  fDepthStencilBufferID));
         } else {
-            GrGLenum format = kES2_GrGLBinding == bindingInUse ?
+            GrGLenum format = kGLES_GrGLStandard == standard ?
                                     GR_GL_STENCIL_INDEX8 :
                                     GR_GL_STENCIL_INDEX;
             SK_GL(*this, RenderbufferStorage(GR_GL_RENDERBUFFER,
