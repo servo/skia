@@ -52,10 +52,6 @@ ifeq ($(USE_CLANG),1)
     CXXFLAGS += -Wno-c++11-extensions
 endif
 
-ifneq (arm,$(findstring arm,$(TARGET)))
-	CXXFLAGS += -mssse3
-endif
-
 ifeq (darwin,$(findstring darwin,$(TARGET)))
     OSTYPE=darwin
 endif
@@ -458,14 +454,24 @@ SKIA_SRC=\
 	$(SKIA_UTILS_CXX_SRC) \
 	$(NULL)
 
-ifeq (i686,$(findstring i686,$(TARTET)))
-	SKIA_SRC += $(SKIA_OPTS_CXX_SRC_X86)
+ifeq (i686,$(findstring i686,$(TARGET)))
+	supports_sse = true
 endif
 ifeq (x86_64,$(findstring x86_64,$(TARGET)))
-	SKIA_SRC += $(SKIA_OPTS_CXX_SRC_X86)
+	supports_sse = true
 endif
+ifeq (true,$(supports_sse))
+	SKIA_SRC += \
+		$(SKIA_OPTS_CXX_SRC_X86)
+	PROCESSOR_EXTENSION_CXXFLAGS += \
+		-msse2 \
+		-mfpmath=sse
+endif
+
 ifeq (arm,$(findstring arm,$(TARGET)))
-        SKIA_SRC += $(SKIA_OPTS_CXX_SRC_ARM)
+	SKIA_SRC += \
+		$(SKIA_OPTS_CXX_SRC_ARM)
+	PROCESSOR_EXTENSION_CXXFLAGS =
 endif
 
 SKIA_OBJS=$(patsubst %.cpp,$(OUT_DIR)/%.o,$(SKIA_SRC))
@@ -473,8 +479,21 @@ SKIA_OBJS=$(patsubst %.cpp,$(OUT_DIR)/%.o,$(SKIA_SRC))
 .PHONY: all
 all: $(OUT_DIR)/libskia.a
 
-$(OUT_DIR)/%.o: %.cpp
+# opts_check_SSE2.cpp should not be build with SSE2 instructions enabled, as it is
+# used to check for whether the processor supports SSE2 instructions. So we do not
+# activate any processor extensions when building the file.
+$(OUT_DIR)/%opts_check_SSE2.o: %opts_check_SSE2.cpp
 	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) -o $@ $<
+
+# Files that are suffixed in SSE3 require SSE3 to compile, but we cannot rely on
+# those extensions for all processors. We only enable those extensions when compiling
+# that file. Skia will not call the code if it does not detect SSE3 support
+# at runtime.
+$(OUT_DIR)/%SSE3.o: %SSE3.cpp
+	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -mssse3 -o $@ $<
+
+$(OUT_DIR)/%.o: %.cpp
+	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -o $@ $<
 
 $(OUT_DIR)/libskia.a: $(SKIA_OBJS)
 	cp -R include $(OUT_DIR)
