@@ -1,3 +1,17 @@
 Skia is a complete 2D graphic library for drawing Text, Geometries, and Images.
 
 See full details, and build instructions, at https://sites.google.com/site/skiadocs/home
+
+This version of Skia is adapted for use by the Servo project and rust-azure. Changes
+from upstream Skia:
+
+    * The addition of Cargo build rules.
+    * The addition of native a GL surface type that wraps platform-specific
+      shareable surfaces.
+    * Adjustment of the default glyph cache size for multi-task usage.
+
+This branch is based on 0349864b75317ba66232df827e84ef7c25e34cfe from June 16,
+2014. The upstream repository was found at https://skia.googlesource.com/skia.git/.
+The procedure for updating Skia is to rename this branch and then rebase
+it onto the new upstream revision.
+
