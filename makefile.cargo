@@ -2,11 +2,13 @@ ifeq (androideabi,$(findstring androideabi,$(TARGET)))
 
 CXX := $(TARGET)-g++
 AR := $(TARGET)-ar
+AS := $(TARGET)-as
 
 else
 
 CXX ?= g++
 AR ?= ar
+AS ?= as
 
 endif
 
@@ -374,6 +376,12 @@ SKIA_OPTS_CXX_SRC_ARM=\
 		SkUtils_opts_none.cpp \
 		opts_check_arm.cpp )
 
+SKIA_OPTS_S_SRC_ARM=\
+        $(addprefix src/opts/,\
+		memset.arm.S \
+		memset16_neon.S \
+		memset32_neon.S )
+
 ifeq ($(OSTYPE),darwin)
 CXXFLAGS+=-Iinclude/utils/mac
 
@@ -422,6 +430,7 @@ endif
 ifeq ($(OSTYPE),android)
         CXXFLAGS += -DSK_BUILD_FOR_ANDROID
         CXXFLAGS += -DEGL_EGLEXT_PROTOTYPES
+        CXXFLAGS += -DSK_ARM_NEON_IS_DYNAMIC
 
 SKIA_GL_CXX_SRC += \
         $(addprefix src/gpu/,\
@@ -470,11 +479,13 @@ endif
 
 ifeq (arm,$(findstring arm,$(TARGET)))
 	SKIA_SRC += \
-		$(SKIA_OPTS_CXX_SRC_ARM)
+		$(SKIA_OPTS_CXX_SRC_ARM) \
+		$(SKIA_OPTS_S_SRC_ARM)
 	PROCESSOR_EXTENSION_CXXFLAGS =
 endif
 
-SKIA_OBJS=$(patsubst %.cpp,$(OUT_DIR)/%.o,$(SKIA_SRC))
+SKIA_OBJS:=$(patsubst %.cpp,$(OUT_DIR)/%.o,$(SKIA_SRC))
+SKIA_OBJS:=$(patsubst %.S,$(OUT_DIR)/%.o,$(SKIA_OBJS))
 
 .PHONY: all
 all: $(OUT_DIR)/libskia.a
@@ -494,6 +505,9 @@ $(OUT_DIR)/%SSE3.o: %SSE3.cpp
 
 $(OUT_DIR)/%.o: %.cpp
 	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -o $@ $<
+
+$(OUT_DIR)/%.o: %.S
+	mkdir -p `dirname $@` && $(AS) -o $@ $<
 
 $(OUT_DIR)/libskia.a: $(SKIA_OBJS)
 	cp -R include $(OUT_DIR)
