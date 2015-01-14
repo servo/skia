@@ -1,15 +1,10 @@
 [package]
 
-name = "skia-sys"
+name = "skia"
 version = "0.0.20130412"
-authors = ["The Skia Project Developers"]
+authors = ["The Skia Project Developers and The Servo Project Developers"]
 
 build = "make -f makefile.cargo -j4"
-
-[lib]
-
-name = "skia-sys"
-path = "lib.rs"
 
 [dependencies.freetype-sys]
 git = "https://github.com/servo/libfreetype2"
