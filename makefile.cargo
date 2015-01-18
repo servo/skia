@@ -407,6 +407,24 @@ SKIA_OPTS_CXX_SRC_ARM = \
 		SkXfermode_opts_none.cpp \
 	)
 
+SKIA_OPTS_CXX_SRC_ARM_NEON = \
+	$(addprefix src/opts/,\
+		SkBitmapProcState_opts_arm.cpp \
+		SkBitmapProcState_arm_neon.cpp \
+		SkBitmapProcState_matrixProcs_neon.cpp \
+		SkBlitMask_opts_arm.cpp \
+		SkBlitMask_opts_arm_neon.cpp \
+		SkBlitRow_opts_arm.cpp \
+		SkBlitRow_opts_arm_neon.cpp \
+		SkBlurImage_opts_arm.cpp \
+		SkBlurImage_opts_neon.cpp \
+		SkMorphology_opts_arm.cpp \
+		SkMorphology_opts_neon.cpp \
+		SkXfermode_opts_arm.cpp \
+		SkXfermode_opts_arm_neon.cpp \
+		SkUtils_opts_none.cpp \
+	)
+
 SKIA_PATHOPS_CXX_SRC = \
 	$(addprefix src/pathops/,\
 		SkAddIntersections.cpp \
@@ -623,6 +641,12 @@ endif
 ifeq (arm,$(findstring arm,$(TARGET)))
 	SKIA_SRC += \
 		$(SKIA_OPTS_CXX_SRC_ARM)
+	PROCESSOR_EXTENSION_CXXFLAGS =
+endif
+
+ifeq (aarch64,$(findstring aarch64,$(TARGET)))
+	SKIA_SRC += \
+		$(SKIA_OPTS_CXX_SRC_ARM_NEON)
 	PROCESSOR_EXTENSION_CXXFLAGS =
 endif
 
