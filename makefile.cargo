@@ -24,8 +24,8 @@ CXXFLAGS += \
 	-DGR_RELEASE=1
 endif
 
-FREETYPE_OUTDIR = $(shell find $(OUT_DIR)/.. -name 'freetype-sys-*' -type d)
-EXPAT_OUTDIR = $(shell find $(OUT_DIR)/.. -name 'expat-sys-*' -type d)
+FREETYPE_OUTDIR = $(shell find $(OUT_DIR)/../.. -name 'freetype-sys-*' -type d)/out
+EXPAT_OUTDIR = $(shell find $(OUT_DIR)/../.. -name 'expat-sys-*' -type d)/out
 CXXFLAGS += \
 	-fPIC \
 	-DSK_A32_SHIFT=24 -DSK_R32_SHIFT=16 -DSK_G32_SHIFT=8 -DSK_B32_SHIFT=0 \
