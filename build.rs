@@ -11,7 +11,7 @@ use std::os;
 fn main() {
     let out_dir = os::getenv("OUT_DIR").unwrap();
     let result = Command::new("make")
-        .args(&["-f", "makefile.cargo"])
+        .args(&["-f", "makefile.cargo", "-j4"])
         .stdout(StdioContainer::InheritFd(1))
         .stderr(StdioContainer::InheritFd(2))
         .status()
