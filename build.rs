@@ -12,5 +12,7 @@ fn main() {
         .status()
         .unwrap()
         .success());
-    println!("cargo:rustc-flags=-L native={}", env::var("OUT_DIR").unwrap());
+    let out_dir = env::var("OUT_DIR").unwrap();
+    println!("cargo:rustc-flags=-L native={}", out_dir);
+    println!("cargo:outdir={}", out_dir);
 }
