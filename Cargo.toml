@@ -3,7 +3,7 @@
 name = "skia"
 version = "0.0.20130412"
 authors = ["The Skia Project Developers and The Servo Project Developers"]
-
+links = "skia"
 build = "build.rs"
 
 [dependencies.freetype-sys]
