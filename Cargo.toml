@@ -6,9 +6,16 @@ authors = ["The Skia Project Developers and The Servo Project Developers"]
 links = "skia"
 build = "build.rs"
 
-[dependencies.freetype-sys]
-git = "https://github.com/servo/libfreetype2"
-
 [dependencies.expat-sys]
 git = "https://github.com/servo/libexpat"
+
+[target.i686-unknown-linux-gnu.dependencies.freetype-sys]
+git = "https://github.com/servo/libfreetype2"
+
+[target.x86_64-unknown-linux-gnu.dependencies.freetype-sys]
+git = "https://github.com/servo/libfreetype2"
+
+[target.arm-linux-androideabi.dependencies.freetype-sys]
+git = "https://github.com/servo/libfreetype2"
+
 
