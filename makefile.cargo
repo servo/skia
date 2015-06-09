@@ -47,7 +47,9 @@ CXXFLAGS += \
 	-Isrc/utils \
 	-Ithird_party/etc1 \
 	-Ithird_party/ktx \
-	-iquote src/gpu
+	-iquote src/gpu \
+	-I/usr/include/freetype2
+
 
 USE_CLANG = $(shell $(CXX) --version|grep -c 'clang')
 ifeq ($(USE_CLANG),1)
