@@ -6,6 +6,9 @@ authors = ["The Skia Project Developers and The Servo Project Developers"]
 links = "skia"
 build = "build.rs"
 
+[dependencies]
+libc = "0.1"
+
 [dependencies.expat-sys]
 git = "https://github.com/servo/libexpat"
 
