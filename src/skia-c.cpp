@@ -4,58 +4,49 @@
 
 #include "skia-c.h"
 
-extern "C" SkiaSkNativeSharedGLContextRef
-SkiaSkNativeSharedGLContextCreate(SkiaGrGLNativeContextRef aNativeContext, int32_t aWidth, int32_t aHeight) {
-    GrGLNativeContext* nativeContext = reinterpret_cast<GrGLNativeContext*>(aNativeContext);
-    SkNativeSharedGLContext *sharedGLContext = new SkNativeSharedGLContext(*nativeContext);
-    if (sharedGLContext == NULL) {
-        return NULL;
-    }
-    if (!sharedGLContext->init(aWidth, aHeight)) {
-        return NULL;
-    }
-    return sharedGLContext;
+#include "gl/GrGLUtil.h"
+
+extern "C" SkiaGrGLInterfaceRef
+SkiaGrGLCreateNativeInterface() {
+    return GrGLCreateNativeInterface();
 }
 
 extern "C" void
-SkiaSkNativeSharedGLContextRetain(SkiaSkNativeSharedGLContextRef aGLContext) {
-    SkNativeSharedGLContext *sharedGLContext = static_cast<SkNativeSharedGLContext*>(aGLContext);
-    sharedGLContext->ref();
+SkiaGrGLInterfaceRetain(SkiaGrGLInterfaceRef aGrGLInterface) {
+    SkSafeRef(static_cast<const GrGLInterface*>(aGrGLInterface));
 }
 
 extern "C" void
-SkiaSkNativeSharedGLContextRelease(SkiaSkNativeSharedGLContextRef aGLContext) {
-    SkNativeSharedGLContext *sharedGLContext = static_cast<SkNativeSharedGLContext*>(aGLContext);
-    sharedGLContext->unref();
+SkiaGrGLInterfaceRelease(SkiaGrGLInterfaceRef aGrGLInterface) {
+    SkSafeUnref(static_cast<const GrGLInterface*>(aGrGLInterface));
 }
 
-extern "C" unsigned int
-SkiaSkNativeSharedGLContextGetFBOID(SkiaSkNativeSharedGLContextRef aGLContext) {
-   SkNativeSharedGLContext *sharedGLContext = static_cast<SkNativeSharedGLContext*>(aGLContext);
-   return sharedGLContext->getFBOID();
+extern "C" bool
+SkiaGrGLInterfaceHasExtension(SkiaGrGLInterfaceRef aGrGLInterface, const char extension[]) {
+    return static_cast<const GrGLInterface*>(aGrGLInterface)->hasExtension(extension);
 }
 
-extern "C" SkiaGrGLSharedSurfaceRef
-SkiaSkNativeSharedGLContextStealSurface(SkiaSkNativeSharedGLContextRef aGLContext) {
-    SkNativeSharedGLContext *sharedGLContext = static_cast<SkNativeSharedGLContext*>(aGLContext);
-    return reinterpret_cast<void*>(sharedGLContext->stealSurface());
+extern "C" bool
+SkiaGrGLInterfaceGLVersionGreaterThanOrEqualTo(SkiaGrGLInterfaceRef aGrGLInterface, int32_t major, int32_t minor) {
+    const GrGLubyte* versionUByte;
+    GR_GL_CALL_RET(static_cast<const GrGLInterface*>(aGrGLInterface), versionUByte, GetString(GR_GL_VERSION));
+    const char* version = reinterpret_cast<const char*>(versionUByte);
+
+    GrGLVersion glVersion = GrGLGetVersionFromString(version);
+    return GR_GL_INVALID_VER != glVersion && glVersion >= GR_GL_VER(major, minor);
 }
 
 extern "C" SkiaGrContextRef
-SkiaSkNativeSharedGLContextGetGrContext(SkiaSkNativeSharedGLContextRef aGLContext) {
-    SkNativeSharedGLContext *sharedGLContext = static_cast<SkNativeSharedGLContext*>(aGLContext);
-    return sharedGLContext->getGrContext();
+SkiaGrContextCreate(SkiaGrGLInterfaceRef anInterface) {
+    return GrContext::Create(kOpenGL_GrBackend, reinterpret_cast<GrBackendContext>(anInterface));
 }
 
 extern "C" void
-SkiaSkNativeSharedGLContextMakeCurrent(SkiaSkNativeSharedGLContextRef aGLContext) {
-    SkNativeSharedGLContext *sharedGLContext = static_cast<SkNativeSharedGLContext*>(aGLContext);
-    sharedGLContext->makeCurrent();
+SkiaGrContextRetain(SkiaGrContextRef aContext) {
+    SkSafeRef(static_cast<const GrContext*>(aContext));
 }
 
 extern "C" void
-SkiaSkNativeSharedGLContextFlush(SkiaSkNativeSharedGLContextRef aGLContext) {
-    SkNativeSharedGLContext *sharedGLContext = static_cast<SkNativeSharedGLContext*>(aGLContext);
-    sharedGLContext->flush();
+SkiaGrContextRelease(SkiaGrContextRef aContext) {
+    SkSafeUnref(static_cast<const GrContext*>(aContext));
 }
-

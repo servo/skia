@@ -7,6 +7,8 @@ links = "skia"
 build = "build.rs"
 
 [dependencies]
+euclid = "0.1"
+gleam = "0.1"
 libc = "0.1"
 
 [dependencies.expat-sys]
@@ -24,4 +26,33 @@ git = "https://github.com/servo/libfreetype2"
 [target.arm-linux-androideabi.dependencies.freetype-sys]
 git = "https://github.com/servo/libfreetype2"
 
+[target.arm-linux-androideabi.dependencies.egl]
+git = "https://github.com/servo/rust-egl"
+
+[target.i686-unknown-linux-gnu.dependencies.glx]
+git = "https://github.com/servo/rust-glx"
+
+[target.x86_64-unknown-linux-gnu.dependencies.glx]
+git = "https://github.com/servo/rust-glx"
+
+[target.arm-unknown-linux-gnueabihf.dependencies.glx]
+git = "https://github.com/servo/rust-glx"
+
+[target.i686-unknown-linux-gnu.dependencies.x11]
+version = "1.1.1"
+features = ["xlib"]
+
+[target.x86_64-unknown-linux-gnu.dependencies.x11]
+version = "1.1.1"
+features = ["xlib"]
+
+[target.arm-unknown-linux-gnueabihf.dependencies.x11]
+version = "1.1.1"
+features = ["xlib"]
+
+[target.x86_64-apple-darwin.dependencies]
+cgl = "0.1"
+
+[target.x86_64-apple-darwin.dependencies.io-surface]
+git = "https://github.com/servo/io-surface-rs"
 
