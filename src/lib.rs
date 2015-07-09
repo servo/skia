@@ -33,15 +33,22 @@ pub use skia::{
 };
 
 pub mod linkhack;
+pub mod gl_context;
 pub mod gl_rasterization_context;
 pub mod skia;
 
 #[cfg(target_os="linux")]
+pub mod gl_context_glx;
+#[cfg(target_os="linux")]
 pub mod gl_rasterization_context_glx;
 
 #[cfg(target_os="macos")]
+pub mod gl_context_cgl;
+#[cfg(target_os="macos")]
 pub mod gl_rasterization_context_cgl;
 
+#[cfg(target_os="android")]
+pub mod gl_context_android;
 #[cfg(target_os="android")]
 pub mod gl_rasterization_context_android;
 
