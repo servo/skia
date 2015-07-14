@@ -98,7 +98,7 @@ impl GLRasterizationContext {
                                      gl::RGBA, gl::UNSIGNED_BYTE, None);
                 });
 
-            if gr_context == ptr::null() {
+            if gr_context == ptr::null_mut() {
                 egl::MakeCurrent(display, ptr::null_mut(), ptr::null_mut(), ptr::null_mut());
                 egl::DestroyContext(display, egl_context);
                 egl::DestroySurface(display, egl_surface);

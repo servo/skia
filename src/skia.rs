@@ -8,7 +8,7 @@
 
 use libc::*;
 
-pub type SkiaGrContextRef = *const c_void;
+pub type SkiaGrContextRef = *mut c_void;
 pub type SkiaGrGLInterfaceRef = *const c_void;
 
 #[link(name = "skia")]

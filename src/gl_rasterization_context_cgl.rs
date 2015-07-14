@@ -65,7 +65,7 @@ impl GLRasterizationContext {
                                                 0);
                 });
 
-            if gr_context == ptr::null() {
+            if gr_context == ptr::null_mut() {
                 cgl::CGLDestroyContext(cgl_context);
                 return None;
             }

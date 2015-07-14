@@ -99,7 +99,7 @@ pub fn setup_framebuffer<F>(texture_target: gl::GLenum,
     unsafe {
         let gl_interface = skia::SkiaGrGLCreateNativeInterface();
         if gl_interface == ptr::null_mut() {
-            return (0, 0, 0, ptr::null());
+            return (0, 0, 0, ptr::null_mut());
         }
 
         clear_gl_errors();
@@ -135,7 +135,7 @@ pub fn setup_framebuffer<F>(texture_target: gl::GLenum,
         let gr_context = if !framebuffer_creation_failed {
             skia::SkiaGrContextCreate(gl_interface)
         } else {
-            ptr::null()
+            ptr::null_mut()
         };
 
         skia::SkiaGrGLInterfaceRelease(gl_interface);

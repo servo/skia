@@ -7,7 +7,7 @@
 #ifndef SKIA_C_DEFINED
 #define SKIA_C_DEFINED
 
-typedef const void* SkiaGrContextRef;
+typedef void* SkiaGrContextRef;
 typedef const void* SkiaGrGLInterfaceRef;
 
 #ifdef __cplusplus
