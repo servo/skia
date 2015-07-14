@@ -517,7 +517,6 @@ CXXFLAGS += \
 SKIA_GL_CXX_SRC += \
 	$(addprefix src/gpu/,\
 		gl/mac/GrGLCreateNativeInterface_mac.cpp \
-		gl/mac/SkNativeSharedGLContext_mac.cpp \
 		gl/mac/SkNativeGLContext_mac.cpp \
 	)
 
@@ -557,7 +556,6 @@ SKIA_GL_CXX_SRC += \
 	$(addprefix src/gpu/,\
 		gl/android/GrGLCreateNativeInterface_android.cpp \
 		gl/android/SkNativeGLContext_android.cpp \
-		gl/android/SkNativeSharedGLContext_android.cpp \
 	)
 
 SKIA_PORTS_CXX_SRC = \
@@ -584,7 +582,6 @@ ifeq (linux,$(findstring linux,$(TARGET)))
 SKIA_GL_CXX_SRC += \
 	$(addprefix src/gpu/,\
 		gl/unix/GrGLCreateNativeInterface_unix.cpp \
-		gl/unix/SkNativeSharedGLContext_unix.cpp \
 		gl/unix/SkNativeGLContext_unix.cpp \
 	)
 

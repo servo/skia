@@ -8,21 +8,20 @@
 
 use libc::*;
 
-pub type SkiaSkNativeSharedGLContextRef = *mut c_void;
-pub type SkiaGrContextRef = *mut c_void;
-pub type SkiaGrGLSharedSurfaceRef = *mut c_void;
-pub type SkiaGrGLNativeContextRef = *mut c_void;
+pub type SkiaGrContextRef = *const c_void;
+pub type SkiaGrGLInterfaceRef = *const c_void;
 
 #[link(name = "skia")]
 extern {
 
-pub fn SkiaSkNativeSharedGLContextCreate(aNativeContext: SkiaGrGLNativeContextRef, aWidth: i32, aHeight: i32) -> SkiaSkNativeSharedGLContextRef;
-pub fn SkiaSkNativeSharedGLContextRetain(aGLContext: SkiaSkNativeSharedGLContextRef);
-pub fn SkiaSkNativeSharedGLContextRelease(aGLContext: SkiaSkNativeSharedGLContextRef);
-pub fn SkiaSkNativeSharedGLContextGetFBOID(aGLContext: SkiaSkNativeSharedGLContextRef) -> c_uint;
-pub fn SkiaSkNativeSharedGLContextStealSurface(aGLContext: SkiaSkNativeSharedGLContextRef) -> SkiaGrGLSharedSurfaceRef;
-pub fn SkiaSkNativeSharedGLContextGetGrContext(aGLContext: SkiaSkNativeSharedGLContextRef) -> SkiaGrContextRef;
-pub fn SkiaSkNativeSharedGLContextMakeCurrent(aGLContext: SkiaSkNativeSharedGLContextRef);
-pub fn SkiaSkNativeSharedGLContextFlush(aGLContext: SkiaSkNativeSharedGLContextRef);
+pub fn SkiaGrGLCreateNativeInterface() -> SkiaGrGLInterfaceRef;
+pub fn SkiaGrGLInterfaceRetain(anInterface: SkiaGrGLInterfaceRef);
+pub fn SkiaGrGLInterfaceRelease(anInterface: SkiaGrGLInterfaceRef);
+pub fn SkiaGrGLInterfaceHasExtension(anInterface: SkiaGrGLInterfaceRef, extension: *const c_char) -> bool;
+pub fn SkiaGrGLInterfaceGLVersionGreaterThanOrEqualTo(anInterface: SkiaGrGLInterfaceRef, major: i32, minor: i32) -> bool;
+
+pub fn SkiaGrContextCreate(anInterface: SkiaGrGLInterfaceRef) -> SkiaGrContextRef;
+pub fn SkiaGrContextRetain(aContext: SkiaGrContextRef);
+pub fn SkiaGrContextRelease(aContext: SkiaGrContextRef);
 
 }
