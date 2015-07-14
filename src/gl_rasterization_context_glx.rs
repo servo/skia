@@ -84,7 +84,7 @@ impl GLRasterizationContext {
                                      gl::RGBA, gl::UNSIGNED_BYTE, None);
                 });
 
-            if gr_context == ptr::null() {
+            if gr_context == ptr::null_mut() {
                 glx::MakeCurrent(glx_display, 0 /* None */, ptr::null_mut());
                 glx::DestroyContext(glx_display, glx_context);
                 glx::DestroyGLXPixmap(glx_display, glx_pixmap);

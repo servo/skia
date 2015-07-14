@@ -43,10 +43,10 @@ SkiaGrContextCreate(SkiaGrGLInterfaceRef anInterface) {
 
 extern "C" void
 SkiaGrContextRetain(SkiaGrContextRef aContext) {
-    SkSafeRef(static_cast<const GrContext*>(aContext));
+    SkSafeRef(static_cast<GrContext*>(aContext));
 }
 
 extern "C" void
 SkiaGrContextRelease(SkiaGrContextRef aContext) {
-    SkSafeUnref(static_cast<const GrContext*>(aContext));
+    SkSafeUnref(static_cast<GrContext*>(aContext));
 }
