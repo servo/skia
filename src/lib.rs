@@ -19,4 +19,5 @@ pub use skia::{
     SkiaSkNativeSharedGLContextFlush,
 };
 
+pub mod linkhack;
 pub mod skia;

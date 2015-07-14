@@ -524,7 +524,6 @@ SKIA_GL_CXX_SRC += \
 SKIA_PORTS_CXX_SRC = \
 	$(addprefix src/ports/,\
 		SkDebug_stdio.cpp \
-		SkDebug_stdio.cpp \
 		SkFontHost_mac.cpp \
 		SkGlobalInitialization_default.cpp \
 		SkImageDecoder_empty.cpp \
