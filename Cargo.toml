@@ -15,16 +15,16 @@ libc = "0.1"
 git = "https://github.com/servo/libexpat"
 
 [target.i686-unknown-linux-gnu.dependencies.freetype-sys]
-version = "0.1"
+git = "https://github.com/servo/libfreetype2"
 
 [target.x86_64-unknown-linux-gnu.dependencies.freetype-sys]
-version = "0.1"
+git = "https://github.com/servo/libfreetype2"
 
 [target.arm-unknown-linux-gnueabihf.dependencies.freetype-sys]
-version = "0.1"
+git = "https://github.com/servo/libfreetype2"
 
 [target.arm-linux-androideabi.dependencies.freetype-sys]
-version = "0.1"
+git = "https://github.com/servo/libfreetype2"
 
 [target.arm-linux-androideabi.dependencies.egl]
 git = "https://github.com/servo/rust-egl"
