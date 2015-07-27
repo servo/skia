@@ -5,10 +5,15 @@
  * found in the LICENSE file.
  */
 
+use gl_rasterization_context;
+use skia;
+
 use euclid::size::Size2D;
 use glx;
 use std::ptr;
 use x11::xlib;
+
+use gleam::gl;
 
 pub struct PlatformDisplayData {
     pub display: *mut xlib::Display,
@@ -20,6 +25,10 @@ pub struct GLPlatformContext {
     glx_context: xlib::XID,
     pub glx_pixmap: xlib::XID,
     pub pixmap: xlib::XID,
+
+    pub framebuffer_id: gl::GLuint,
+    pub texture_id: gl::GLuint,
+    pub depth_stencil_renderbuffer_id: gl::GLuint,
 }
 
 impl Drop for GLPlatformContext {
@@ -30,6 +39,10 @@ impl Drop for GLPlatformContext {
         // first solves this problem somehow.
         self.drop_current_context();
         self.make_current();
+
+        gl_rasterization_context::destroy_framebuffer(self.framebuffer_id,
+                                                      self.texture_id,
+                                                      self.depth_stencil_renderbuffer_id);
 
         unsafe {
             let glx_display = self.display as *mut glx::types::Display;
@@ -68,15 +81,43 @@ impl GLPlatformContext {
 
             if glx_context == ptr::null() {
                 glx::DestroyGLXPixmap(glx_display, glx_pixmap);
+            }
+
+            glx::MakeCurrent(display as *mut glx::types::Display,
+                             glx_pixmap,
+                             glx_context as glx::types::GLXContext);
+
+            let gl_interface = skia::SkiaGrGLCreateNativeInterface();
+            if gl_interface == ptr::null_mut() {
+                glx::MakeCurrent(display as *mut glx::types::Display,
+                                 0 /* None */,
+                                 ptr::null_mut());
                 return None;
             }
 
-            Some(GLPlatformContext {
-                display: display,
-                glx_context: glx_context as xlib::XID,
-                pixmap: pixmap,
-                glx_pixmap: glx_pixmap as xlib::XID,
-            })
+            if let Some((framebuffer_id, texture_id, depth_stencil_renderbuffer_id)) =
+                gl_rasterization_context::setup_framebuffer(gl::TEXTURE_2D,
+                                                            size,
+                                                            gl_interface,
+                                                            || {
+                gl::tex_image_2d(gl::TEXTURE_2D, 0,
+                                 gl::RGBA as gl::GLint,
+                                 size.width, size.height, 0,
+                                 gl::RGBA, gl::UNSIGNED_BYTE, None);
+            }) {
+                skia::SkiaGrGLInterfaceRelease(gl_interface);
+                return Some(GLPlatformContext {
+                    display: display,
+                    glx_context: glx_context as xlib::XID,
+                    pixmap: pixmap,
+                    glx_pixmap: glx_pixmap as xlib::XID,
+                    framebuffer_id: framebuffer_id,
+                    texture_id: texture_id,
+                    depth_stencil_renderbuffer_id: depth_stencil_renderbuffer_id,
+                })
+            }
+            skia::SkiaGrGLInterfaceRelease(gl_interface);
+            None
         }
     }
 

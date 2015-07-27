@@ -6,7 +6,6 @@
  */
 
 use gl_context::GLContext;
-use gl_rasterization_context;
 
 use euclid::size::Size2D;
 use gleam::gl;
@@ -18,19 +17,8 @@ pub struct GLRasterizationContext {
     pub gl_context: Arc<GLContext>,
     pub size: Size2D<i32>,
     pub framebuffer_id: gl::GLuint,
+
     pixmap: xlib::XID,
-    texture_id: gl::GLuint,
-    depth_stencil_renderbuffer_id: gl::GLuint,
-}
-
-impl Drop for GLRasterizationContext {
-    fn drop(&mut self) {
-        self.gl_context.make_current();
-        gl_rasterization_context::destroy_framebuffer(self.framebuffer_id,
-                                                      self.texture_id,
-                                                      self.depth_stencil_renderbuffer_id);
-
-    }
 }
 
 impl GLRasterizationContext {
@@ -38,29 +26,12 @@ impl GLRasterizationContext {
                pixmap: xlib::Pixmap,
                size: Size2D<i32>)
                -> Option<GLRasterizationContext> {
-        gl_context.make_current();
-
-        if let Some((framebuffer_id, texture_id, depth_stencil_renderbuffer_id)) =
-            gl_rasterization_context::setup_framebuffer(gl::TEXTURE_2D,
-                                                        size,
-                                                        gl_context.gl_interface,
-                                                        || {
-            gl::tex_image_2d(gl::TEXTURE_2D, 0,
-                             gl::RGBA as gl::GLint,
-                             size.width, size.height, 0,
-                             gl::RGBA, gl::UNSIGNED_BYTE, None);
-        }) {
-            return Some(GLRasterizationContext {
-                gl_context: gl_context,
-                size: size,
-                pixmap: pixmap,
-                framebuffer_id: framebuffer_id,
-                texture_id: texture_id,
-                depth_stencil_renderbuffer_id: depth_stencil_renderbuffer_id,
-            });
-        }
-
-        None
+        Some(GLRasterizationContext {
+            gl_context: gl_context.clone(),
+            size: size,
+            framebuffer_id: gl_context.platform_context.framebuffer_id,
+            pixmap: pixmap,
+        })
     }
 
     pub fn make_current(&self) {
