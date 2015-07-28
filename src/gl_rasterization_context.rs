@@ -10,7 +10,6 @@ use skia;
 use euclid::size::Size2D;
 use gleam::gl;
 use std::ffi::CString;
-use std::ptr;
 
 #[cfg(target_os="macos")]
 pub use gl_rasterization_context_cgl::GLRasterizationContext;
@@ -93,15 +92,11 @@ fn create_and_bind_depth_stencil_buffer_with_formats(supports_depth_stencil: boo
 
 pub fn setup_framebuffer<F>(texture_target: gl::GLenum,
                             size: Size2D<i32>,
+                            gl_interface: skia::SkiaGrGLInterfaceRef,
                             set_texture_image: F)
-                            -> (gl::GLuint, gl::GLuint, gl::GLuint, skia::SkiaGrContextRef)
+                            -> Option<(gl::GLuint, gl::GLuint, gl::GLuint)>
                             where F: Fn() {
     unsafe {
-        let gl_interface = skia::SkiaGrGLCreateNativeInterface();
-        if gl_interface == ptr::null_mut() {
-            return (0, 0, 0, ptr::null_mut());
-        }
-
         clear_gl_errors();
 
         let framebuffer_id = gl::gen_framebuffers(1)[0];
@@ -132,32 +127,20 @@ pub fn setup_framebuffer<F>(texture_target: gl::GLenum,
         let framebuffer_creation_failed = error != gl::NO_ERROR ||
             gl::CheckFramebufferStatus(gl::FRAMEBUFFER) != gl::FRAMEBUFFER_COMPLETE;
 
-        let gr_context = if !framebuffer_creation_failed {
-            skia::SkiaGrContextCreate(gl_interface)
-        } else {
-            ptr::null_mut()
-        };
-
-        skia::SkiaGrGLInterfaceRelease(gl_interface);
-
         if framebuffer_creation_failed {
             gl::delete_framebuffers(&[framebuffer_id]);
             gl::delete_textures(&[texture_id]);
             gl::delete_renderbuffers(&[depth_stencil_renderbuffer_id]);
+            return None;
         }
 
-        (framebuffer_id, texture_id, depth_stencil_renderbuffer_id, gr_context)
+        Some((framebuffer_id, texture_id, depth_stencil_renderbuffer_id))
     }
 }
 
-pub fn destroy_framebuffer(gr_context:  skia::SkiaGrContextRef,
-                           framebuffer_id: gl::GLuint,
+pub fn destroy_framebuffer(framebuffer_id: gl::GLuint,
                            texture_id: gl::GLuint,
                            depth_stencil_renderbuffer_id: gl::GLuint) {
-    unsafe {
-        skia::SkiaGrContextRelease(gr_context);
-    }
-
     gl::delete_framebuffers(&[framebuffer_id]);
     gl::delete_textures(&[texture_id]);
     gl::delete_renderbuffers(&[depth_stencil_renderbuffer_id]);
