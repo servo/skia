@@ -96,45 +96,56 @@ pub fn setup_framebuffer<F>(texture_target: gl::GLenum,
                             set_texture_image: F)
                             -> Option<(gl::GLuint, gl::GLuint, gl::GLuint)>
                             where F: Fn() {
+
+    let (framebuffer_id, texture_id, depth_stencil_renderbuffer_id) =
+        start_framebuffer_setup(texture_target, size, gl_interface);
+
+    if !finish_framebuffer_setup(size, set_texture_image) {
+        destroy_framebuffer(framebuffer_id, texture_id, depth_stencil_renderbuffer_id);
+        return None;
+    }
+
+    Some((framebuffer_id, texture_id, depth_stencil_renderbuffer_id))
+}
+
+pub fn start_framebuffer_setup(texture_target: gl::GLenum,
+                               size: Size2D<i32>,
+                               gl_interface: skia::SkiaGrGLInterfaceRef)
+                               -> (gl::GLuint, gl::GLuint, gl::GLuint) {
+    clear_gl_errors();
+
+    let framebuffer_id = gl::gen_framebuffers(1)[0];
+    gl::bind_framebuffer(gl::FRAMEBUFFER, framebuffer_id);
+
+    let texture_id = gl::gen_textures(1)[0];
+    gl::bind_texture(texture_target, texture_id);
+
+    gl::tex_parameter_i(texture_target, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as gl::GLint);
+    gl::tex_parameter_i(texture_target, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as gl::GLint);
+    gl::tex_parameter_i(texture_target, gl::TEXTURE_MAG_FILTER, gl::NEAREST as gl::GLint);
+    gl::tex_parameter_i(texture_target, gl::TEXTURE_MIN_FILTER, gl::NEAREST as gl::GLint);
+    gl::framebuffer_texture_2d(gl::FRAMEBUFFER,
+                               gl::COLOR_ATTACHMENT0,
+                               texture_target,
+                               texture_id, 0);
+
+    let depth_stencil_renderbuffer_id = create_and_bind_depth_stencil_buffer(gl_interface,
+                                                                             size);
+
+    (framebuffer_id, texture_id, depth_stencil_renderbuffer_id)
+}
+
+pub fn finish_framebuffer_setup<F>(size: Size2D<i32>,
+                                   set_texture_image: F)
+                                   -> bool
+                                   where F: Fn() {
+    set_texture_image();
+
+    gl::viewport(0, 0, size.width, size.height);
+
     unsafe {
-        clear_gl_errors();
-
-        let framebuffer_id = gl::gen_framebuffers(1)[0];
-        gl::bind_framebuffer(gl::FRAMEBUFFER, framebuffer_id);
-
-        let texture_id = gl::gen_textures(1)[0];
-        gl::bind_texture(texture_target, texture_id);
-
-        set_texture_image();
-
-        gl::tex_parameter_i(texture_target, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as gl::GLint);
-        gl::tex_parameter_i(texture_target, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as gl::GLint);
-        gl::tex_parameter_i(texture_target, gl::TEXTURE_MAG_FILTER, gl::NEAREST as gl::GLint);
-        gl::tex_parameter_i(texture_target, gl::TEXTURE_MIN_FILTER, gl::NEAREST as gl::GLint);
-        gl::framebuffer_texture_2d(gl::FRAMEBUFFER,
-                                   gl::COLOR_ATTACHMENT0,
-                                   texture_target,
-                                   texture_id, 0);
-
-        let depth_stencil_renderbuffer_id = create_and_bind_depth_stencil_buffer(gl_interface,
-                                                                                 size);
-
-        gl::viewport(0, 0, size.width, size.height);
-        gl::ClearStencil(0);
-        gl::Clear(gl::STENCIL_BUFFER_BIT as gl::GLuint);
-
-        let error = gl::get_error() ;
-        let framebuffer_creation_failed = error != gl::NO_ERROR ||
-            gl::CheckFramebufferStatus(gl::FRAMEBUFFER) != gl::FRAMEBUFFER_COMPLETE;
-
-        if framebuffer_creation_failed {
-            gl::delete_framebuffers(&[framebuffer_id]);
-            gl::delete_textures(&[texture_id]);
-            gl::delete_renderbuffers(&[depth_stencil_renderbuffer_id]);
-            return None;
-        }
-
-        Some((framebuffer_id, texture_id, depth_stencil_renderbuffer_id))
+        gl::get_error() == gl::NO_ERROR &&
+            gl::CheckFramebufferStatus(gl::FRAMEBUFFER) == gl::FRAMEBUFFER_COMPLETE
     }
 }
 

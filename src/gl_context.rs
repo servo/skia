@@ -21,6 +21,8 @@ pub use gl_context_cgl::PlatformDisplayData;
 pub use gl_context_glx::GLPlatformContext;
 #[cfg(target_os="linux")]
 pub use gl_context_glx::PlatformDisplayData;
+#[cfg(target_os="linux")]
+pub use gl_rasterization_context::GLRasterizationContext;
 
 #[cfg(target_os="android")]
 pub use gl_context_android::GLPlatformContext;

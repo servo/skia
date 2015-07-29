@@ -1,10 +1,6 @@
 sudo: false
 language: rust
-
-# We pin rust here, because aster (0.3.3) is broken with the latest
-# rust nightly. Once aster is fixed we can change this back to 'nightly.'
-rust: nightly-2015-07-10
-
+rust: nightly
 branches:
   except:
     - master
