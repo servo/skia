@@ -8,7 +8,7 @@ use std::env;
 
 fn main() {
     assert!(Command::new("make")
-        .args(&["-R", "-f", "makefile.cargo", "-j4"])
+        .args(&["-R", "-f", "makefile.cargo", &format!("-j{}", env::var("NUM_JOBS").unwrap())])
         .status()
         .unwrap()
         .success());
