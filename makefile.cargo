@@ -1,10 +1,12 @@
 ifeq (eabi,$(findstring eabi,$(TARGET)))
 
+CC ?= $(TARGET)-gcc
 CXX ?= $(TARGET)-g++
 AR ?= $(TARGET)-ar
 
 else
 
+CC ?= gcc
 CXX ?= g++
 AR ?= ar
 
@@ -409,20 +411,23 @@ SKIA_OPTS_CXX_SRC_ARM = \
 
 SKIA_OPTS_CXX_SRC_ARM_NEON = \
 	$(addprefix src/opts/,\
+		memset.arm.S \
 		SkBitmapProcState_opts_arm.cpp \
+		SkBlitMask_opts_arm.cpp \
+		SkBlitRow_opts_arm.cpp \
+		SkBlurImage_opts_arm.cpp \
+		SkMorphology_opts_arm.cpp \
+		SkUtils_opts_arm.cpp \
+		SkXfermode_opts_arm.cpp \
+		memset16_neon.S \
+		memset32_neon.S \
 		SkBitmapProcState_arm_neon.cpp \
 		SkBitmapProcState_matrixProcs_neon.cpp \
-		SkBlitMask_opts_arm.cpp \
 		SkBlitMask_opts_arm_neon.cpp \
-		SkBlitRow_opts_arm.cpp \
 		SkBlitRow_opts_arm_neon.cpp \
-		SkBlurImage_opts_arm.cpp \
 		SkBlurImage_opts_neon.cpp \
-		SkMorphology_opts_arm.cpp \
 		SkMorphology_opts_neon.cpp \
-		SkXfermode_opts_arm.cpp \
 		SkXfermode_opts_arm_neon.cpp \
-		SkUtils_opts_none.cpp \
 	)
 
 SKIA_PATHOPS_CXX_SRC = \
@@ -544,7 +549,8 @@ endif
 ifeq (androideabi,$(findstring androideabi,$(TARGET)))
 CXXFLAGS += \
 	-DSK_BUILD_FOR_ANDROID \
-	-DEGL_EGLEXT_PROTOTYPES
+	-DEGL_EGLEXT_PROTOTYPES \
+	-Iplatform_tools/android/third_party/cpufeatures
 
 # FIXME: The skia version we updated to doesn't have android FontMgr class.
 # However, this was added to skia upstream recently, so next time we update
@@ -575,6 +581,11 @@ SKIA_PORTS_CXX_SRC = \
 	)
 
 SKIA_FONTS_CXX_SRC =
+
+SKIA_UTILS_CXX_SRC += \
+	$(addprefix platform_tools/android/third_party/cpufeatures/,\
+		cpu-features.c \
+	)
 
 else
 
@@ -631,23 +642,30 @@ ifeq (true,$(supports_sse))
 	SKIA_SRC += \
 		$(SKIA_OPTS_CXX_SRC_X86)
 	PROCESSOR_EXTENSION_CXXFLAGS += \
-	-msse2 \
-	-mfpmath=sse
+		-msse2 \
+		-mfpmath=sse
 endif
 
 ifeq (arm,$(findstring arm,$(TARGET)))
 	SKIA_SRC += \
-		$(SKIA_OPTS_CXX_SRC_ARM)
-	PROCESSOR_EXTENSION_CXXFLAGS =
+		$(SKIA_OPTS_CXX_SRC_ARM_NEON)
+	PROCESSOR_EXTENSION_CXXFLAGS += \
+		-mthumb \
+		-march=armv7-a \
+		-mfloat-abi=softfp \
+		-D__ARM_HAVE_OPTIONAL_NEON_SUPPORT
 endif
 
 ifeq (aarch64,$(findstring aarch64,$(TARGET)))
 	SKIA_SRC += \
 		$(SKIA_OPTS_CXX_SRC_ARM_NEON)
-	PROCESSOR_EXTENSION_CXXFLAGS =
+	PROCESSOR_EXTENSION_CXXFLAGS += \
+		-D__ARM_HAVE_NEON
 endif
 
-SKIA_OBJS = $(patsubst %.cpp,$(OUT_DIR)/%.o,$(SKIA_SRC))
+SKIA_OBJS1 = $(patsubst %.cpp,$(OUT_DIR)/%.o,$(SKIA_SRC))
+SKIA_OBJS2 = $(patsubst %.c,$(OUT_DIR)/%.o,$(SKIA_OBJS1))
+SKIA_OBJS = $(patsubst %.S,$(OUT_DIR)/%.o,$(SKIA_OBJS2))
 
 .PHONY: all
 all: $(OUT_DIR)/libskia.a
@@ -669,7 +687,16 @@ $(OUT_DIR)/%opts_check_x86.o: %opts_check_x86.cpp $(OUT_DIR)/src/ports/SkAtomics
 $(OUT_DIR)/%SSE3.o: %SSE3.cpp $(OUT_DIR)/src/ports/SkAtomics_sync.h
 	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -mssse3 -o $@ $<
 
+$(OUT_DIR)/%_neon.o: %_neon.cpp $(OUT_DIR)/src/ports/SkAtomics_sync.h
+	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -mfpu=neon -o $@ $<
+
 $(OUT_DIR)/%.o: %.cpp $(OUT_DIR)/src/ports/SkAtomics_sync.h
+	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -o $@ $<
+
+$(OUT_DIR)/%.o: %.c $(OUT_DIR)/src/ports/SkAtomics_sync.h
+	mkdir -p `dirname $@` && $(CC) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -o $@ $<
+
+$(OUT_DIR)/%.o: %.S $(OUT_DIR)/src/ports/SkAtomics_sync.h
 	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -o $@ $<
 
 $(OUT_DIR)/libskia.a: $(SKIA_OBJS) src/skia-c.h
