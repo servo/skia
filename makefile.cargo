@@ -43,6 +43,8 @@ CXXFLAGS += \
 	-Iinclude/utils \
 	-Isrc/core \
 	-Isrc/image \
+	-Isrc/images \
+	-Isrc/lazy \
 	-Isrc/opts \
 	-Isrc/ports \
 	-Isrc/sfnt \
@@ -384,6 +386,13 @@ SKIA_IMAGE_CXX_SRC = \
 		SkSurface_Raster.cpp \
 	)
 
+SKIA_IMAGES_CXX_SRC = \
+	$(addprefix src/images/,\
+		SkImageEncoder.cpp \
+		SkImageEncoder_Factory.cpp \
+		SkImageEncoder_argb.cpp \
+	)
+
 SKIA_OPTS_CXX_SRC_X86 = \
 	$(addprefix src/opts/,\
 		SkBitmapFilter_opts_SSE2.cpp \
@@ -535,6 +544,8 @@ SKIA_PORTS_CXX_SRC = \
 		SkOSFile_posix.cpp \
 		SkOSFile_stdio.cpp \
 		SkTLS_pthread.cpp \
+		SkImageDecoder_CG.cpp \
+		SkImageDecoder_WIC.cpp \
 	)
 
 SKIA_FONTS_CXX_SRC =
@@ -626,6 +637,7 @@ SKIA_SRC = \
 	$(SKIA_FONTS_CXX_SRC) \
 	$(SKIA_GL_CXX_SRC) \
 	$(SKIA_IMAGE_CXX_SRC) \
+	$(SKIA_IMAGES_CXX_SRC) \
 	$(SKIA_PATHOPS_CXX_SRC) \
 	$(SKIA_PORTS_CXX_SRC) \
 	$(SKIA_SFNT_CXX_SRC) \
