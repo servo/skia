@@ -400,17 +400,6 @@ SKIA_OPTS_CXX_SRC_X86 = \
 		opts_check_x86.cpp \
 	)
 
-SKIA_OPTS_CXX_SRC_ARM = \
-	$(addprefix src/opts/,\
-		SkBitmapProcState_opts_none.cpp \
-		SkBlitMask_opts_none.cpp \
-		SkBlitRow_opts_none.cpp \
-		SkBlurImage_opts_none.cpp \
-		SkMorphology_opts_none.cpp \
-		SkUtils_opts_none.cpp \
-		SkXfermode_opts_none.cpp \
-	)
-
 SKIA_OPTS_CXX_SRC_ARM_NEON = \
 	$(addprefix src/opts/,\
 		memset.arm.S \
@@ -423,6 +412,24 @@ SKIA_OPTS_CXX_SRC_ARM_NEON = \
 		SkXfermode_opts_arm.cpp \
 		memset16_neon.S \
 		memset32_neon.S \
+		SkBitmapProcState_arm_neon.cpp \
+		SkBitmapProcState_matrixProcs_neon.cpp \
+		SkBlitMask_opts_arm_neon.cpp \
+		SkBlitRow_opts_arm_neon.cpp \
+		SkBlurImage_opts_neon.cpp \
+		SkMorphology_opts_neon.cpp \
+		SkXfermode_opts_arm_neon.cpp \
+	)
+
+SKIA_OPTS_CXX_SRC_AARCH64 = \
+	$(addprefix src/opts/,\
+		SkBitmapProcState_opts_arm.cpp \
+		SkBlitMask_opts_arm.cpp \
+		SkBlitRow_opts_arm.cpp \
+		SkBlurImage_opts_arm.cpp \
+		SkMorphology_opts_arm.cpp \
+		SkUtils_opts_none.cpp \
+		SkXfermode_opts_arm.cpp \
 		SkBitmapProcState_arm_neon.cpp \
 		SkBitmapProcState_matrixProcs_neon.cpp \
 		SkBlitMask_opts_arm_neon.cpp \
@@ -663,12 +670,13 @@ ifeq (arm,$(findstring arm,$(TARGET)))
 		-mthumb \
 		-march=armv7-a \
 		-mfloat-abi=softfp \
+		-mfpu=neon \
 		-D__ARM_HAVE_OPTIONAL_NEON_SUPPORT
 endif
 
 ifeq (aarch64,$(findstring aarch64,$(TARGET)))
 	SKIA_SRC += \
-		$(SKIA_OPTS_CXX_SRC_ARM_NEON)
+		$(SKIA_OPTS_CXX_SRC_AARCH64)
 	PROCESSOR_EXTENSION_CXXFLAGS += \
 		-D__ARM_HAVE_NEON
 endif
@@ -696,9 +704,6 @@ $(OUT_DIR)/%opts_check_x86.o: %opts_check_x86.cpp $(OUT_DIR)/src/ports/SkAtomics
 # at runtime.
 $(OUT_DIR)/%SSE3.o: %SSE3.cpp $(OUT_DIR)/src/ports/SkAtomics_sync.h
 	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -mssse3 -o $@ $<
-
-$(OUT_DIR)/%_neon.o: %_neon.cpp $(OUT_DIR)/src/ports/SkAtomics_sync.h
-	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -mfpu=neon -o $@ $<
 
 $(OUT_DIR)/%.o: %.cpp $(OUT_DIR)/src/ports/SkAtomics_sync.h
 	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -o $@ $<
