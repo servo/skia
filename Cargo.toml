@@ -7,7 +7,7 @@ links = "skia"
 build = "build.rs"
 
 [dependencies]
-euclid = "0.1"
+euclid = "0.2"
 gleam = "0.1"
 libc = "0.1"
 
