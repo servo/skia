@@ -14,6 +14,21 @@ libc = "0.1"
 [dependencies.expat-sys]
 git = "https://github.com/servo/libexpat"
 
+[target.i686-unknown-linux-gnu.dependencies.fontconfig]
+git = "https://github.com/servo/rust-fontconfig"
+
+[target.x86_64-unknown-linux-gnu.dependencies.fontconfig]
+git = "https://github.com/servo/rust-fontconfig"
+
+[target.arm-unknown-linux-gnueabihf.dependencies.fontconfig]
+git = "https://github.com/servo/rust-fontconfig"
+
+[target.aarch64-unknown-linux-gnu.dependencies.fontconfig]
+git = "https://github.com/servo/rust-fontconfig"
+
+[target.arm-linux-androideabi.dependencies.fontconfig]
+git = "https://github.com/servo/rust-fontconfig"
+
 [target.i686-unknown-linux-gnu.dependencies.freetype-sys]
 git = "https://github.com/servo/libfreetype2"
 
