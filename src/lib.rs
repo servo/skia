@@ -19,6 +19,9 @@ extern crate glx;
 #[cfg(target_os="android")]
 extern crate egl;
 
+#[cfg(target_os="android")]
+extern crate freetype_sys;
+
 pub use skia::{
     SkiaGrContextRef,
     SkiaGrGLInterfaceRef,
