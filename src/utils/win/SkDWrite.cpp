@@ -21,7 +21,7 @@ static void release_dwrite_factory() {
 }
 
 static void create_dwrite_factory(IDWriteFactory** factory) {
-    typedef decltype(DWriteCreateFactory)* DWriteCreateFactoryProc;
+    typedef DWRITEAPI HRESULT WINAPI (*DWriteCreateFactoryProc)(DWRITE_FACTORY_TYPE, REFIID, IUnknown**);
     DWriteCreateFactoryProc dWriteCreateFactoryProc = reinterpret_cast<DWriteCreateFactoryProc>(
         GetProcAddress(LoadLibraryW(L"dwrite.dll"), "DWriteCreateFactory"));
 

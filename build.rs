@@ -7,14 +7,23 @@ use std::env;
 
 
 fn main() {
+    let target = env::var("TARGET").unwrap();
+    let out_dir = env::var("OUT_DIR").unwrap();
+
     assert!(Command::new("make")
         .args(&["-R", "-f", "makefile.cargo", &format!("-j{}", env::var("NUM_JOBS").unwrap())])
         .status()
         .unwrap()
         .success());
-    let out_dir = env::var("OUT_DIR").unwrap();
     println!("cargo:rustc-link-search=native={}", out_dir);
-    println!("cargo:rustc-link-lib=static=skia");
+    if target.contains("windows") {
+        // The link ordering matters, so we don't include this in the
+        // rlib so that we can reference it multiple times (specifically from
+        // rust-azure).
+        println!("cargo:rustc-link-lib=skia");
+    } else {
+        println!("cargo:rustc-link-lib=static=skia");
+    }
     println!("cargo:rustc-link-lib=stdc++");
     println!("cargo:outdir={}", out_dir);
 
@@ -27,5 +36,8 @@ fn main() {
     } else if target.contains("apple-darwin") {
         println!("cargo:rustc-link-lib=framework=OpenGL");
         println!("cargo:rustc-link-lib=framework=ApplicationServices");
+    } else if target.contains("windows") {
+        println!("cargo:rustc-link-lib=usp10");
+        println!("cargo:rustc-link-lib=ole32");
     }
 }

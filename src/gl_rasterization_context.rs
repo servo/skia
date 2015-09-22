@@ -17,6 +17,8 @@ pub use gl_rasterization_context_cgl::GLRasterizationContext;
 pub use gl_rasterization_context_glx::GLRasterizationContext;
 #[cfg(target_os="android")]
 pub use gl_rasterization_context_android::GLRasterizationContext;
+#[cfg(target_os="windows")]
+pub use gl_rasterization_context_wgl::GLRasterizationContext;
 
 fn clear_gl_errors() {
     let mut error = gl::get_error();
