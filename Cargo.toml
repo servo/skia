@@ -5,6 +5,13 @@ version = "0.0.20130412"
 authors = ["The Skia Project Developers and The Servo Project Developers"]
 links = "skia"
 build = "build.rs"
+exclude = [
+    "experimental/*", 
+    "expectations/*", 
+    "platform_tools/*", 
+    "tools/*",
+    "tests/*",
+]
 
 [dependencies]
 euclid = "0.2"
