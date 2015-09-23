@@ -13,6 +13,19 @@ fn main() {
         .unwrap()
         .success());
     let out_dir = env::var("OUT_DIR").unwrap();
-    println!("cargo:rustc-flags=-L native={}", out_dir);
+    println!("cargo:rustc-link-search=native={}", out_dir);
+    println!("cargo:rustc-link-lib=static=skia");
+    println!("cargo:rustc-link-lib=stdc++");
     println!("cargo:outdir={}", out_dir);
+
+    let target = env::var("TARGET").unwrap();
+    if target.contains("unknown-linux-gnu") {
+        println!("cargo:rustc-link-lib=bz2");
+        println!("cargo:rustc-link-lib=GL");
+    } else if target.contains("eabi") {
+        println!("cargo:rustc-link-lib=GLESv2");
+    } else if target.contains("apple-darwin") {
+        println!("cargo:rustc-link-lib=framework=OpenGL");
+        println!("cargo:rustc-link-lib=framework=ApplicationServices");
+    }
 }

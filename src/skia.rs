@@ -11,7 +11,6 @@ use libc::*;
 pub type SkiaGrContextRef = *mut c_void;
 pub type SkiaGrGLInterfaceRef = *const c_void;
 
-#[link(name = "skia")]
 extern {
 
 pub fn SkiaGrGLCreateNativeInterface() -> SkiaGrGLInterfaceRef;
