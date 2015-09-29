@@ -17,6 +17,7 @@ exclude = [
 euclid = "0.3"
 gleam = "0.1"
 libc = "0.2"
+glutin = "0.3.5"
 
 [dependencies.expat-sys]
 git = "https://github.com/servo/libexpat"
@@ -36,6 +37,9 @@ git = "https://github.com/servo/rust-fontconfig"
 [target.arm-linux-androideabi.dependencies.fontconfig]
 git = "https://github.com/servo/rust-fontconfig"
 
+[target.x86_64-pc-windows-gnu.dependencies.fontconfig]
+git = "https://github.com/servo/rust-fontconfig"
+
 [target.i686-unknown-linux-gnu.dependencies.freetype-sys]
 git = "https://github.com/servo/libfreetype2"
 
@@ -49,6 +53,9 @@ git = "https://github.com/servo/libfreetype2"
 git = "https://github.com/servo/libfreetype2"
 
 [target.arm-linux-androideabi.dependencies.freetype-sys]
+git = "https://github.com/servo/libfreetype2"
+
+[target.x86_64-pc-windows-gnu.dependencies.freetype-sys]
 git = "https://github.com/servo/libfreetype2"
 
 [target.arm-linux-androideabi.dependencies.egl]

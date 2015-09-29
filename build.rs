@@ -7,12 +7,13 @@ use std::env;
 
 
 fn main() {
+    let out_dir = env::var("OUT_DIR").unwrap();
+
     assert!(Command::new("make")
         .args(&["-R", "-f", "makefile.cargo", &format!("-j{}", env::var("NUM_JOBS").unwrap())])
         .status()
         .unwrap()
         .success());
-    let out_dir = env::var("OUT_DIR").unwrap();
     println!("cargo:rustc-link-search=native={}", out_dir);
     println!("cargo:rustc-link-lib=static=skia");
     println!("cargo:rustc-link-lib=stdc++");
@@ -27,5 +28,8 @@ fn main() {
     } else if target.contains("apple-darwin") {
         println!("cargo:rustc-link-lib=framework=OpenGL");
         println!("cargo:rustc-link-lib=framework=ApplicationServices");
+    } else if target.contains("windows") {
+        println!("cargo:rustc-link-lib=usp10");
+        println!("cargo:rustc-link-lib=ole32");
     }
 }
