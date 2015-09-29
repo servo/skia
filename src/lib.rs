@@ -57,3 +57,7 @@ pub mod gl_context_android;
 #[cfg(target_os="android")]
 pub mod gl_rasterization_context_android;
 
+#[cfg(target_os="windows")]
+pub mod gl_context_wgl;
+#[cfg(target_os="windows")]
+pub mod gl_rasterization_context_wgl;
