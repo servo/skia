@@ -641,6 +641,7 @@ CXXFLAGS += \
 	-Wno-deprecated-declarations \
 	-D_WIN32_WINNT=0x0600 \
 	-DSK_BUILD_FOR_WIN32 \
+	-DSK_INCLUDE_FREETYPE \
 	-Iinclude/utils/win
 
 ifeq ("$(MSYSTEM)","MINGW64")
