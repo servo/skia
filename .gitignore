@@ -16,3 +16,4 @@ Makefile
 /doc
 /target
 /Cargo.lock
+*~
