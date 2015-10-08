@@ -1,4 +1,4 @@
-ifeq (eabi,$(findstring eabi,$(TARGET)))
+ifneq ($(HOST),$(TARGET))
 
 CC ?= $(TARGET)-gcc
 CXX ?= $(TARGET)-g++
