@@ -657,11 +657,24 @@ ifeq (arm,$(findstring arm,$(TARGET)))
 	SKIA_SRC += \
 		$(SKIA_OPTS_CXX_SRC_ARM_NEON)
 	PROCESSOR_EXTENSION_CXXFLAGS += \
-		-mthumb \
-		-march=armv7-a \
-		-mfloat-abi=softfp \
 		-mfpu=neon \
 		-D__ARM_HAVE_OPTIONAL_NEON_SUPPORT
+
+	# FIXME: Need more advanced detection of FP support
+	ifeq (eabihf,$(findstring eabihf,$(TARGET)))
+		PROCESSOR_EXTENSION_CXXFLAGS += \
+			-mfloat-abi=hard
+	else
+		PROCESSOR_EXTENSION_CXXFLAGS += \
+			-mfloat-abi=softfp
+	endif
+
+	ifneq ($(HOST),$(TARGET))
+		# FIXME: Assumes armv7 for cross compile
+		PROCESSOR_EXTENSION_CXXFLAGS += \
+			-march=armv7-a \
+			-mthumb
+	endif
 endif
 
 ifeq (aarch64,$(findstring aarch64,$(TARGET)))
