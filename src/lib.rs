@@ -19,8 +19,11 @@ extern crate glx;
 #[cfg(target_os="android")]
 extern crate egl;
 
-#[cfg(any(target_os="linux", target_os="android"))]
+#[cfg(any(target_os="linux", target_os="android", target_os="windows"))]
 extern crate freetype_sys;
+
+#[cfg(any(target_os="windows"))]
+extern crate fontconfig;
 
 pub use skia::{
     SkiaGrContextRef,
@@ -54,3 +57,7 @@ pub mod gl_context_android;
 #[cfg(target_os="android")]
 pub mod gl_rasterization_context_android;
 
+#[cfg(target_os="windows")]
+pub mod gl_context_wgl;
+#[cfg(target_os="windows")]
+pub mod gl_rasterization_context_wgl;
