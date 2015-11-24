@@ -6,9 +6,9 @@ authors = ["The Skia Project Developers and The Servo Project Developers"]
 links = "skia"
 build = "build.rs"
 exclude = [
-    "experimental/*", 
-    "expectations/*", 
-    "platform_tools/*", 
+    "experimental/*",
+    "expectations/*",
+    "platform_tools/*",
     "tools/*",
     "tests/*",
 ]
@@ -16,7 +16,7 @@ exclude = [
 [dependencies]
 euclid = "0.3"
 gleam = "0.1"
-libc = "0.1"
+libc = "0.2"
 
 [dependencies.expat-sys]
 git = "https://github.com/servo/libexpat"
