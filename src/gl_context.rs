@@ -29,6 +29,11 @@ pub use gl_context_android::GLPlatformContext;
 #[cfg(target_os="android")]
 pub use gl_context_android::PlatformDisplayData;
 
+#[cfg(target_os="windows")]
+pub use gl_context_wgl::GLPlatformContext;
+#[cfg(target_os="windows")]
+pub use gl_context_wgl::PlatformDisplayData;
+
 pub struct GLContext {
     pub platform_context: GLPlatformContext,
     pub gr_context: skia::SkiaGrContextRef,

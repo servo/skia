@@ -27,6 +27,9 @@
 #include "SkTemplates.h"
 #include "SkThread.h"
 
+// Hi, windows.h!
+#undef ERROR
+
 #if defined(SK_CAN_USE_DLOPEN)
 #include <dlfcn.h>
 #endif
