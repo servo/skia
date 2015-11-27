@@ -1,8 +1,12 @@
 [package]
 
-name = "skia"
-version = "0.0.20130412"
+name = "servo-skia"
+version = "0.20130412.0"
 authors = ["The Skia Project Developers and The Servo Project Developers"]
+description = "2D graphic library for drawing Text, Geometries, and Images"
+license = "BSD-3-Clause"
+repository ="https://github.com/servo/skia/"
+homepage = "https://skia.org/"
 links = "skia"
 build = "build.rs"
 exclude = [
@@ -13,85 +17,49 @@ exclude = [
     "tests/*",
 ]
 
+[lib]
+name = "skia"
+
 [dependencies]
 euclid = "0.4"
 gleam = "0.1"
 libc = "0.2"
 glutin = "0.4"
+expat-sys = "2.1.0"
 
-[dependencies.expat-sys]
-git = "https://github.com/servo/libexpat"
+[target.i686-unknown-linux-gnu.dependencies]
+servo-fontconfig = "0.2"
+servo-freetype-sys = "2.4.11"
+x11 = { version = "2.0.0", features = ["xlib"] }
+glx = "0.1.0"
 
-[target.i686-unknown-linux-gnu.dependencies.fontconfig]
-git = "https://github.com/servo/rust-fontconfig"
+[target.x86_64-unknown-linux-gnu.dependencies]
+servo-fontconfig = "0.2"
+servo-freetype-sys = "2.4.11"
+x11 = { version = "2.0.0", features = ["xlib"] }
+glx = "0.1.0"
 
-[target.x86_64-unknown-linux-gnu.dependencies.fontconfig]
-git = "https://github.com/servo/rust-fontconfig"
+[target.arm-unknown-linux-gnueabihf.dependencies]
+servo-fontconfig = "0.2"
+servo-freetype-sys = "2.4.11"
+x11 = { version = "2.0.0", features = ["xlib"] }
+glx = "0.1.0"
 
-[target.arm-unknown-linux-gnueabihf.dependencies.fontconfig]
-git = "https://github.com/servo/rust-fontconfig"
+[target.aarch64-unknown-linux-gnu.dependencies]
+servo-fontconfig = "0.2"
+servo-freetype-sys = "2.4.11"
+x11 = { version = "2.0.0", features = ["xlib"] }
+glx = "0.1.0"
 
-[target.aarch64-unknown-linux-gnu.dependencies.fontconfig]
-git = "https://github.com/servo/rust-fontconfig"
+[target.arm-linux-androideabi.dependencies]
+servo-fontconfig = "0.2"
+servo-freetype-sys = "2.4.11"
+servo-egl = "0.2"
 
-[target.arm-linux-androideabi.dependencies.fontconfig]
-git = "https://github.com/servo/rust-fontconfig"
-
-[target.x86_64-pc-windows-gnu.dependencies.fontconfig]
-git = "https://github.com/servo/rust-fontconfig"
-
-[target.i686-unknown-linux-gnu.dependencies.freetype-sys]
-git = "https://github.com/servo/libfreetype2"
-
-[target.x86_64-unknown-linux-gnu.dependencies.freetype-sys]
-git = "https://github.com/servo/libfreetype2"
-
-[target.arm-unknown-linux-gnueabihf.dependencies.freetype-sys]
-git = "https://github.com/servo/libfreetype2"
-
-[target.aarch64-unknown-linux-gnu.dependencies.freetype-sys]
-git = "https://github.com/servo/libfreetype2"
-
-[target.arm-linux-androideabi.dependencies.freetype-sys]
-git = "https://github.com/servo/libfreetype2"
-
-[target.x86_64-pc-windows-gnu.dependencies.freetype-sys]
-git = "https://github.com/servo/libfreetype2"
-
-[target.arm-linux-androideabi.dependencies.egl]
-git = "https://github.com/servo/rust-egl"
-
-[target.i686-unknown-linux-gnu.dependencies.glx]
-git = "https://github.com/servo/rust-glx"
-
-[target.x86_64-unknown-linux-gnu.dependencies.glx]
-git = "https://github.com/servo/rust-glx"
-
-[target.arm-unknown-linux-gnueabihf.dependencies.glx]
-git = "https://github.com/servo/rust-glx"
-
-[target.aarch64-unknown-linux-gnu.dependencies.glx]
-git = "https://github.com/servo/rust-glx"
-
-[target.i686-unknown-linux-gnu.dependencies.x11]
-version = "2.0.0"
-features = ["xlib"]
-
-[target.x86_64-unknown-linux-gnu.dependencies.x11]
-version = "2.0.0"
-features = ["xlib"]
-
-[target.arm-unknown-linux-gnueabihf.dependencies.x11]
-version = "2.0.0"
-features = ["xlib"]
-
-[target.aarch64-unknown-linux-gnu.dependencies.x11]
-version = "2.0.0"
-features = ["xlib"]
+[target.x86_64-pc-windows-gnu.dependencies]
+servo-fontconfig = "0.2"
+servo-freetype-sys = "2.4.11"
 
 [target.x86_64-apple-darwin.dependencies]
 cgl = "0.1"
-
-[target.x86_64-apple-darwin.dependencies.io-surface]
-git = "https://github.com/servo/io-surface-rs"
-
+io-surface = "0.1.0"
