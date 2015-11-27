@@ -14,7 +14,7 @@ exclude = [
 ]
 
 [dependencies]
-euclid = "0.3"
+euclid = "0.4"
 gleam = "0.1"
 libc = "0.2"
 glutin = "0.4"
