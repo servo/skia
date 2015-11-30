@@ -1,4 +1,9 @@
 sudo: false
+addons:
+  apt:
+    packages:
+    - libxxf86vm-dev
+    - libosmesa6-dev
 language: rust
 rust: nightly
 branches:
