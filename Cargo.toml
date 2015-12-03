@@ -1,7 +1,7 @@
 [package]
 
 name = "skia-sys"
-version = "0.20130412.2"
+version = "0.20130412.3"
 authors = ["The Skia Project Developers and The Servo Project Developers"]
 description = "2D graphic library for drawing Text, Geometries, and Images. FFI bindings only."
 license = "BSD-3-Clause"
