@@ -1,63 +1,28 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-extern crate euclid;
-extern crate gleam;
+#![allow(non_upper_case_globals)]
+#![allow(non_camel_case_types)]
+#![allow(non_snake_case)]
+
 extern crate libc;
 
-#[cfg(target_os="macos")]
-extern crate cgl;
-#[cfg(target_os="macos")]
-extern crate io_surface;
+use libc::*;
 
-#[cfg(target_os="linux")]
-extern crate x11;
-#[cfg(target_os="linux")]
-extern crate glx;
+pub type SkiaGrContextRef = *mut c_void;
+pub type SkiaGrGLInterfaceRef = *const c_void;
 
-#[cfg(target_os="android")]
-extern crate egl;
+extern {
 
-#[cfg(any(target_os="linux", target_os="android", target_os="windows"))]
-extern crate freetype_sys;
+pub fn SkiaGrGLCreateNativeInterface() -> SkiaGrGLInterfaceRef;
+pub fn SkiaGrGLInterfaceRetain(anInterface: SkiaGrGLInterfaceRef);
+pub fn SkiaGrGLInterfaceRelease(anInterface: SkiaGrGLInterfaceRef);
+pub fn SkiaGrGLInterfaceHasExtension(anInterface: SkiaGrGLInterfaceRef, extension: *const c_char) -> bool;
+pub fn SkiaGrGLInterfaceGLVersionGreaterThanOrEqualTo(anInterface: SkiaGrGLInterfaceRef, major: i32, minor: i32) -> bool;
 
-#[cfg(any(target_os="windows"))]
-extern crate fontconfig;
+pub fn SkiaGrContextCreate(anInterface: SkiaGrGLInterfaceRef) -> SkiaGrContextRef;
+pub fn SkiaGrContextRetain(aContext: SkiaGrContextRef);
+pub fn SkiaGrContextRelease(aContext: SkiaGrContextRef);
 
-pub use skia::{
-    SkiaGrContextRef,
-    SkiaGrGLInterfaceRef,
-    SkiaGrGLCreateNativeInterface,
-    SkiaGrGLInterfaceRetain,
-    SkiaGrGLInterfaceRelease,
-    SkiaGrGLInterfaceHasExtension,
-    SkiaGrGLInterfaceGLVersionGreaterThanOrEqualTo,
-    SkiaGrContextCreate,
-    SkiaGrContextRetain,
-    SkiaGrContextRelease,
-};
-
-pub mod gl_context;
-pub mod gl_rasterization_context;
-pub mod skia;
-
-#[cfg(target_os="linux")]
-pub mod gl_context_glx;
-#[cfg(target_os="linux")]
-pub mod gl_rasterization_context_glx;
-
-#[cfg(target_os="macos")]
-pub mod gl_context_cgl;
-#[cfg(target_os="macos")]
-pub mod gl_rasterization_context_cgl;
-
-#[cfg(target_os="android")]
-pub mod gl_context_android;
-#[cfg(target_os="android")]
-pub mod gl_rasterization_context_android;
-
-#[cfg(target_os="windows")]
-pub mod gl_context_wgl;
-#[cfg(target_os="windows")]
-pub mod gl_rasterization_context_wgl;
+}

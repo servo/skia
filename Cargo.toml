@@ -1,9 +1,9 @@
 [package]
 
-name = "servo-skia"
+name = "skia-sys"
 version = "0.20130412.2"
 authors = ["The Skia Project Developers and The Servo Project Developers"]
-description = "2D graphic library for drawing Text, Geometries, and Images"
+description = "2D graphic library for drawing Text, Geometries, and Images. FFI bindings only."
 license = "BSD-3-Clause"
 repository ="https://github.com/servo/skia/"
 homepage = "https://skia.org/"
@@ -18,48 +18,7 @@ exclude = [
 ]
 
 [lib]
-name = "skia"
+name = "skia_sys"
 
 [dependencies]
-euclid = "0.4"
-gleam = "0.1"
 libc = "0.2"
-servo-glutin = "0.4"
-expat-sys = "2.1.0"
-
-[target.i686-unknown-linux-gnu.dependencies]
-servo-fontconfig = "0.2"
-servo-freetype-sys = "2.4.11"
-x11 = { version = "2.0.0", features = ["xlib"] }
-glx = "0.1.0"
-
-[target.x86_64-unknown-linux-gnu.dependencies]
-servo-fontconfig = "0.2"
-servo-freetype-sys = "2.4.11"
-x11 = { version = "2.0.0", features = ["xlib"] }
-glx = "0.1.0"
-
-[target.arm-unknown-linux-gnueabihf.dependencies]
-servo-fontconfig = "0.2"
-servo-freetype-sys = "2.4.11"
-x11 = { version = "2.0.0", features = ["xlib"] }
-glx = "0.1.0"
-
-[target.aarch64-unknown-linux-gnu.dependencies]
-servo-fontconfig = "0.2"
-servo-freetype-sys = "2.4.11"
-x11 = { version = "2.0.0", features = ["xlib"] }
-glx = "0.1.0"
-
-[target.arm-linux-androideabi.dependencies]
-servo-fontconfig = "0.2"
-servo-freetype-sys = "2.4.11"
-servo-egl = "0.2"
-
-[target.x86_64-pc-windows-gnu.dependencies]
-servo-fontconfig = "0.2"
-servo-freetype-sys = "2.4.11"
-
-[target.x86_64-apple-darwin.dependencies]
-cgl = "0.1"
-io-surface = "0.1.0"
