@@ -483,7 +483,6 @@ SKIA_SFNT_CXX_SRC = \
 SKIA_UTILS_CXX_SRC = \
 	$(addprefix src/utils/,\
 		SkBase64.cpp \
-		SkBitmapHasher.cpp \
 		SkBitSet.cpp \
 		SkBoundaryPatch.cpp \
 		SkCamera.cpp \
