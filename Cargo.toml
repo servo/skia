@@ -22,3 +22,30 @@ name = "skia_sys"
 
 [dependencies]
 libc = "0.2"
+expat-sys = "2.1.0"
+
+[target.i686-unknown-linux-gnu.dependencies]
+servo-fontconfig-sys = "2.11"
+servo-freetype-sys = "2.4.11"
+[target.x86_64-unknown-linux-gnu.dependencies]
+servo-fontconfig-sys = "2.11"
+servo-freetype-sys = "2.4.11"
+[target.arm-unknown-linux-gnueabihf.dependencies]
+servo-fontconfig-sys = "2.11"
+servo-freetype-sys = "2.4.11"
+[target.aarch64-unknown-linux-gnu.dependencies]
+servo-fontconfig-sys = "2.11"
+servo-freetype-sys = "2.4.11"
+
+[target.arm-linux-androideabi.dependencies]
+servo-fontconfig-sys = "2.11"
+servo-freetype-sys = "2.4.11"
+[target.aarch64-linux-android.dependencies]
+servo-fontconfig-sys = "2.11"
+servo-freetype-sys = "2.4.11"
+[target.i686-linux-android.dependencies]
+servo-fontconfig-sys = "2.11"
+servo-freetype-sys = "2.4.11"
+[target.x86_64-linux-android.dependencies]
+servo-fontconfig-sys = "2.11"
+servo-freetype-sys = "2.4.11"
