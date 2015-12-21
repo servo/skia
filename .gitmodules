@@ -1,0 +1,3 @@
+[submodule "skia-c"]
+	path = skia-c
+	url = https://github.com/DiamondLovesYou/skia-c.git

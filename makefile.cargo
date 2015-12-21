@@ -688,6 +688,7 @@ endif
 
 SKIA_SRC = \
 	src/skia-c.cpp \
+        skia-c/src/skia.cpp \
 	$(SKIA_CORE_CXX_SRC) \
 	$(SKIA_EFFECTS_CXX_SRC) \
 	$(SKIA_FONTS_CXX_SRC) \
