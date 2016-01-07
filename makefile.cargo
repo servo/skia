@@ -36,6 +36,7 @@ endif
 CXXFLAGS += \
 	-DSK_A32_SHIFT=24 -DSK_R32_SHIFT=16 -DSK_G32_SHIFT=8 -DSK_B32_SHIFT=0 \
 	-DGR_GL_USE_NEW_SHADER_SOURCE_SIGNATURE=1 \
+	-I"$(DEP_FONTCONFIG_INCDIR)" \
 	-I"$(DEP_FREETYPE_OUTDIR)/include" \
 	-I"$(DEP_EXPAT_OUTDIR)/include" \
 	-Iinclude/config \
@@ -55,8 +56,7 @@ CXXFLAGS += \
 	-Isrc/utils \
 	-Ithird_party/etc1 \
 	-Ithird_party/ktx \
-	-iquote src/gpu \
-	-I/usr/include/freetype2
+	-iquote src/gpu
 
 USE_CLANG = $(shell $(CXX) --version|grep -c 'clang')
 ifeq ($(USE_CLANG),1)
@@ -557,7 +557,7 @@ SKIA_UTILS_CXX_SRC += \
 	)
 endif
 
-ifeq (androideabi,$(findstring androideabi,$(TARGET)))
+ifeq (android,$(findstring android,$(TARGET)))
 CXXFLAGS += \
 	-DSK_BUILD_FOR_ANDROID \
 	-DEGL_EGLEXT_PROTOTYPES \
@@ -687,6 +687,7 @@ endif
 
 SKIA_SRC = \
 	src/skia-c.cpp \
+        skia-c/src/skia.cpp \
 	$(SKIA_CORE_CXX_SRC) \
 	$(SKIA_EFFECTS_CXX_SRC) \
 	$(SKIA_FONTS_CXX_SRC) \
@@ -764,19 +765,19 @@ $(OUT_DIR)/%opts_check_x86.o: %opts_check_x86.cpp $(OUT_DIR)/src/ports/SkAtomics
 # those extensions for all processors. We only enable those extensions when compiling
 # that file. Skia will not call the code if it does not detect SSE3 support
 # at runtime.
-$(OUT_DIR)/%SSE3.o: %SSE3.cpp $(OUT_DIR)/src/ports/SkAtomics_sync.h
+$(OUT_DIR)/%SSE3.o: %SSE3.cpp $(OUT_DIR)/src/ports/SkAtomics_sync.h makefile.cargo
 	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -mssse3 -o $@ $<
 
-$(OUT_DIR)/%.o: %.cpp $(OUT_DIR)/src/ports/SkAtomics_sync.h
+$(OUT_DIR)/%.o: %.cpp $(OUT_DIR)/src/ports/SkAtomics_sync.h makefile.cargo
 	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -o $@ $<
 
-$(OUT_DIR)/%.o: %.c $(OUT_DIR)/src/ports/SkAtomics_sync.h
+$(OUT_DIR)/%.o: %.c $(OUT_DIR)/src/ports/SkAtomics_sync.h makefile.cargo
 	mkdir -p `dirname $@` && $(CC) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -o $@ $<
 
-$(OUT_DIR)/%.o: %.S $(OUT_DIR)/src/ports/SkAtomics_sync.h
+$(OUT_DIR)/%.o: %.S $(OUT_DIR)/src/ports/SkAtomics_sync.h makefile.cargo
 	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -o $@ $<
 
-$(OUT_DIR)/libskia.a: $(SKIA_OBJS) src/skia-c.h
+$(OUT_DIR)/libskia.a: $(SKIA_OBJS) src/skia-c.h makefile.cargo
 	cp -R include $(OUT_DIR)
 	cp src/skia-c.h $(OUT_DIR)/include
 	cd $(OUT_DIR) && $(AR) rcs $(subst $(OUT_DIR)/,,$@) $(subst $(OUT_DIR)/,,$(SKIA_OBJS))
