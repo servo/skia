@@ -36,6 +36,7 @@ endif
 CXXFLAGS += \
 	-DSK_A32_SHIFT=24 -DSK_R32_SHIFT=16 -DSK_G32_SHIFT=8 -DSK_B32_SHIFT=0 \
 	-DGR_GL_USE_NEW_SHADER_SOURCE_SIGNATURE=1 \
+	-I"$(DEP_FONTCONFIG_INCDIR)" \
 	-I"$(DEP_FREETYPE_OUTDIR)/include" \
 	-I"$(DEP_EXPAT_OUTDIR)/include" \
 	-Iinclude/config \
@@ -55,8 +56,7 @@ CXXFLAGS += \
 	-Isrc/utils \
 	-Ithird_party/etc1 \
 	-Ithird_party/ktx \
-	-iquote src/gpu \
-	-I/usr/include/freetype2
+	-iquote src/gpu
 
 USE_CLANG = $(shell $(CXX) --version|grep -c 'clang')
 ifeq ($(USE_CLANG),1)
