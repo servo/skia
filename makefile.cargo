@@ -558,7 +558,7 @@ SKIA_UTILS_CXX_SRC += \
 	)
 endif
 
-ifeq (androideabi,$(findstring androideabi,$(TARGET)))
+ifeq (android,$(findstring android,$(TARGET)))
 CXXFLAGS += \
 	-DSK_BUILD_FOR_ANDROID \
 	-DEGL_EGLEXT_PROTOTYPES \
