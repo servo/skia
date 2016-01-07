@@ -766,19 +766,19 @@ $(OUT_DIR)/%opts_check_x86.o: %opts_check_x86.cpp $(OUT_DIR)/src/ports/SkAtomics
 # those extensions for all processors. We only enable those extensions when compiling
 # that file. Skia will not call the code if it does not detect SSE3 support
 # at runtime.
-$(OUT_DIR)/%SSE3.o: %SSE3.cpp $(OUT_DIR)/src/ports/SkAtomics_sync.h
+$(OUT_DIR)/%SSE3.o: %SSE3.cpp $(OUT_DIR)/src/ports/SkAtomics_sync.h makefile.cargo
 	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -mssse3 -o $@ $<
 
-$(OUT_DIR)/%.o: %.cpp $(OUT_DIR)/src/ports/SkAtomics_sync.h
+$(OUT_DIR)/%.o: %.cpp $(OUT_DIR)/src/ports/SkAtomics_sync.h makefile.cargo
 	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -o $@ $<
 
-$(OUT_DIR)/%.o: %.c $(OUT_DIR)/src/ports/SkAtomics_sync.h
+$(OUT_DIR)/%.o: %.c $(OUT_DIR)/src/ports/SkAtomics_sync.h makefile.cargo
 	mkdir -p `dirname $@` && $(CC) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -o $@ $<
 
-$(OUT_DIR)/%.o: %.S $(OUT_DIR)/src/ports/SkAtomics_sync.h
+$(OUT_DIR)/%.o: %.S $(OUT_DIR)/src/ports/SkAtomics_sync.h makefile.cargo
 	mkdir -p `dirname $@` && $(CXX) -c $(CXXFLAGS) $(PROCESSOR_EXTENSION_CXXFLAGS) -o $@ $<
 
-$(OUT_DIR)/libskia.a: $(SKIA_OBJS) src/skia-c.h
+$(OUT_DIR)/libskia.a: $(SKIA_OBJS) src/skia-c.h makefile.cargo
 	cp -R include $(OUT_DIR)
 	cp src/skia-c.h $(OUT_DIR)/include
 	cd $(OUT_DIR) && $(AR) rcs $(subst $(OUT_DIR)/,,$@) $(subst $(OUT_DIR)/,,$(SKIA_OBJS))
