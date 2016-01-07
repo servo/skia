@@ -49,3 +49,7 @@ servo-freetype-sys = "2.4.11"
 [target.x86_64-linux-android.dependencies]
 servo-fontconfig-sys = "2.11"
 servo-freetype-sys = "2.4.11"
+
+[target.x86_64-pc-windows-gnu.dependencies]
+servo-fontconfig-sys = "2.11"
+servo-freetype-sys = "2.4.11"
