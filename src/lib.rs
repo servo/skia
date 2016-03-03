@@ -35,13 +35,17 @@ pub fn SkiaGrContextRelease(aContext: SkiaGrContextRef);
 
 }
 
+pub type Bitmap    = *mut c_void;
+pub type ColorTable = *mut c_void;
 pub type Surface   = *mut c_void;
 pub type Image     = *mut c_void;
 pub type Data      = *mut c_void;
 pub type Path      = *mut c_void;
+pub type PathEffect = *mut c_void;
 pub type Paint     = *mut c_void;
 pub type Typeface  = *mut c_void;
 pub type GrContext = *mut c_void;
+pub type StrokeRec = [u8; 4 + 4 + 4 + 4 + 1];
 
 pub type Color = libc::uint32_t;
 
@@ -278,7 +282,12 @@ extern {
     pub fn sk_color_get_r(c: Color) -> libc::uint8_t;
     pub fn sk_color_get_g(c: Color) -> libc::uint8_t;
     pub fn sk_color_get_b(c: Color) -> libc::uint8_t;
+    pub fn sk_color_premul(c: Color) -> Color;
 
+    pub fn sk_color_table_ref(ct: ColorTable);
+    pub fn sk_color_table_unref(ct: ColorTable);
+    pub fn sk_path_effect_ref(e: PathEffect);
+    pub fn sk_path_effect_unref(e: PathEffect);
     pub fn sk_surface_ref(s: Surface) -> Error;
     pub fn sk_surface_unref(s: Surface) -> Error;
     pub fn sk_image_ref(i: Image) -> Error;
@@ -301,8 +310,27 @@ extern {
     pub fn sk_typeface_create_from_path(path: *const libc::c_char,
                                         path_len: libc::size_t) -> Typeface;
 
+    pub fn sk_new_corner_path_effect(radius: libc::c_float) -> PathEffect;
+    pub fn sk_path_effect_filter_path(effect: PathEffect, dest: Path, src: Path,
+                                      stroke: *const StrokeRec, cull: *const Rect) -> bool;
+
+    pub fn sk_new_color_table(colors: *const Color, len: libc::size_t,
+                              alpha_type: AlphaType) -> ColorTable;
+
+    pub fn sk_new_empty_bitmap() -> Bitmap;
+    pub fn sk_reset_bitmap(bm: Bitmap);
+    pub fn sk_delete_bitmap(bm: Bitmap);
+    pub fn sk_bitmap_draws_nothing(bm: Bitmap) -> bool;
+    pub fn sk_bitmap_get_immutable(bm: Bitmap) -> bool;
+    pub fn sk_bitmap_set_immutable(bm: Bitmap);
+    pub fn sk_bitmap_row_bytes(bm: Bitmap) -> libc::size_t;
+    pub fn sk_bitmap_get_image_info(bm: Bitmap) -> ImageInfo;
+    pub fn sk_bitmap_set_image_info(bm: Bitmap, info: ImageInfo, row_bytes: libc::size_t) -> bool;
+    pub fn sk_bitmap_get_pixels(bm: Bitmap) -> *mut libc::c_void;
+    pub fn sk_bitmap_set_pixels(bm: Bitmap, pixels: *mut libc::c_void, ctable: ColorTable);
+
     pub fn sk_new_paint() -> Paint;
-    pub fn sk_new_paint_copy(p: Paint) -> Paint;
+    pub fn sk_copy_paint(p: Paint) -> Paint;
     pub fn sk_paint_reset(p: Paint) -> Error;
     pub fn sk_paint_get_color(p: Paint) -> Color;
     pub fn sk_paint_set_color(p: Paint, c: Color);
@@ -324,6 +352,8 @@ extern {
     pub fn sk_paint_set_text_encoding(p: Paint, encoding: TextEncoding);
     pub fn sk_paint_get_style(p: Paint) -> PaintStyle;
     pub fn sk_paint_set_style(p: Paint, s: PaintStyle);
+    pub fn sk_paint_get_path_effect(p: Paint) -> PathEffect;
+    pub fn sk_paint_set_path_effect(p: Paint, effect: PathEffect);
     pub fn sk_paint_measure_text(p: Paint, text: *const libc::c_void, length: libc::size_t,
                                  bounds: *mut Rect, scale: libc::c_float) -> libc::c_float;
 
@@ -349,12 +379,17 @@ extern {
     pub fn sk_surface_discard(s: Surface);
     pub fn sk_surface_save_layer_alpha(s: Surface, bounds: *const Rect, alpha: u8) -> libc::c_int;
 
+    pub fn sk_surface_clear(s: Surface, c: Color);
+
     pub fn sk_clip_rect(s: Surface, rect: Rect) -> Error;
     pub fn sk_draw_paint(s: Surface, paint: Paint) -> Error;
     pub fn sk_surface_draw_line(s: Surface, paint: Paint, start: Point, end: Point);
     pub fn sk_draw_points(s: Surface, paint: Paint, mode: PointMode,
                           points: *const Point, count: libc::size_t) -> Error;
     pub fn sk_draw_path(s: Surface, paint: Paint, path: Path) -> Error;
+    pub fn sk_draw_bitmap_rect_to_rect(s: Surface, paint: Paint,
+                                       bm: Bitmap, src: *const Rect,
+                                       dest: Rect, bleed: bool);
     //pub fn sk_draw_image_rect(s: Surface, paint: Paint, src: *const Rect,
     //                          dest: Rect, img: Image, constraint: SrcRectConstraint) -> Error;
     pub fn sk_draw_text(s: Surface, paint: Paint, pos: Point, text: *const libc::c_void,
