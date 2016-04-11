@@ -1,7 +1,7 @@
 [package]
 
 name = "servo-skia"
-version = "0.20130412.6"
+version = "0.20130412.7"
 authors = ["The Skia Project Developers and The Servo Project Developers"]
 description = "2D graphic library for drawing Text, Geometries, and Images"
 license = "BSD-3-Clause"
@@ -12,7 +12,11 @@ build = "build.rs"
 exclude = [
     "experimental/*",
     "expectations/*",
+    "gm/tests/*",
+    "gm/rebaseline_server/*",
     "platform_tools/android/bin/*",
+    "platform_tools/android/examples/*",
+    "platform_tools/android/tests/*",
     "tools/*",
     "tests/*",
 ]
