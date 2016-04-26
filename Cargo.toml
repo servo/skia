@@ -49,6 +49,12 @@ servo-freetype-sys = "2.4.11"
 x11 = { version = "2.0.0", features = ["xlib"] }
 glx = "0.1.0"
 
+[target.armv7-unknown-linux-gnueabihf.dependencies]
+servo-fontconfig = "0.2"
+servo-freetype-sys = "2.4.11"
+x11 = { version = "2.0.0", features = ["xlib"] }
+glx = "0.1.0"
+
 [target.aarch64-unknown-linux-gnu.dependencies]
 servo-fontconfig = "0.2"
 servo-freetype-sys = "2.4.11"
