@@ -31,7 +31,7 @@ libc = "0.2"
 servo-glutin = "0.4"
 expat-sys = "2.1.1"
 
-[target.'cfg(any(target_os = "android", target_os = "linux", target_os = "windows"))'.dependencies]
+[target.'cfg(any(target_os = "android", target_os = "linux", all(target_os = "windows", target_env = "gnu")))'.dependencies]
 servo-fontconfig = "0.2"
 servo-freetype-sys = "2.4.11"
 
@@ -45,3 +45,7 @@ servo-egl = "0.2"
 [target.'cfg(target_os = "macos")'.dependencies]
 cgl = "0.1"
 io-surface = "0.2.0"
+
+[build-dependencies]
+cmake = "0.1"
+
