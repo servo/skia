@@ -19,10 +19,10 @@ extern crate glx;
 #[cfg(target_os="android")]
 extern crate egl;
 
-#[cfg(any(target_os="linux", target_os="android", target_os="windows"))]
+#[cfg(any(target_os="linux", target_os="android", all(target_os="windows", target_env="gnu")))]
 extern crate freetype_sys;
 
-#[cfg(any(target_os="windows"))]
+#[cfg(all(target_os="windows", target_env="gnu"))]
 extern crate fontconfig;
 
 pub use skia::{
