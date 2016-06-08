@@ -1,23 +1,47 @@
 project(skia)
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8)
 
 # Needed to avoid error
-set(DUMMY ${CMAKE_BUILD_TYPE})
+#set(DUMMY ${CMAKE_BUILD_TYPE})
 
 function(set_prefix var prefix)
   string(REGEX REPLACE "(^|;)([^;]+)" "\\1${prefix}\\2" tmp "${ARGN}")
   set(${var} "${tmp}" PARENT_SCOPE)
 endfunction()
 
+# Use ccache if available
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+endif(CCACHE_FOUND)
+
+if("$ENV{CFG_ENABLE_DEBUG_SKIA}" STREQUAL "1")
+  add_definitions(
+    -DDSK_DEBUG
+    -DGR_DEBUG=1
+    -DGR_GL_LOG_CALLS=1
+    -DGR_GL_LOG_CALLS_START=1
+  )
+else()
+  add_definitions(
+    -DSK_RELEASE
+    -DGR_RELEASE=1
+  )
+endif()
+
 add_definitions(
-  -DSK_RELEASE
-  -DGR_RELEASE=1
   -DSK_A32_SHIFT=24
   -DSK_R32_SHIFT=16
   -DSK_G32_SHIFT=8
   -DSK_B32_SHIFT=0
   -DGR_GL_USE_NEW_SHADER_SOURCE_SIGNATURE=1
 )
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_definitions(-Wno-c++11-extensions)
+endif()
+
 include_directories(
   $ENV{DEP_FREETYPE_OUTDIR}
   $ENV{DEP_EXPAT_OUTDIR}/include
@@ -482,16 +506,50 @@ set_prefix(SKIA_THIRDPARTY_SRC third_party/
   ktx/ktx.cpp
   )
 
+if(APPLE)
+  add_definitions(-DSK_USE_POSIX_THREADS)
+  include_directories(include/utils/mac)
+  include_directories(src/utils/mac)
+
+  set_prefix(SKIA_GL_PLATFORM_SRC src/gpu/gl/mac/
+    GrGLCreateNativeInterface_mac.cpp
+    SkNativeGLContext_mac.cpp
+    )
+
+  set_prefix(SKIA_PORTS_SRC src/ports/
+    SkDebug_stdio.cpp
+    SkFontHost_mac.cpp
+    SkGlobalInitialization_default.cpp
+    SkImageDecoder_empty.cpp
+    SkMemory_malloc.cpp
+    SkOSFile_posix.cpp
+    SkOSFile_stdio.cpp
+    SkTLS_pthread.cpp
+    )
+
+  set(SKIA_FONTS_SRC "")
+
+  set_prefix(SKIA_UTILS_PLATFORM_SRC src/utils/mac/
+    SkCreateCGImageRef.cpp
+    SkStream_mac.cpp
+    )
+endif() # MacOS X
+
 if(WIN32)
-  add_definitions(-D_WIN32_WINNT=0x0600 -DSK_BUILD_FOR_WIN32 -DSK_INCLUDE_FREETYPE)
+  add_definitions(-D_WIN32_WINNT=0x0600 -DSK_BUILD_FOR_WIN32)
   include_directories(include/utils/win)
   include_directories(src/utils/win)
 
-  set_prefix(SKIA_GL_WIN32_SRC src/gpu/gl/win/
+  if (CMAKE_COMPILER_IS_GNUCC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++0x -Wno-deprecated-declarations")
+    include_directories(/mingw64/include/freetype2)
+  endif()
+
+  set_prefix(SKIA_GL_PLATFORM_SRC src/gpu/gl/win/
     GrGLCreateNativeInterface_win.cpp
     SkNativeGLContext_win.cpp
     )
-  set(SKIA_GL_SRC "${SKIA_GL_SRC};${SKIA_GL_WIN32_SRC}")
+
   set_prefix(SKIA_PORTS_SRC src/ports/
     SkDebug_win.cpp
     SkFontHost_win.cpp
@@ -503,42 +561,99 @@ if(WIN32)
     SkTLS_win.cpp
     )
 
-  set_prefix(SKIA_PORTS_FC_SRC src/ports/
-    SkFontConfigInterface_direct.cpp
-    SkFontHost_FreeType.cpp
-    SkFontHost_FreeType_common.cpp
-    SkFontHost_fontconfig.cpp
-    )
-  set_prefix(SKIA_PORTS_DW_SRC src/ports/
-    SkFontMgr_default_dw.cpp
-    SkFontMgr_win_dw.cpp
-    SkTypeface_win_dw.cpp
-    SkScalerContext_win_dw.cpp
-    )
-  set(SKIA_PORTS_SRC "${SKIA_PORTS_SRC};${SKIA_PORTS_DW_SRC}")
-
-  set_prefix(SKIA_FONTS_FC_SRC src/fonts/
-    SkFontMgr_fontconfig.cpp
-    )
-  set_prefix(SKIA_FONTS_DW_SRC src/fonts/
-    SkFontMgr_indirect.cpp
-    )
-  set(SKIA_FONTS_SRC ${SKIA_FONTS_DW_SRC})
-
-  set_prefix(SKIA_UTILS_WIN32_SRC src/utils/win/
+  set_prefix(SKIA_UTILS_PLATFORM_SRC src/utils/win/
     SkAutoCoInitialize.cpp
-    SkDWrite.cpp
-    SkDWriteFontFileStream.cpp
-    SkDWriteGeometrySink.cpp
     SkHRESULT.cpp
     SkIStream.cpp
     SkWGL_win.cpp
     )
-  set(SKIA_UTILS_SRC "${SKIA_UTILS_SRC};${SKIA_UTILS_WIN32_SRC}")
-endif()
 
-if(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86")
-set(HAVE_SSE 1)
+  if(TRUE)
+    # If we're building with DirectWrite and DW only
+    set_prefix(SKIA_PORTS_2_SRC src/ports/
+      SkFontMgr_default_dw.cpp
+      SkFontMgr_win_dw.cpp
+      SkTypeface_win_dw.cpp
+      SkScalerContext_win_dw.cpp
+      )
+
+    set(SKIA_FONTS_SRC
+      src/fonts/SkFontMgr_indirect.cpp
+      src/utils/win/SkDWrite.cpp
+      src/utils/win/SkDWriteFontFileStream.cpp
+      src/utils/win/SkDWriteGeometrySink.cpp
+      )
+  else()
+    add_definitions(-DSK_INCLUDE_FREETYPE)
+    set_prefix(SKIA_PORTS_2_SRC src/ports/
+      SkFontConfigInterface_direct.cpp
+      SkFontHost_FreeType.cpp
+      SkFontHost_FreeType_common.cpp
+      SkFontHost_fontconfig.cpp
+      )
+    
+    set_prefix(SKIA_FONTS_SRC src/fonts/
+      SkFontMgr_fontconfig.cpp
+      )
+  endif()
+endif() # Windows
+
+if(ENV{TARGET} MATCHES androideabi)
+  add_definitions(-DSK_BUILD_FOR_ANDROID -DEGL_EGLEXT_PROTOTYPES)
+  include_directories(platform_tools/android/third_party/cpufeatures)
+
+  # FIXME: The skia version we updated to doesn't have android FontMgr class.
+  # However, this was added to skia upstream recently, so next time we update
+  # skia this should be removed and have the android FontMgr source file added
+  # to the makefile.
+  add_definitions(-DSK_FONTHOST_DOES_NOT_USE_FONTMGR=1)
+
+  set_prefix(SKIA_GL_PLATFORM_SRC src/gpu/gl/android/
+    GrGLCreateNativeInterface_android.cpp
+    SkNativeGLContext_android.cpp
+    )
+
+  set_prefix(SKIA_PORTS_SRC src/ports/
+    SkDebug_android.cpp
+    SkFontConfigInterface_android.cpp
+    SkFontConfigParser_android.cpp
+    SkFontHost_FreeType.cpp
+    SkFontHost_FreeType_common.cpp
+    SkFontHost_fontconfig.cpp
+    SkGlobalInitialization_default.cpp
+    SkImageDecoder_empty.cpp
+    SkMemory_malloc.cpp
+    SkOSFile_posix.cpp
+    SkOSFile_stdio.cpp
+    SkTLS_pthread.cpp
+    )
+
+  set_prefix(SKIA_UTILS_PLATFORM_SRC platform_tools/android/third_party/cpufeatures/
+    cpu-features.c
+    )
+elseif(ENV{TARGET} MATCHES linux)
+  set_prefix(SKIA_GL_PLATFORM_SRC src/gpu/gl/unix/
+    gl/unix/GrGLCreateNativeInterface_unix.cpp
+    gl/unix/SkNativeGLContext_unix.cpp
+    )
+
+  set_prefix(SKIA_PORTS_SRC src/ports/
+    SkDebug_stdio.cpp
+    SkFontConfigInterface_direct.cpp
+    SkFontHost_FreeType.cpp
+    SkFontHost_FreeType_common.cpp
+    SkFontHost_fontconfig.cpp
+    SkGlobalInitialization_default.cpp
+    SkImageDecoder_empty.cpp
+    SkMemory_malloc.cpp
+    SkOSFile_posix.cpp
+    SkOSFile_stdio.cpp
+    SkTLS_pthread.cpp
+    )
+
+  set_prefix(SKIA_FONTS_SRC src/fonts/
+    SkFontMgr_fontconfig.cpp
+    )
 endif()
 
 set(SKIA_SRC
@@ -547,19 +662,22 @@ set(SKIA_SRC
   ${SKIA_EFFECTS_SRC}
   ${SKIA_FONTS_SRC}
   ${SKIA_GL_SRC}
+  ${SKIA_GL_PLATFORM_SRC}
   ${SKIA_IMAGE_SRC}
   ${SKIA_PATHOPS_SRC}
   ${SKIA_PORTS_SRC}
+  ${SKIA_PORTS_2_SRC}
   ${SKIA_SFNT_SRC}
   ${SKIA_THIRDPARTY_SRC}
   ${SKIA_UTILS_SRC}
+  ${SKIA_UTILS_PLATFORM_SRC}
   )
 
 # TODO(vlad/jack): check target type, use
 # SKIA_OPTS_NEON_SRC and SKIA_OPTS_AARCH64_SRC properly!
 # Also if none of the above, we need a SKIA_OPTS_NONE that just
 # includes the none opts
-if(HAVE_SSE)
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86")
   set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_X86_SRC})
   if(NOT MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse2 -mfpmath=sse")
@@ -569,6 +687,22 @@ if(HAVE_SSE)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
     endif()
   endif()
+elseif(ENV{TARGET} MATCHES "arm")
+  set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_ARM_SRC})
+  add_definitions(-mfpu=neon -D__ARM_HAVE_OPTIONAL_NEON_SUPPORT)
+  # FIXME: Need more advanced detection of FP support
+  if(ENV{TARGET} MATCHES "eabihf")
+    add_definitions(-mfloat-abi=hard)
+  else()
+    add_definitions(-mfloat-abi=softfp)
+  endif()
+  if(NOT "$ENV{TARGET}" STREQUAL "$ENV{HOST}")
+    # FIXME: Assumes armv7 for cross compile
+    add_definitions(-march=armv7-a -mthumb)
+  endif()
+elseif(ENV{TARGET} MATCHES "aarch64")
+  set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_AARCH64_SRC})
+  add_definitions(-D__ARM_HAVE_NEON)
 endif()
 
 add_library(skia STATIC ${SKIA_SRC})
