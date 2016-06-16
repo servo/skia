@@ -7,11 +7,7 @@ extern crate cmake;
 use std::env;
 
 fn main() {
-    let dst = cmake::Config::new(".")
-        .define("CMAKE_C_COMPILER", "cl.exe")
-        .define("CMAKE_CXX_COMPILER", "cl.exe")
-        .define("CMAKE_LINKER", "C:\\Program Files (x86)\\Microsoft Visual Studio 12.0\\VC\\bin\\amd64\\link.exe")
-        .build();
+    let dst = cmake::Config::new(".").build();
     println!("cargo:rustc-link-search=native={}/lib", dst.display());
     println!("cargo:rustc-link-lib=static=skia");
     println!("cargo:outdir={}", dst.display());
