@@ -1,9 +1,6 @@
 project(skia)
 cmake_minimum_required(VERSION 2.8)
 
-# Needed to avoid error
-#set(DUMMY ${CMAKE_BUILD_TYPE})
-
 function(set_prefix var prefix)
   string(REGEX REPLACE "(^|;)([^;]+)" "\\1${prefix}\\2" tmp "${ARGN}")
   set(${var} "${tmp}" PARENT_SCOPE)
@@ -12,8 +9,8 @@ endfunction()
 # Use ccache if available
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif(CCACHE_FOUND)
 
 if("$ENV{CFG_ENABLE_DEBUG_SKIA}" STREQUAL "1")
@@ -23,11 +20,21 @@ if("$ENV{CFG_ENABLE_DEBUG_SKIA}" STREQUAL "1")
     -DGR_GL_LOG_CALLS=1
     -DGR_GL_LOG_CALLS_START=1
   )
+  if(MSVC)
+    add_definitions(-Zi)
+  else()
+    add_definitions(-g)
+  endif()
 else()
   add_definitions(
     -DSK_RELEASE
     -DGR_RELEASE=1
   )
+  if(MSVC)
+    add_definitions(-Os)
+  else()
+    add_definitions(-O3)
+  endif()
 endif()
 
 add_definitions(
@@ -42,9 +49,24 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_definitions(-Wno-c++11-extensions)
 endif()
 
+if(NOT WIN32)
+  add_definitions(-fPIC)
+endif()
+
+if(NOT "$ENV{DEP_FREETYPE_OUTDIR}" STREQUAL "")
+  include_directories($ENV{DEP_FREETYPE_OUTDIR}/include)
+else()
+  # We need to work with older pkg-config
+  #pkg_check_modules(FREETYPE REQUIRED freetype2)
+  EXEC_PROGRAM(pkg-config ARGS --cflags freetype2 OUTPUT_VARIABLE FREETYPE_CFLAGS)
+  add_definitions(${FREETYPE_CFLAGS})
+endif()
+
+if(NOT "$ENV{DEP_FREETYPE_OUTDIR}" STREQUAL "")
+  include_directories($ENV{DEP_EXPAT_OUTDIR}/include)
+endif()
+
 include_directories(
-  $ENV{DEP_FREETYPE_OUTDIR}
-  $ENV{DEP_EXPAT_OUTDIR}/include
   include/config
   include/core
   include/effects
@@ -598,7 +620,7 @@ if(WIN32)
   endif()
 endif() # Windows
 
-if(ENV{TARGET} MATCHES androideabi)
+if($ENV{TARGET} MATCHES androideabi)
   add_definitions(-DSK_BUILD_FOR_ANDROID -DEGL_EGLEXT_PROTOTYPES)
   include_directories(platform_tools/android/third_party/cpufeatures)
 
@@ -631,10 +653,10 @@ if(ENV{TARGET} MATCHES androideabi)
   set_prefix(SKIA_UTILS_PLATFORM_SRC platform_tools/android/third_party/cpufeatures/
     cpu-features.c
     )
-elseif(ENV{TARGET} MATCHES linux)
+elseif($ENV{TARGET} MATCHES "linux")
   set_prefix(SKIA_GL_PLATFORM_SRC src/gpu/gl/unix/
-    gl/unix/GrGLCreateNativeInterface_unix.cpp
-    gl/unix/SkNativeGLContext_unix.cpp
+    GrGLCreateNativeInterface_unix.cpp
+    SkNativeGLContext_unix.cpp
     )
 
   set_prefix(SKIA_PORTS_SRC src/ports/
@@ -687,11 +709,11 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
     endif()
   endif()
-elseif(ENV{TARGET} MATCHES "arm")
+elseif($ENV{TARGET} MATCHES "arm")
   set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_ARM_SRC})
   add_definitions(-mfpu=neon -D__ARM_HAVE_OPTIONAL_NEON_SUPPORT)
   # FIXME: Need more advanced detection of FP support
-  if(ENV{TARGET} MATCHES "eabihf")
+  if($ENV{TARGET} MATCHES "eabihf")
     add_definitions(-mfloat-abi=hard)
   else()
     add_definitions(-mfloat-abi=softfp)
@@ -700,7 +722,7 @@ elseif(ENV{TARGET} MATCHES "arm")
     # FIXME: Assumes armv7 for cross compile
     add_definitions(-march=armv7-a -mthumb)
   endif()
-elseif(ENV{TARGET} MATCHES "aarch64")
+elseif($ENV{TARGET} MATCHES "aarch64")
   set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_AARCH64_SRC})
   add_definitions(-D__ARM_HAVE_NEON)
 endif()
