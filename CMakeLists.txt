@@ -405,10 +405,9 @@ set_prefix(SKIA_IMAGE_SRC src/image/
   SkSurface_Gpu.cpp
   SkSurface_Raster.cpp
   )
-set_prefix(SKIA_OPTS_X86_SRC src/opts/
+set_prefix(SKIA_OPTS_SSE2_SRC src/opts/
   SkBitmapFilter_opts_SSE2.cpp
   SkBitmapProcState_opts_SSE2.cpp
-  SkBitmapProcState_opts_SSSE3.cpp
   SkBlitRect_opts_SSE2.cpp
   SkBlitRow_opts_SSE2.cpp
   SkBlurImage_opts_SSE2.cpp
@@ -416,6 +415,9 @@ set_prefix(SKIA_OPTS_X86_SRC src/opts/
   SkUtils_opts_SSE2.cpp
   SkXfermode_opts_SSE2.cpp
   opts_check_x86.cpp
+  )
+set_prefix(SKIA_OPTS_SSSE3_SRC src/opts/
+  SkBitmapProcState_opts_SSSE3.cpp
   )
 set_prefix(SKIA_OPTS_ARM_NEON_SRC src/opts/
   memset.arm.S
@@ -620,7 +622,9 @@ if(WIN32)
   endif()
 endif() # Windows
 
-if($ENV{TARGET} MATCHES androideabi)
+message(STATUS "Building for target: $ENV{TARGET}")
+
+if($ENV{TARGET} MATCHES ".*androideabi.*")
   add_definitions(-DSK_BUILD_FOR_ANDROID -DEGL_EGLEXT_PROTOTYPES)
   include_directories(platform_tools/android/third_party/cpufeatures)
 
@@ -653,7 +657,7 @@ if($ENV{TARGET} MATCHES androideabi)
   set_prefix(SKIA_UTILS_PLATFORM_SRC platform_tools/android/third_party/cpufeatures/
     cpu-features.c
     )
-elseif($ENV{TARGET} MATCHES "linux")
+elseif($ENV{TARGET} MATCHES ".*linux.*")
   set_prefix(SKIA_GL_PLATFORM_SRC src/gpu/gl/unix/
     GrGLCreateNativeInterface_unix.cpp
     SkNativeGLContext_unix.cpp
@@ -699,21 +703,23 @@ set(SKIA_SRC
 # SKIA_OPTS_NEON_SRC and SKIA_OPTS_AARCH64_SRC properly!
 # Also if none of the above, we need a SKIA_OPTS_NONE that just
 # includes the none opts
-if(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86")
-  set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_X86_SRC})
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64|x86)")
+  set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_SSE2_SRC})
+  set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_SSSE3_SRC})
   if(NOT MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse2 -mfpmath=sse")
+    set_source_files_properties(${SKIA_OPTS_SSSE3_SRC} PROPERTIES COMPILE_FLAGS -mssse3)
   else()
     # /arch:SSE2 is invalid on x86-64 (SSE2 always present)
     if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
     endif()
   endif()
-elseif($ENV{TARGET} MATCHES "arm")
+elseif($ENV{TARGET} MATCHES ".*arm.*")
   set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_ARM_SRC})
   add_definitions(-mfpu=neon -D__ARM_HAVE_OPTIONAL_NEON_SUPPORT)
   # FIXME: Need more advanced detection of FP support
-  if($ENV{TARGET} MATCHES "eabihf")
+  if($ENV{TARGET} MATCHES ".*eabihf.*")
     add_definitions(-mfloat-abi=hard)
   else()
     add_definitions(-mfloat-abi=softfp)
@@ -722,7 +728,7 @@ elseif($ENV{TARGET} MATCHES "arm")
     # FIXME: Assumes armv7 for cross compile
     add_definitions(-march=armv7-a -mthumb)
   endif()
-elseif($ENV{TARGET} MATCHES "aarch64")
+elseif($ENV{TARGET} MATCHES ".*aarch64.*")
   set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_AARCH64_SRC})
   add_definitions(-D__ARM_HAVE_NEON)
 endif()
