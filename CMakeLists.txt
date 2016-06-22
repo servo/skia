@@ -62,7 +62,7 @@ else()
   add_definitions(${FREETYPE_CFLAGS})
 endif()
 
-if(NOT "$ENV{DEP_FREETYPE_OUTDIR}" STREQUAL "")
+if(NOT "$ENV{DEP_EXPAT_OUTDIR}" STREQUAL "")
   include_directories($ENV{DEP_EXPAT_OUTDIR}/include)
 endif()
 
