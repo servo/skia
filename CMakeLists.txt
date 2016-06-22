@@ -699,24 +699,8 @@ set(SKIA_SRC
   ${SKIA_UTILS_PLATFORM_SRC}
   )
 
-# TODO(vlad/jack): check target type, use
-# SKIA_OPTS_NEON_SRC and SKIA_OPTS_AARCH64_SRC properly!
-# Also if none of the above, we need a SKIA_OPTS_NONE that just
-# includes the none opts
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64|x86)")
-  set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_SSE2_SRC})
-  set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_SSSE3_SRC})
-  if(NOT MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse2 -mfpmath=sse")
-    set_source_files_properties(${SKIA_OPTS_SSSE3_SRC} PROPERTIES COMPILE_FLAGS -mssse3)
-  else()
-    # /arch:SSE2 is invalid on x86-64 (SSE2 always present)
-    if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86")
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
-    endif()
-  endif()
-elseif($ENV{TARGET} MATCHES ".*arm.*")
-  set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_ARM_SRC})
+if($ENV{TARGET} MATCHES ".*arm.*")
+  set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_ARM_NEON_SRC})
   add_definitions(-mfpu=neon -D__ARM_HAVE_OPTIONAL_NEON_SUPPORT)
   # FIXME: Need more advanced detection of FP support
   if($ENV{TARGET} MATCHES ".*eabihf.*")
@@ -731,6 +715,20 @@ elseif($ENV{TARGET} MATCHES ".*arm.*")
 elseif($ENV{TARGET} MATCHES ".*aarch64.*")
   set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_AARCH64_SRC})
   add_definitions(-D__ARM_HAVE_NEON)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64|x86)")
+  # TODO(vlad): CMAKE_SYSTEM_PROCESSOR is not the right thing to check,
+  # since that's just the host CPU.
+  set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_SSE2_SRC})
+  set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_SSSE3_SRC})
+  if(NOT MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse2 -mfpmath=sse")
+    set_source_files_properties(${SKIA_OPTS_SSSE3_SRC} PROPERTIES COMPILE_FLAGS -mssse3)
+  else()
+    # /arch:SSE2 is invalid on x86-64 (SSE2 always present)
+    if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
+    endif()
+  endif()
 endif()
 
 add_library(skia STATIC ${SKIA_SRC})
