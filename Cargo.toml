@@ -24,6 +24,9 @@ exclude = [
 [lib]
 name = "skia"
 
+[build-dependencies]
+cmake = "0.1"
+
 [dependencies]
 euclid = "0.7.0"
 gleam = "0.2"
@@ -31,7 +34,7 @@ libc = "0.2"
 servo-glutin = "0.4"
 expat-sys = "2.1.1"
 
-[target.'cfg(any(target_os = "android", target_os = "linux", target_os = "windows"))'.dependencies]
+[target.'cfg(any(target_os = "android", target_os = "linux", all(target_os = "windows", target_env = "gnu")))'.dependencies]
 servo-fontconfig = "0.2"
 servo-freetype-sys = "2.4.11"
 
