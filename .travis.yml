@@ -15,6 +15,3 @@ os:
 notifications:
   webhooks: http://build.servo.org:54856/travis
 script: cargo build --verbose
-before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install freetype; fi
