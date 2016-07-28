@@ -4,7 +4,11 @@ addons:
     - libxxf86vm-dev
     - libosmesa6-dev
 language: rust
-rust: nightly
+rust:
+  - stable
+  - beta
+  - nightly
+cache: cargo
 os:
   - osx
   - linux
