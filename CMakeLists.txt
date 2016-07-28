@@ -53,14 +53,16 @@ if(NOT WIN32)
   add_definitions(-fPIC)
 endif()
 
-if(NOT "$ENV{DEP_FREETYPE_OUTDIR}" STREQUAL "")
-  include_directories($ENV{DEP_FREETYPE_OUTDIR}/include)
-else()
-  # We need to work with older cmake -- pkg_check_modules was added in
-  # a version of cmake newer than what Ubuntu 14.04 LTS ships with.
-  #pkg_check_modules(FREETYPE REQUIRED freetype2)
-  EXEC_PROGRAM(pkg-config ARGS --cflags freetype2 OUTPUT_VARIABLE FREETYPE_CFLAGS)
-  add_definitions(${FREETYPE_CFLAGS})
+if(NOT APPLE)
+  if(NOT "$ENV{DEP_FREETYPE_OUTDIR}" STREQUAL "")
+    include_directories($ENV{DEP_FREETYPE_OUTDIR}/include)
+  else()
+    # We need to work with older cmake -- pkg_check_modules was added in
+    # a version of cmake newer than what Ubuntu 14.04 LTS ships with.
+    #pkg_check_modules(FREETYPE REQUIRED freetype2)
+    EXEC_PROGRAM(pkg-config ARGS --cflags freetype2 OUTPUT_VARIABLE FREETYPE_CFLAGS)
+    add_definitions(${FREETYPE_CFLAGS})
+  endif()
 endif()
 
 if(NOT "$ENV{DEP_EXPAT_OUTDIR}" STREQUAL "")
