@@ -5,9 +5,12 @@ addons:
     - libosmesa6-dev
 language: rust
 rust: nightly
-branches:
-  except:
-    - master
+os:
+  - osx
+  - linux
 notifications:
   webhooks: http://build.servo.org:54856/travis
 script: cargo build --verbose
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install freetype; fi
