@@ -53,15 +53,23 @@ if(NOT WIN32)
   add_definitions(-fPIC)
 endif()
 
-if(NOT APPLE)
+if(MSVC)
+  set(WINDOWS_USE_DIRECTWRITE TRUE)
+endif()
+
+if(NOT APPLE AND NOT WINDOWS_USE_DIRECTWRITE)
   if(NOT "$ENV{DEP_FREETYPE_OUTDIR}" STREQUAL "")
     include_directories($ENV{DEP_FREETYPE_OUTDIR}/include)
   else()
     # We need to work with older cmake -- pkg_check_modules was added in
     # a version of cmake newer than what Ubuntu 14.04 LTS ships with.
     #pkg_check_modules(FREETYPE REQUIRED freetype2)
-    EXEC_PROGRAM(pkg-config ARGS --cflags freetype2 OUTPUT_VARIABLE FREETYPE_CFLAGS)
-    add_definitions(${FREETYPE_CFLAGS})
+    EXEC_PROGRAM(pkg-config ARGS --cflags freetype2 OUTPUT_VARIABLE FREETYPE_CFLAGS RESULT_VARIABLE FREETYPE_NOT_FOUND)
+    if(NOT FREETYPE_NOT_FOUND)
+      add_definitions(${FREETYPE_CFLAGS})
+    else()
+      message(FATAL_ERROR "Freetype is required by Skia for this build, but it was not built by the freetype crate nor found by pkg-config")
+    endif()
   endif()
 endif()
 
@@ -595,7 +603,7 @@ if(WIN32)
     SkWGL_win.cpp
     )
 
-  if(TRUE)
+  if(WINDOWS_USE_DIRECTWRITE)
     # If we're building with DirectWrite and DW only
     set_prefix(SKIA_PORTS_2_SRC src/ports/
       SkFontMgr_default_dw.cpp
