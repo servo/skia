@@ -36,7 +36,7 @@ expat-sys = "2.1.1"
 
 [target.'cfg(any(target_os = "android", target_os = "linux", all(target_os = "windows", target_env = "gnu")))'.dependencies]
 servo-fontconfig = "0.2"
-servo-freetype-sys = "2.4.11"
+servo-freetype-sys = "4.0.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 x11 = { version = "2.0.0", features = ["xlib"] }
