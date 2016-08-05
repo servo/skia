@@ -59,17 +59,18 @@ endif()
 
 if(NOT APPLE AND NOT WINDOWS_USE_DIRECTWRITE)
   if(NOT "$ENV{DEP_FREETYPE_OUTDIR}" STREQUAL "")
-    include_directories($ENV{DEP_FREETYPE_OUTDIR}/include)
+    include_directories($ENV{DEP_FREETYPE_OUTDIR}/include/freetype2)
+    message(STATUS "Using DEP_FREETYPE_OUTDIR/include/freetype2: " $ENV{DEP_FREETYPE_OUTDIR})
   else()
     # We need to work with older cmake -- pkg_check_modules was added in
     # a version of cmake newer than what Ubuntu 14.04 LTS ships with.
     #pkg_check_modules(FREETYPE REQUIRED freetype2)
     EXEC_PROGRAM(pkg-config ARGS --cflags freetype2 OUTPUT_VARIABLE FREETYPE_CFLAGS RESULT_VARIABLE FREETYPE_NOT_FOUND)
-    if(NOT FREETYPE_NOT_FOUND)
-      add_definitions(${FREETYPE_CFLAGS})
-    else()
+    if(FREETYPE_NOT_FOUND)
       message(FATAL_ERROR "Freetype is required by Skia for this build, but it was not built by the freetype crate nor found by pkg-config")
     endif()
+    message(STATUS "Using FREETYPE_CFLAGS: " ${FREETYPE_CFLAGS})
+    add_definitions(${FREETYPE_CFLAGS})
   endif()
 endif()
 
