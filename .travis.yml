@@ -14,4 +14,5 @@ os:
   - linux
 notifications:
   webhooks: http://build.servo.org:54856/travis
-script: cargo build --verbose
+env:
+  - RUSTFLAGS="-Z print-link-args" VERBOSE=1

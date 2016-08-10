@@ -22,8 +22,8 @@ extern crate egl;
 #[cfg(any(target_os="linux", target_os="android", all(target_os="windows", target_env="gnu")))]
 extern crate freetype_sys;
 
-#[cfg(all(target_os="windows", target_env="gnu"))]
-extern crate fontconfig;
+#[cfg(any(target_os="linux", target_os="android", all(target_os="windows", target_env="gnu")))]
+extern crate fontconfig_sys;
 
 pub use skia::{
     SkiaGrContextRef,
