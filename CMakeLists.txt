@@ -727,7 +727,7 @@ if($ENV{TARGET} MATCHES "(i386|x86_64)-.*")
     endif()
   endif()
 elseif($ENV{TARGET} MATCHES "arm-.*")
-  set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_ARM_SRC})
+  set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_ARM_NEON_SRC})
   add_definitions(-mfpu=neon -D__ARM_HAVE_OPTIONAL_NEON_SUPPORT)
   # FIXME: Need more advanced detection of FP support
   if($ENV{TARGET} MATCHES ".*eabihf.*")
