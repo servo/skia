@@ -1,5 +1,6 @@
 project(skia)
 cmake_minimum_required(VERSION 2.8)
+enable_language(CXX ASM)
 
 function(set_prefix var prefix)
   string(REGEX REPLACE "(^|;)([^;]+)" "\\1${prefix}\\2" tmp "${ARGN}")
