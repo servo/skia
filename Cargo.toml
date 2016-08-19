@@ -28,7 +28,7 @@ name = "skia"
 cmake = "0.1"
 
 [dependencies]
-euclid = "0.9"
+euclid = "0.10"
 gleam = "0.2"
 libc = "0.2"
 servo-glutin = "0.6"
