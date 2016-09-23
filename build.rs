@@ -21,7 +21,7 @@ fn main() {
         println!("cargo:rustc-link-lib=stdc++");
         println!("cargo:rustc-link-lib=GLESv2");
     } else if target.contains("apple-darwin") {
-        println!("cargo:rustc-link-lib=stdc++");
+        println!("cargo:rustc-link-lib=c++");
         println!("cargo:rustc-link-lib=framework=OpenGL");
         println!("cargo:rustc-link-lib=framework=ApplicationServices");
     } else if target.contains("windows") {
