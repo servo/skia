@@ -54,11 +54,7 @@ if(NOT WIN32)
   add_definitions(-fPIC)
 endif()
 
-if(MSVC)
-  set(WINDOWS_USE_DIRECTWRITE TRUE)
-endif()
-
-if(NOT APPLE AND NOT WINDOWS_USE_DIRECTWRITE)
+if(NOT APPLE AND NOT WIN32)
   if(NOT "$ENV{DEP_FREETYPE_OUTDIR}" STREQUAL "")
     include_directories($ENV{DEP_FREETYPE_OUTDIR}/include/freetype2)
     message(STATUS "Using DEP_FREETYPE_OUTDIR/include/freetype2: " $ENV{DEP_FREETYPE_OUTDIR})
@@ -608,7 +604,7 @@ if(WIN32)
     SkWGL_win.cpp
     )
 
-  if(WINDOWS_USE_DIRECTWRITE)
+  if(WIN32)
     # If we're building with DirectWrite and DW only
     set_prefix(SKIA_PORTS_2_SRC src/ports/
       SkFontMgr_default_dw.cpp
@@ -631,7 +627,7 @@ if(WIN32)
       SkFontHost_FreeType_common.cpp
       SkFontHost_fontconfig.cpp
       )
-    
+
     set_prefix(SKIA_FONTS_SRC src/fonts/
       SkFontMgr_fontconfig.cpp
       )
