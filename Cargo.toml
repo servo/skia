@@ -34,7 +34,7 @@ libc = "0.2"
 servo-glutin = "0.6"
 expat-sys = "2.1.1"
 
-[target.'cfg(any(target_os = "android", target_os = "linux", all(target_os = "windows", target_env = "gnu")))'.dependencies]
+[target.'cfg(any(target_os = "android", target_os = "linux"))'.dependencies]
 servo-fontconfig-sys = "4.0.0"
 servo-freetype-sys = "4.0.0"
 
