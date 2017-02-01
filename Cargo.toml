@@ -31,8 +31,10 @@ cmake = "0.1"
 euclid = "0.10"
 gleam = "0.2"
 libc = "0.2"
-servo-glutin = "0.7"
 expat-sys = "2.1.1"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+servo-glutin = "0.7"
 
 [target.'cfg(any(target_os = "android", target_os = "linux"))'.dependencies]
 servo-fontconfig-sys = "4.0.0"
