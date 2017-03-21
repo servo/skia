@@ -11,6 +11,7 @@ use skia;
 use euclid::size::Size2D;
 use glx;
 use std::ptr;
+use std::rc::Rc;
 use x11::xlib;
 
 use gleam::gl;
@@ -21,6 +22,7 @@ pub struct PlatformDisplayData {
 }
 
 pub struct GLPlatformContext {
+    gl: Rc<gl::Gl>,
     pub display: *mut xlib::Display,
     glx_context: xlib::XID,
     pub glx_pixmap: xlib::XID,
@@ -40,7 +42,8 @@ impl Drop for GLPlatformContext {
         self.drop_current_context();
         self.make_current();
 
-        gl_rasterization_context::destroy_framebuffer(self.framebuffer_id,
+        gl_rasterization_context::destroy_framebuffer(self.gl(),
+                                                      self.framebuffer_id,
                                                       self.texture_id,
                                                       self.depth_stencil_renderbuffer_id);
 
@@ -55,7 +58,8 @@ impl Drop for GLPlatformContext {
 }
 
 impl GLPlatformContext {
-    pub fn new(platform_display_data: PlatformDisplayData,
+    pub fn new(gl: Rc<gl::Gl>,
+               platform_display_data: PlatformDisplayData,
                size: Size2D<i32>)
                -> Option<GLPlatformContext> {
         unsafe {
@@ -96,17 +100,19 @@ impl GLPlatformContext {
             }
 
             if let Some((framebuffer_id, texture_id, depth_stencil_renderbuffer_id)) =
-                gl_rasterization_context::setup_framebuffer(gl::TEXTURE_2D,
+                gl_rasterization_context::setup_framebuffer(&*gl,
+                                                            gl::TEXTURE_2D,
                                                             size,
                                                             gl_interface,
                                                             || {
-                gl::tex_image_2d(gl::TEXTURE_2D, 0,
+                gl.tex_image_2d(gl::TEXTURE_2D, 0,
                                  gl::RGBA as gl::GLint,
                                  size.width, size.height, 0,
                                  gl::RGBA, gl::UNSIGNED_BYTE, None);
             }) {
                 skia::SkiaGrGLInterfaceRelease(gl_interface);
                 return Some(GLPlatformContext {
+                    gl: gl,
                     display: display,
                     glx_context: glx_context as xlib::XID,
                     pixmap: pixmap,
@@ -119,6 +125,10 @@ impl GLPlatformContext {
             skia::SkiaGrGLInterfaceRelease(gl_interface);
             None
         }
+    }
+
+    fn gl(&self) -> &gl::Gl {
+        &*self.gl
     }
 
     pub fn drop_current_context(&self) {

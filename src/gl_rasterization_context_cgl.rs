@@ -26,7 +26,7 @@ impl GLRasterizationContext {
                io_surface: io_surface::IOSurfaceRef,
                size: Size2D<i32>)
                -> Option<GLRasterizationContext> {
-        if !gl_rasterization_context::finish_framebuffer_setup(size, || {
+        if !gl_rasterization_context::finish_framebuffer_setup(gl_context.gl(), size, || {
             unsafe {
                 cgl::CGLTexImageIOSurface2D(gl_context.platform_context.cgl_context,
                                             gl::TEXTURE_RECTANGLE_ARB, gl::RGBA,
@@ -52,10 +52,10 @@ impl GLRasterizationContext {
 
     pub fn flush(&self) {
         self.make_current();
-        gl::flush();
+        self.gl_context.gl().flush();
     }
 
     pub fn flush_to_surface(&self) {
-        gl::bind_framebuffer(gl::FRAMEBUFFER, self.framebuffer_id);
+        self.gl_context.gl().bind_framebuffer(gl::FRAMEBUFFER, self.framebuffer_id);
     }
 }
