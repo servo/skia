@@ -10,6 +10,7 @@ use skia;
 use euclid::size::Size2D;
 use gleam::gl;
 use std::ptr;
+use std::rc::Rc;
 use std::sync::Arc;
 
 #[cfg(target_os="macos")]
@@ -35,6 +36,7 @@ pub use gl_context_wgl::GLPlatformContext;
 pub use gl_context_wgl::PlatformDisplayData;
 
 pub struct GLContext {
+    gl: Rc<gl::Gl>,
     pub platform_context: GLPlatformContext,
     pub gr_context: skia::SkiaGrContextRef,
     pub gl_interface: skia::SkiaGrGLInterfaceRef,
@@ -53,10 +55,12 @@ impl Drop for GLContext {
 }
 
 impl GLContext {
-    pub fn new(platform_display_data: PlatformDisplayData,
+    pub fn new(gl: Rc<gl::Gl>,
+               platform_display_data: PlatformDisplayData,
                size: Size2D<i32>)
                -> Option<Arc<GLContext>> {
-        let platform_context = GLPlatformContext::new(platform_display_data, size);
+
+        let platform_context = GLPlatformContext::new(gl.clone(), platform_display_data, size);
         let platform_context = match platform_context {
             Some(platform_context) => platform_context,
             None => return None,
@@ -80,6 +84,7 @@ impl GLContext {
             }
 
             Some(Arc::new(GLContext {
+                gl: gl,
                 platform_context: platform_context,
                 gr_context: gr_context,
                 gl_interface: gl_interface,
@@ -88,9 +93,13 @@ impl GLContext {
         }
    }
 
+    pub fn gl(&self) -> &gl::Gl {
+        &*self.gl
+    }
+
     pub fn flush(&self) {
         self.make_current();
-        gl::flush();
+        self.gl.flush();
     }
 
     pub fn make_current(&self) {

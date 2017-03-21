@@ -1,7 +1,7 @@
 [package]
 
 name = "servo-skia"
-version = "0.30000003.0"
+version = "0.30000004.0"
 authors = ["The Skia Project Developers and The Servo Project Developers"]
 description = "2D graphic library for drawing Text, Geometries, and Images"
 license = "BSD-3-Clause"
@@ -29,12 +29,12 @@ cmake = "0.1"
 
 [dependencies]
 euclid = "0.11"
-gleam = "0.2"
+gleam = "0.4"
 libc = "0.2"
 expat-sys = "2.1.1"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-servo-glutin = "0.9"
+servo-glutin = "0.10"
 
 [target.'cfg(any(target_os = "android", target_os = "linux"))'.dependencies]
 servo-fontconfig-sys = "4.0.0"
@@ -48,5 +48,5 @@ glx = "0.1.0"
 servo-egl = "0.2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-cgl = "0.1"
-io-surface = "0.6.0"
+cgl = "0.2"
+io-surface = "0.7.0"

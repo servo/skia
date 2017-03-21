@@ -24,7 +24,8 @@ impl Drop for GLRasterizationContext {
     fn drop(&mut self) {
         self.make_current();
 
-        gl_rasterization_context::destroy_framebuffer(self.framebuffer_id,
+        gl_rasterization_context::destroy_framebuffer(self.gl_context.gl(),
+                                                      self.framebuffer_id,
                                                       self.texture_id,
                                                       self.depth_stencil_renderbuffer_id);
     }
@@ -43,11 +44,11 @@ impl GLRasterizationContext {
 
     pub fn flush(&self) {
         self.make_current();
-        gl::flush();
+        self.gl_context.gl().flush();
     }
 
     pub fn flush_to_surface(&self) {
-        gl::bind_framebuffer(gl::READ_FRAMEBUFFER, self.framebuffer_id);
-        gl::framebuffer_texture_2d(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT0, gl::TEXTURE_2D, 0, 0);
+        self.gl_context.gl().bind_framebuffer(gl::READ_FRAMEBUFFER, self.framebuffer_id);
+        self.gl_context.gl().framebuffer_texture_2d(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT0, gl::TEXTURE_2D, 0, 0);
     }
 }

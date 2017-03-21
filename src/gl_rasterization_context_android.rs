@@ -27,7 +27,8 @@ impl Drop for GLRasterizationContext {
     fn drop(&mut self) {
         self.make_current();
 
-        gl_rasterization_context::destroy_framebuffer(self.framebuffer_id,
+        gl_rasterization_context::destroy_framebuffer(self.gl_context.gl(),
+                                                      self.framebuffer_id,
                                                       self.texture_id,
                                                       self.depth_stencil_renderbuffer_id);
     }
@@ -40,14 +41,15 @@ impl GLRasterizationContext {
         gl_context.make_current();
 
         if let Some((framebuffer_id, texture_id, depth_stencil_renderbuffer_id)) =
-            gl_rasterization_context::setup_framebuffer(gl::TEXTURE_2D,
+            gl_rasterization_context::setup_framebuffer(gl_context.gl(),
+                                                        gl::TEXTURE_2D,
                                                         size,
                                                         gl_context.gl_interface,
                                                         || {
-            gl::tex_image_2d(gl::TEXTURE_2D, 0,
-                             gl::RGBA as gl::GLint,
-                             size.width, size.height, 0,
-                             gl::RGBA, gl::UNSIGNED_BYTE, None);
+            gl_context.gl().tex_image_2d(gl::TEXTURE_2D, 0,
+                                         gl::RGBA as gl::GLint,
+                                         size.width, size.height, 0,
+                                         gl::RGBA, gl::UNSIGNED_BYTE, None);
         }) {
             let egl_image_attributes = [
                 eglext::EGL_IMAGE_PRESERVED_KHR as i32, egl::EGL_TRUE as i32,
@@ -78,11 +80,11 @@ impl GLRasterizationContext {
 
     pub fn flush(&self) {
         self.make_current();
-        gl::flush();
+        self.gl_context.gl().flush();
     }
 
     pub fn flush_to_surface(&self) {
-        gl::bind_framebuffer(0x8CA8 as gl::GLenum, self.framebuffer_id);
-        gl::framebuffer_texture_2d(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT0, gl::TEXTURE_2D, 0, 0);
+        self.gl_context.gl().bind_framebuffer(0x8CA8 as gl::GLenum, self.framebuffer_id);
+        self.gl_context.gl().framebuffer_texture_2d(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT0, gl::TEXTURE_2D, 0, 0);
     }
 }

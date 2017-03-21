@@ -12,12 +12,14 @@ use euclid::size::Size2D;
 use cgl;
 use gleam::gl;
 use std::ptr;
+use std::rc::Rc;
 
 pub struct PlatformDisplayData {
     pub pixel_format: cgl::CGLPixelFormatObj,
 }
 
 pub struct GLPlatformContext {
+    gl: Rc<gl::Gl>,
     pub cgl_context: cgl::CGLContextObj,
 
     pub framebuffer_id: gl::GLuint,
@@ -28,7 +30,8 @@ pub struct GLPlatformContext {
 impl Drop for GLPlatformContext {
     fn drop(&mut self) {
         self.make_current();
-        gl_rasterization_context::destroy_framebuffer(self.framebuffer_id,
+        gl_rasterization_context::destroy_framebuffer(self.gl(),
+                                                      self.framebuffer_id,
                                                       self.texture_id,
                                                       self.depth_stencil_renderbuffer_id);
 
@@ -39,7 +42,8 @@ impl Drop for GLPlatformContext {
 }
 
 impl GLPlatformContext {
-    pub fn new(platform_display_data: PlatformDisplayData,
+    pub fn new(gl: Rc<gl::Gl>,
+               platform_display_data: PlatformDisplayData,
                size: Size2D<i32>)
                -> Option<GLPlatformContext> {
         unsafe {
@@ -52,7 +56,7 @@ impl GLPlatformContext {
             }
 
             cgl::CGLSetCurrentContext(cgl_context);
-            gl::enable(gl::TEXTURE_RECTANGLE_ARB);
+            gl.enable(gl::TEXTURE_RECTANGLE_ARB);
 
             let gl_interface = skia::SkiaGrGLCreateNativeInterface();
             if gl_interface == ptr::null_mut() {
@@ -64,17 +68,23 @@ impl GLPlatformContext {
             // we have a texture image. That will be provided by the IOSurface in the
             // GLRasterizationContext.
             let (framebuffer_id, texture_id, depth_stencil_renderbuffer_id) =
-                gl_rasterization_context::start_framebuffer_setup(gl::TEXTURE_RECTANGLE_ARB,
+                gl_rasterization_context::start_framebuffer_setup(&*gl,
+                                                                  gl::TEXTURE_RECTANGLE_ARB,
                                                                   size,
                                                                   gl_interface);
             skia::SkiaGrGLInterfaceRelease(gl_interface);
             Some(GLPlatformContext {
+                gl: gl,
                 cgl_context: cgl_context,
                 framebuffer_id: framebuffer_id,
                 texture_id: texture_id,
                 depth_stencil_renderbuffer_id: depth_stencil_renderbuffer_id,
             })
         }
+    }
+
+    fn gl(&self) -> &gl::Gl {
+        &*self.gl
     }
 
     pub fn drop_current_context(&self) {

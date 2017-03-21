@@ -40,22 +40,20 @@ impl GLRasterizationContext {
 
     pub fn flush(&self) {
         self.make_current();
-        gl::flush();
+        self.gl_context.gl().flush();
     }
 
     pub fn flush_to_surface(&self) {
-        gl::bind_framebuffer(gl::READ_FRAMEBUFFER, self.framebuffer_id);
-        gl::bind_framebuffer(gl::DRAW_FRAMEBUFFER, 0);
+        self.gl_context.gl().bind_framebuffer(gl::READ_FRAMEBUFFER, self.framebuffer_id);
+        self.gl_context.gl().bind_framebuffer(gl::DRAW_FRAMEBUFFER, 0);
 
-        unsafe {
-            gl::BlitFramebuffer(0, 0,
-                                self.size.width, self.size.height,
-                                0, 0,
-                                self.size.width, self.size.height,
-                                gl::COLOR_BUFFER_BIT, gl::NEAREST);
-        }
+        self.gl_context.gl().blit_framebuffer(0, 0,
+                                              self.size.width, self.size.height,
+                                              0, 0,
+                                              self.size.width, self.size.height,
+                                              gl::COLOR_BUFFER_BIT, gl::NEAREST);
 
-        gl::finish();
+        self.gl_context.gl().finish();
         self.gl_context.drop_current_context();
 
         // Since the GLRasterizationContext renders to a Pixmap that is owned by the
