@@ -7,6 +7,7 @@
 
 use euclid::size::Size2D;
 use egl::egl;
+use gleam::gl;
 use std::ptr;
 use std::rc::Rc;
 
