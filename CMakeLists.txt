@@ -636,7 +636,7 @@ endif() # Windows
 
 message(STATUS "Building for target: $ENV{TARGET}")
 
-if($ENV{TARGET} MATCHES ".*androideabi.*")
+if($ENV{TARGET} MATCHES ".*android.*")
   add_definitions(-DSK_BUILD_FOR_ANDROID -DEGL_EGLEXT_PROTOTYPES)
   include_directories(platform_tools/android/third_party/cpufeatures)
 
@@ -723,7 +723,7 @@ if($ENV{TARGET} MATCHES "(i686|x86_64)-.*")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
     endif()
   endif()
-elseif($ENV{TARGET} MATCHES "arm-.*")
+elseif($ENV{TARGET} MATCHES "(arm|armv7)-.*")
   set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_ARM_NEON_SRC})
   add_definitions(-mfpu=neon -D__ARM_HAVE_OPTIONAL_NEON_SUPPORT)
   # FIXME: Need more advanced detection of FP support
