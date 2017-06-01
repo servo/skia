@@ -7,7 +7,7 @@
 
 use skia;
 
-use euclid::size::Size2D;
+use euclid::Size2D;
 use gleam::gl;
 use std::ffi::CString;
 
