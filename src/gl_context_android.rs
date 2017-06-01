@@ -5,7 +5,7 @@
  * found in the LICENSE file.
  */
 
-use euclid::size::Size2D;
+use euclid::Size2D;
 use egl::egl;
 use gleam::gl;
 use std::ptr;
