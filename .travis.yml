@@ -15,4 +15,4 @@ os:
 notifications:
   webhooks: http://build.servo.org:54856/travis
 env:
-  - RUSTFLAGS="-Z print-link-args" VERBOSE=1
+  - VERBOSE=1
