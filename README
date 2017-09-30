@@ -6,7 +6,7 @@ This version of Skia is adapted for use by the Servo project and rust-azure. Cha
 from upstream Skia:
 
     * The addition of Cargo build rules.
-    * The addition of native a GL surface type that wraps platform-specific
+    * The addition of a native GL surface type that wraps platform-specific
       shareable surfaces.
     * Adjustment of the default glyph cache size for multi-task usage.
 
