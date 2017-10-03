@@ -62,11 +62,11 @@ if(NOT APPLE AND NOT WIN32)
     # We need to work with older cmake -- pkg_check_modules was added in
     # a version of cmake newer than what Ubuntu 14.04 LTS ships with.
     #pkg_check_modules(FREETYPE REQUIRED freetype2)
-    EXEC_PROGRAM(pkg-config ARGS --cflags freetype2 OUTPUT_VARIABLE FREETYPE_CFLAGS RESULT_VARIABLE FREETYPE_NOT_FOUND)
+    EXEC_PROGRAM(pkg-config ARGS --cflags freetype2 fontconfig OUTPUT_VARIABLE FREETYPE_CFLAGS RESULT_VARIABLE FREETYPE_NOT_FOUND)
     if(FREETYPE_NOT_FOUND)
-      message(FATAL_ERROR "Freetype is required by Skia for this build, but it was not built by the freetype crate nor found by pkg-config")
+      message(FATAL_ERROR "Freetype & fontconfig is required by Skia for this build, but it was not built by the freetype crate nor found by pkg-config")
     endif()
-    EXEC_PROGRAM(pkg-config ARGS --libs freetype2 OUTPUT_VARIABLE FREETYPE_CLDFLAGS)
+    EXEC_PROGRAM(pkg-config ARGS --libs freetype2 fontconfig OUTPUT_VARIABLE FREETYPE_CLDFLAGS)
     message(STATUS "Using FREETYPE_CFLAGS: " ${FREETYPE_CFLAGS})
     message(STATUS "Using FREETYPE_CLDFLAGS: " ${FREETYPE_CLDFLAGS})
     add_definitions(${FREETYPE_CFLAGS})
@@ -669,7 +669,7 @@ if($ENV{TARGET} MATCHES ".*android.*")
   set_prefix(SKIA_UTILS_PLATFORM_SRC platform_tools/android/third_party/cpufeatures/
     cpu-features.c
     )
-elseif($ENV{TARGET} MATCHES ".*linux.*")
+elseif($ENV{TARGET} MATCHES ".*linux.*" OR $ENV{TARGET} MATCHES ".*bsd.*")
   set_prefix(SKIA_GL_PLATFORM_SRC src/gpu/gl/unix/
     GrGLCreateNativeInterface_unix.cpp
     SkNativeGLContext_unix.cpp

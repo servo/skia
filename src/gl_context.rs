@@ -18,11 +18,11 @@ pub use gl_context_cgl::GLPlatformContext;
 #[cfg(target_os="macos")]
 pub use gl_context_cgl::PlatformDisplayData;
 
-#[cfg(target_os="linux")]
+#[cfg(all(unix, not(any(target_os = "android", target_os = "macos"))))]
 pub use gl_context_glx::GLPlatformContext;
-#[cfg(target_os="linux")]
+#[cfg(all(unix, not(any(target_os = "android", target_os = "macos"))))]
 pub use gl_context_glx::PlatformDisplayData;
-#[cfg(target_os="linux")]
+#[cfg(all(unix, not(any(target_os = "android", target_os = "macos"))))]
 pub use gl_rasterization_context::GLRasterizationContext;
 
 #[cfg(target_os="android")]

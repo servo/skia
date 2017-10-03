@@ -11,18 +11,18 @@ extern crate cgl;
 #[cfg(target_os="macos")]
 extern crate io_surface;
 
-#[cfg(target_os="linux")]
+#[cfg(all(unix, not(any(target_os = "android", target_os = "macos"))))]
 extern crate x11;
-#[cfg(target_os="linux")]
+#[cfg(all(unix, not(any(target_os = "android", target_os = "macos"))))]
 extern crate glx;
 
 #[cfg(target_os="android")]
 extern crate egl;
 
-#[cfg(any(target_os="linux", target_os="android"))]
+#[cfg(all(unix, not(target_os = "macos")))]
 extern crate freetype_sys;
 
-#[cfg(any(target_os="linux", target_os="android"))]
+#[cfg(all(unix, not(target_os = "macos")))]
 extern crate fontconfig_sys;
 
 pub use skia::{
@@ -42,9 +42,9 @@ pub mod gl_context;
 pub mod gl_rasterization_context;
 pub mod skia;
 
-#[cfg(target_os="linux")]
+#[cfg(all(unix, not(any(target_os = "android", target_os = "macos"))))]
 pub mod gl_context_glx;
-#[cfg(target_os="linux")]
+#[cfg(all(unix, not(any(target_os = "android", target_os = "macos"))))]
 pub mod gl_rasterization_context_glx;
 
 #[cfg(target_os="macos")]

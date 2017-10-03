@@ -13,7 +13,7 @@ use std::ffi::CString;
 
 #[cfg(target_os="macos")]
 pub use gl_rasterization_context_cgl::GLRasterizationContext;
-#[cfg(target_os="linux")]
+#[cfg(all(unix, not(any(target_os = "android", target_os = "macos"))))]
 pub use gl_rasterization_context_glx::GLRasterizationContext;
 #[cfg(target_os="android")]
 pub use gl_rasterization_context_android::GLRasterizationContext;
