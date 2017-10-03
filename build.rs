@@ -24,6 +24,11 @@ fn main() {
         println!("cargo:rustc-link-lib=c++");
         println!("cargo:rustc-link-lib=framework=OpenGL");
         println!("cargo:rustc-link-lib=framework=ApplicationServices");
+    } else if target.contains("bsd") {
+        println!("cargo:rustc-link-search=native=/usr/local/lib");
+        println!("cargo:rustc-link-lib=c++");
+        println!("cargo:rustc-link-lib=bz2");
+        println!("cargo:rustc-link-lib=GL");
     } else if target.contains("windows") {
         if target.contains("gnu") {
             println!("cargo:rustc-link-lib=stdc++");

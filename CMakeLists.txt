@@ -71,6 +71,15 @@ if(NOT APPLE AND NOT WIN32)
     message(STATUS "Using FREETYPE_CLDFLAGS: " ${FREETYPE_CLDFLAGS})
     add_definitions(${FREETYPE_CFLAGS})
     link_libraries(${FREETYPE_CLDFLAGS})
+    EXEC_PROGRAM(pkg-config ARGS --cflags fontconfig OUTPUT_VARIABLE FONTCONFIG_CFLAGS RESULT_VARIABLE FONTCONFIG_NOT_FOUND)
+    if(FONTCONFIG_NOT_FOUND)
+      message(FATAL_ERROR "Fontconfig is required by Skia for this build, but it was not built by the fontconfig crate nor found by pkg-config")
+    endif()
+    EXEC_PROGRAM(pkg-config ARGS --libs fontconfig OUTPUT_VARIABLE FONTCONFIG_CLDFLAGS)
+    message(STATUS "Using FONTCONFIG_CFLAGS: " ${FONTCONFIG_CFLAGS})
+    message(STATUS "Using FONTCONFIG_CLDFLAGS: " ${FONTCONFIG_CLDFLAGS})
+    add_definitions(${FONTCONFIG_CFLAGS})
+    link_libraries(${FONTCONFIG_CLDFLAGS})
   endif()
 endif()
 
@@ -669,7 +678,7 @@ if($ENV{TARGET} MATCHES ".*android.*")
   set_prefix(SKIA_UTILS_PLATFORM_SRC platform_tools/android/third_party/cpufeatures/
     cpu-features.c
     )
-elseif($ENV{TARGET} MATCHES ".*linux.*")
+elseif($ENV{TARGET} MATCHES ".*linux.*" OR $ENV{TARGET} MATCHES ".*bsd.*")
   set_prefix(SKIA_GL_PLATFORM_SRC src/gpu/gl/unix/
     GrGLCreateNativeInterface_unix.cpp
     SkNativeGLContext_unix.cpp

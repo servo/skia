@@ -36,11 +36,11 @@ expat-sys = "2.1.5"
 [target.'cfg(target_os = "windows")'.dependencies]
 servo-glutin = "0.12"
 
-[target.'cfg(any(target_os = "android", target_os = "linux"))'.dependencies]
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
 servo-fontconfig-sys = "4.0.0"
 servo-freetype-sys = "4.0.0"
 
-[target.'cfg(target_os = "linux")'.dependencies]
+[target.'cfg(all(unix, not(any(target_os = "android", target_os = "macos"))))'.dependencies]
 x11 = { version = "2.0.0", features = ["xlib"] }
 glx = "0.1.0"
 
