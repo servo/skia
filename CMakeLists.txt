@@ -566,7 +566,7 @@ if($ENV{TARGET} MATCHES ".*apple-ios")
 
   set_prefix(SKIA_UTILS_PLATFORM_SRC src/utils/iOS/
     SkImageDecoder_iOS.mm
-    SkStream_NSData.mm
+    SkStream_iOS.cpp
   )
   set_prefix( SKIA_IOS_STUB_SRC src/opts/
     SkMorphology_opts_none.cpp
