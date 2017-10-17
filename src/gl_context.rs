@@ -18,6 +18,11 @@ pub use gl_context_cgl::GLPlatformContext;
 #[cfg(target_os="macos")]
 pub use gl_context_cgl::PlatformDisplayData;
 
+#[cfg(target_os="ios")]
+pub use gl_context_ios::GLPlatformContext;
+#[cfg(target_os="ios")]
+pub use gl_context_ios::PlatformDisplayData;
+
 #[cfg(target_os="linux")]
 pub use gl_context_glx::GLPlatformContext;
 #[cfg(target_os="linux")]

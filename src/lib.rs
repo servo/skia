@@ -52,6 +52,11 @@ pub mod gl_context_cgl;
 #[cfg(target_os="macos")]
 pub mod gl_rasterization_context_cgl;
 
+#[cfg(target_os="ios")]
+pub mod gl_context_ios;
+#[cfg(target_os="ios")]
+pub mod gl_rasterization_context_ios;
+
 #[cfg(target_os="android")]
 pub mod gl_context_android;
 #[cfg(target_os="android")]
