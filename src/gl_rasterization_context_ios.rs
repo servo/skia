@@ -14,11 +14,6 @@ pub struct GLRasterizationContext {
     pub gl_context: Arc<GLContext>,
 }
 
-impl Drop for GLRasterizationContext {
-    fn drop(&mut self) {
-    }
-}
-
 impl GLRasterizationContext {
     pub fn new(_gl_context: Arc<GLContext>,
                _size: Size2D<i32>)
