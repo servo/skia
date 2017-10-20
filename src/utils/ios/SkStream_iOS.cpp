@@ -63,5 +63,5 @@ CGDataProviderRef SkCreateDataProviderFromStream(SkStream* stream) {
 CGDataProviderRef SkCreateDataProviderFromData(SkData* data) {
     data->ref();
     return CGDataProviderCreateWithData(data, data->data(), data->size(),
-                                            unref_proc);
+                                        unref_proc);
 }
