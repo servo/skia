@@ -11,6 +11,9 @@ extern crate cgl;
 #[cfg(target_os="macos")]
 extern crate io_surface;
 
+#[cfg(target_os="ios")]
+extern crate offscreen_gl_context;
+
 #[cfg(target_os="linux")]
 extern crate x11;
 #[cfg(target_os="linux")]
