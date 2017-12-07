@@ -10,15 +10,15 @@ homepage = "https://skia.org/"
 links = "skia"
 build = "build.rs"
 exclude = [
-    "experimental/*",
-    "expectations/*",
-    "gm/tests/*",
-    "gm/rebaseline_server/*",
-    "platform_tools/android/bin/*",
-    "platform_tools/android/examples/*",
-    "platform_tools/android/tests/*",
-    "tools/*",
-    "tests/*",
+    "/experimental/*",
+    "/expectations/*",
+    "/gm/tests/*",
+    "/gm/rebaseline_server/*",
+    "/platform_tools/android/bin/*",
+    "/platform_tools/android/examples/*",
+    "/platform_tools/android/tests/*",
+    "/tools/*",
+    "/tests/*",
 ]
 
 [lib]
