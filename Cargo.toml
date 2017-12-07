@@ -50,3 +50,7 @@ servo-egl = "0.2"
 [target.'cfg(target_os = "macos")'.dependencies]
 cgl = "0.2"
 io-surface = "0.8"
+
+[target.'cfg(target_os = "ios")'.dependencies]
+offscreen_gl_context = {git = "https://github.com/emilio/rust-offscreen-rendering-context"}
+objc = "0.2"

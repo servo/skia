@@ -541,8 +541,43 @@ set_prefix(SKIA_THIRDPARTY_SRC third_party/
   etc1/etc1.cpp
   ktx/ktx.cpp
   )
+if($ENV{TARGET} MATCHES ".*apple-ios")
+  add_definitions(-DSK_USE_POSIX_THREADS)
+  include_directories(include/utils/iOS)
+  include_directories(src/utils/iOS)
 
-if(APPLE)
+  set_prefix(SKIA_GL_PLATFORM_SRC src/gpu/gl/iOS/
+    GrGLCreateNativeInterface_iOS.cpp
+    SkNativeGLContext_iOS.mm
+  )
+
+  set_prefix(SKIA_PORTS_SRC src/ports/
+    SkDebug_stdio.cpp
+    SkFontHost_mac.cpp
+    SkGlobalInitialization_default.cpp
+    SkImageDecoder_empty.cpp
+    SkMemory_malloc.cpp
+    SkOSFile_posix.cpp
+    SkOSFile_stdio.cpp
+    SkTLS_pthread.cpp
+  )
+
+  set(SKIA_FONTS_SRC "")
+
+  set_prefix(SKIA_UTILS_PLATFORM_SRC src/utils/iOS/
+    SkImageDecoder_iOS.mm
+    SkStream_iOS.cpp
+  )
+  set_prefix( SKIA_IOS_STUB_SRC src/opts/
+    SkMorphology_opts_none.cpp
+    SkBitmapProcState_opts_none.cpp
+    SkBlitMask_opts_none.cpp
+    SkBlitRow_opts_none.cpp
+    SkBlurImage_opts_none.cpp
+    SkUtils_opts_none.cpp
+    SkXfermode_opts_none.cpp
+  )
+elseif(APPLE)
   add_definitions(-DSK_USE_POSIX_THREADS)
   include_directories(include/utils/mac)
   include_directories(src/utils/mac)
@@ -711,7 +746,9 @@ set(SKIA_SRC
   ${SKIA_UTILS_PLATFORM_SRC}
   )
 
-if($ENV{TARGET} MATCHES "(i686|x86_64)-.*")
+if($ENV{TARGET} MATCHES ".*apple-ios")
+   set(SKIA_SRC ${SKIA_SRC} ${SKIA_IOS_STUB_SRC})
+elseif($ENV{TARGET} MATCHES "(i686|x86_64)-.*")
   set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_SSE2_SRC})
   set(SKIA_SRC ${SKIA_SRC} ${SKIA_OPTS_SSSE3_SRC})
   if(NOT MSVC)

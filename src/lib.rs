@@ -11,6 +11,9 @@ extern crate cgl;
 #[cfg(target_os="macos")]
 extern crate io_surface;
 
+#[cfg(target_os="ios")]
+extern crate offscreen_gl_context;
+
 #[cfg(target_os="linux")]
 extern crate x11;
 #[cfg(target_os="linux")]
@@ -51,6 +54,11 @@ pub mod gl_rasterization_context_glx;
 pub mod gl_context_cgl;
 #[cfg(target_os="macos")]
 pub mod gl_rasterization_context_cgl;
+
+#[cfg(target_os="ios")]
+pub mod gl_context_ios;
+#[cfg(target_os="ios")]
+pub mod gl_rasterization_context_ios;
 
 #[cfg(target_os="android")]
 pub mod gl_context_android;

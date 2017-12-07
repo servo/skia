@@ -17,6 +17,7 @@
 
 #ifdef SK_BUILD_FOR_IOS
 #include <CoreGraphics/CoreGraphics.h>
+#include <MobileCoreServices/MobileCoreServices.h>
 #endif
 
 class SkBitmap;
