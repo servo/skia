@@ -11,6 +11,7 @@ use gl_rasterization_context;
 use skia;
 
 use euclid::Size2D;
+use gl_context_wgl::glutin::GlContext;
 use gleam::gl;
 use std::ptr;
 use std::rc::Rc;
@@ -52,7 +53,7 @@ impl GLPlatformContext {
             // 32x32 is just the size of the dummy underlying context; the real
             // size is used below when we create the FBO
             let cx = glutin::HeadlessRendererBuilder::new(32, 32).build().unwrap();
-            cx.make_current();
+            cx.make_current().expect("make_current failed");
 
             let gl_interface = skia::SkiaGrGLCreateNativeInterface();
             if gl_interface == ptr::null_mut() {
@@ -97,7 +98,7 @@ impl GLPlatformContext {
 
     pub fn make_current(&self) {
         unsafe {
-            self.context.make_current();
+            self.context.make_current().expect("make_current failed");
         }
     }
 }
