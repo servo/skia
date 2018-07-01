@@ -34,7 +34,7 @@ libc = "0.2"
 expat-sys = "2.1.5"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-glutin = "0.16"
+glutin = "0.17"
 
 [target.'cfg(any(target_os = "android", target_os = "linux"))'.dependencies]
 servo-fontconfig-sys = "4.0.0"
