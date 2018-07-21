@@ -1,7 +1,7 @@
 [package]
 
 name = "servo-skia"
-version = "0.30000018.0"
+version = "0.30000019.0"
 authors = ["The Skia Project Developers and The Servo Project Developers"]
 description = "2D graphic library for drawing Text, Geometries, and Images"
 license = "BSD-3-Clause"
@@ -34,7 +34,7 @@ libc = "0.2"
 expat-sys = "2.1.5"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-glutin = "0.17"
+glutin = "0.18"
 
 [target.'cfg(any(target_os = "android", target_os = "linux"))'.dependencies]
 servo-fontconfig-sys = "4.0.0"
