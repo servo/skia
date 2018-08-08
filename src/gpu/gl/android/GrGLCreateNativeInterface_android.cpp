@@ -13,6 +13,7 @@
 #define GL_GLEXT_PROTOTYPES
 #endif
 
+#define __NDK_FPABI__
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 

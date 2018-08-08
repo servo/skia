@@ -15,11 +15,12 @@
 
 ***************************************************************************/
 
+        .syntax unified
+
         .code 32
         .fpu neon
         .align 4
         .globl memset16_neon
-        .func
 
 memset16_neon:
         cmp             r2, #0
@@ -70,7 +71,7 @@ memset_gt4:
         strcs           r1, [r0], #4
         strcs           r1, [r0], #4
         lsls            r12, r12, #2
-        strcsh          r1, [r0], #2
+        strhcs          r1, [r0], #2
 memset_route:
         /*
          * Decide where to route for the maximum copy sizes.  Note that we
@@ -139,5 +140,4 @@ memset_end:
         pop             {r0}
         bx              lr
 
-        .endfunc
         .end
