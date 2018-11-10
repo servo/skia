@@ -12,7 +12,5 @@ cache: cargo
 os:
   - osx
   - linux
-notifications:
-  webhooks: http://build.servo.org:54856/travis
 env:
   - VERBOSE=1
