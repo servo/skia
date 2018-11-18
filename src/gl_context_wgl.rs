@@ -26,7 +26,7 @@ impl PlatformDisplayData {
 
 pub struct GLPlatformContext {
     gl: Rc<gl::Gl>,
-    pub context: glutin::HeadlessContext,
+    pub context: glutin::Context,
 
     pub framebuffer_id: gl::GLuint,
     texture_id: gl::GLuint,
@@ -50,9 +50,9 @@ impl GLPlatformContext {
                size: Size2D<i32>)
                -> Option<GLPlatformContext> {
         unsafe {
-            // 32x32 is just the size of the dummy underlying context; the real
-            // size is used below when we create the FBO
-            let cx = glutin::HeadlessRendererBuilder::new(32, 32).build().unwrap();
+            let events_loop = glutin::EventsLoop::new();
+            let context = glutin::ContextBuilder::new();
+            let cx = glutin::Context::new(&events_loop, context, true).unwrap();
             cx.make_current().expect("make_current failed");
 
             let gl_interface = skia::SkiaGrGLCreateNativeInterface();
