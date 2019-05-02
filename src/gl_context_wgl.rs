@@ -11,8 +11,8 @@ use gl_rasterization_context;
 use skia;
 
 use euclid::Size2D;
-use gl_context_wgl::glutin::GlContext;
 use gleam::gl;
+use std::cell::RefCell;
 use std::ptr;
 use std::rc::Rc;
 
@@ -26,7 +26,7 @@ impl PlatformDisplayData {
 
 pub struct GLPlatformContext {
     gl: Rc<gl::Gl>,
-    pub context: glutin::Context,
+    context: RefCell<Option<glutin::Context<glutin::PossiblyCurrent>>>,
 
     pub framebuffer_id: gl::GLuint,
     texture_id: gl::GLuint,
@@ -50,14 +50,18 @@ impl GLPlatformContext {
                size: Size2D<i32>)
                -> Option<GLPlatformContext> {
         unsafe {
-            let events_loop = glutin::EventsLoop::new();
-            let context = glutin::ContextBuilder::new();
-            let cx = glutin::Context::new(&events_loop, context, true).unwrap();
-            cx.make_current().expect("make_current failed");
+            let event_loop = glutin::EventsLoop::new();
+            let context = glutin::ContextBuilder::new()
+                .build_headless(&event_loop, glutin::dpi::PhysicalSize {
+                    width: size.width as f64,
+                    height: size.height as f64,
+                })
+                .expect("Can't create headless context");
+            let context = context.make_current().expect("make_current failed");
 
             let gl_interface = skia::SkiaGrGLCreateNativeInterface();
             if gl_interface == ptr::null_mut() {
-                //cx.destroy();
+                //context.destroy();
                 return None
             }
 
@@ -76,7 +80,7 @@ impl GLPlatformContext {
             skia::SkiaGrGLInterfaceRelease(gl_interface);
             Some(GLPlatformContext {
                 gl: gl,
-                context: cx,
+                context: RefCell::new(Some(context)),
                 framebuffer_id: framebuffer_id,
                 texture_id: texture_id,
                 depth_stencil_renderbuffer_id: depth_stencil_renderbuffer_id,
@@ -97,8 +101,10 @@ impl GLPlatformContext {
     }
 
     pub fn make_current(&self) {
-        unsafe {
-            self.context.make_current().expect("make_current failed");
-        }
+        let cx = self.context.borrow_mut().take().unwrap();
+        let cx = unsafe {
+            cx.make_current().expect("make_current failed")
+        };
+        *self.context.borrow_mut() = Some(cx);
     }
 }
