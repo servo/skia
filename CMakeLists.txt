@@ -7,12 +7,11 @@ function(set_prefix var prefix)
   set(${var} "${tmp}" PARENT_SCOPE)
 endfunction()
 
-# Use ccache if available
-find_program(CCACHE_FOUND ccache)
-if(CCACHE_FOUND)
-  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-  set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
-endif(CCACHE_FOUND)
+# Use ccache if we're told to.
+if(DEFINED ENV{CCACHE})
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE $ENV{CCACHE})
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK $ENV{CCACHE})
+endif()
 
 if("$ENV{CFG_ENABLE_DEBUG_SKIA}" STREQUAL "1")
   add_definitions(
