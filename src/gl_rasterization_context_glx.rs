@@ -5,7 +5,7 @@
  * found in the LICENSE file.
  */
 
-use gl_context::GLContext;
+use crate::gl_context::GLContext;
 
 use euclid::Size2D;
 use gleam::gl;

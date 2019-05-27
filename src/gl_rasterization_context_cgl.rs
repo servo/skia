@@ -5,14 +5,11 @@
  * found in the LICENSE file.
  */
 
-use gl_context::GLContext;
-use gl_rasterization_context;
+use crate::gl_context::GLContext;
+use crate::gl_rasterization_context;
 
-use cgl;
 use euclid::Size2D;
 use gleam::gl;
-use io_surface;
-use libc;
 use std::sync::Arc;
 
 pub struct GLRasterizationContext {

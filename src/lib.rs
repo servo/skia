@@ -2,30 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-extern crate euclid;
-extern crate gleam;
-extern crate libc;
+#![cfg(feature = "gl_backend")]
 
-#[cfg(target_os="macos")]
-extern crate cgl;
-#[cfg(target_os="macos")]
-extern crate io_surface;
-
-#[cfg(target_os="linux")]
-extern crate x11;
-#[cfg(target_os="linux")]
-extern crate glx;
-
-#[cfg(target_os="android")]
-extern crate egl;
-
-#[cfg(any(target_os="linux", target_os="android"))]
-extern crate freetype_sys;
-
-#[cfg(any(target_os="linux", target_os="android"))]
-extern crate fontconfig_sys;
-
-pub use skia::{
+pub use crate::skia::{
     SkiaGrContextRef,
     SkiaGrGLInterfaceRef,
     SkiaGrGLCreateNativeInterface,

@@ -5,10 +5,7 @@
  * found in the LICENSE file.
  */
 
-extern crate glutin;
-
-use gl_rasterization_context;
-use skia;
+use crate::gl_rasterization_context;
 
 use euclid::Size2D;
 use gleam::gl;
@@ -59,7 +56,7 @@ impl GLPlatformContext {
                 .expect("Can't create headless context");
             let context = context.make_current().expect("make_current failed");
 
-            let gl_interface = skia::SkiaGrGLCreateNativeInterface();
+            let gl_interface = crate::SkiaGrGLCreateNativeInterface();
             if gl_interface == ptr::null_mut() {
                 //context.destroy();
                 return None
@@ -77,7 +74,7 @@ impl GLPlatformContext {
                                                                                 gl::RGBA, gl::UNSIGNED_BYTE, None);
                                                             }).unwrap();
 
-            skia::SkiaGrGLInterfaceRelease(gl_interface);
+            crate::SkiaGrGLInterfaceRelease(gl_interface);
             Some(GLPlatformContext {
                 gl: gl,
                 context: RefCell::new(Some(context)),

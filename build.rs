@@ -16,13 +16,19 @@ fn main() {
     if target.contains("unknown-linux-gnu") {
         println!("cargo:rustc-link-lib=stdc++");
         println!("cargo:rustc-link-lib=bz2");
-        println!("cargo:rustc-link-lib=GL");
+        if env::var("CARGO_FEATURE_GL_BACKEND").is_ok() {
+            println!("cargo:rustc-link-lib=GL");
+        }
     } else if target.contains("eabi") {
         println!("cargo:rustc-link-lib=stdc++");
-        println!("cargo:rustc-link-lib=GLESv2");
+        if env::var("CARGO_FEATURE_GL_BACKEND").is_ok() {
+            println!("cargo:rustc-link-lib=GLESv2");
+        }
     } else if target.contains("apple-darwin") {
         println!("cargo:rustc-link-lib=c++");
-        println!("cargo:rustc-link-lib=framework=OpenGL");
+        if env::var("CARGO_FEATURE_GL_BACKEND").is_ok() {
+            println!("cargo:rustc-link-lib=framework=OpenGL");
+        }
         println!("cargo:rustc-link-lib=framework=ApplicationServices");
     } else if target.contains("windows") {
         if target.contains("gnu") {

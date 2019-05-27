@@ -5,8 +5,6 @@
  * found in the LICENSE file.
  */
 
-use skia;
-
 use euclid::Size2D;
 use gleam::gl;
 use std::ptr;
@@ -14,32 +12,32 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 #[cfg(target_os="macos")]
-pub use gl_context_cgl::GLPlatformContext;
+pub use crate::gl_context_cgl::GLPlatformContext;
 #[cfg(target_os="macos")]
-pub use gl_context_cgl::PlatformDisplayData;
+pub use crate::gl_context_cgl::PlatformDisplayData;
 
 #[cfg(target_os="linux")]
-pub use gl_context_glx::GLPlatformContext;
+pub use crate::gl_context_glx::GLPlatformContext;
 #[cfg(target_os="linux")]
-pub use gl_context_glx::PlatformDisplayData;
+pub use crate::gl_context_glx::PlatformDisplayData;
 #[cfg(target_os="linux")]
-pub use gl_rasterization_context::GLRasterizationContext;
+pub use crate::gl_rasterization_context::GLRasterizationContext;
 
 #[cfg(target_os="android")]
-pub use gl_context_android::GLPlatformContext;
+pub use crate::gl_context_android::GLPlatformContext;
 #[cfg(target_os="android")]
-pub use gl_context_android::PlatformDisplayData;
+pub use crate::gl_context_android::PlatformDisplayData;
 
 #[cfg(target_os="windows")]
-pub use gl_context_wgl::GLPlatformContext;
+pub use crate::gl_context_wgl::GLPlatformContext;
 #[cfg(target_os="windows")]
-pub use gl_context_wgl::PlatformDisplayData;
+pub use crate::gl_context_wgl::PlatformDisplayData;
 
 pub struct GLContext {
     gl: Rc<gl::Gl>,
     pub platform_context: GLPlatformContext,
-    pub gr_context: skia::SkiaGrContextRef,
-    pub gl_interface: skia::SkiaGrGLInterfaceRef,
+    pub gr_context: crate::SkiaGrContextRef,
+    pub gl_interface: crate::SkiaGrGLInterfaceRef,
     pub size: Size2D<i32>,
 }
 
@@ -48,8 +46,8 @@ impl Drop for GLContext {
         self.platform_context.make_current();
 
         unsafe {
-            skia::SkiaGrContextRelease(self.gr_context);
-            skia::SkiaGrGLInterfaceRelease(self.gl_interface);
+            crate::SkiaGrContextRelease(self.gr_context);
+            crate::SkiaGrGLInterfaceRelease(self.gl_interface);
         }
     }
 }
@@ -71,13 +69,13 @@ impl GLContext {
         platform_context.make_current();
 
         unsafe {
-            let gl_interface = skia::SkiaGrGLCreateNativeInterface();
+            let gl_interface = crate::SkiaGrGLCreateNativeInterface();
             if gl_interface == ptr::null_mut() {
                 platform_context.drop_current_context();
                 return None;
             }
 
-            let gr_context = skia::SkiaGrContextCreate(gl_interface);
+            let gr_context = crate::SkiaGrContextCreate(gl_interface);
             if gr_context == ptr::null_mut() {
                 platform_context.drop_current_context();
                 return None;

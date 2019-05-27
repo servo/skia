@@ -5,8 +5,8 @@
  * found in the LICENSE file.
  */
 
-use gl_context::GLContext;
-use gl_rasterization_context;
+use crate::gl_context::GLContext;
+use crate::gl_rasterization_context;
 
 use euclid::Size2D;
 use egl::egl;

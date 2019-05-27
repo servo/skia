@@ -5,11 +5,9 @@
  * found in the LICENSE file.
  */
 
-use gl_rasterization_context;
-use skia;
+use crate::gl_rasterization_context;
 
 use euclid::Size2D;
-use cgl;
 use gleam::gl;
 use std::ptr;
 use std::rc::Rc;
@@ -58,7 +56,7 @@ impl GLPlatformContext {
             cgl::CGLSetCurrentContext(cgl_context);
             gl.enable(gl::TEXTURE_RECTANGLE_ARB);
 
-            let gl_interface = skia::SkiaGrGLCreateNativeInterface();
+            let gl_interface = crate::SkiaGrGLCreateNativeInterface();
             if gl_interface == ptr::null_mut() {
                 cgl::CGLDestroyContext(cgl_context);
                 return None
@@ -72,7 +70,7 @@ impl GLPlatformContext {
                                                                   gl::TEXTURE_RECTANGLE_ARB,
                                                                   size,
                                                                   gl_interface);
-            skia::SkiaGrGLInterfaceRelease(gl_interface);
+            crate::SkiaGrGLInterfaceRelease(gl_interface);
             Some(GLPlatformContext {
                 gl: gl,
                 cgl_context: cgl_context,

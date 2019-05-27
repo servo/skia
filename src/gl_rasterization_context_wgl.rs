@@ -5,8 +5,8 @@
  * found in the LICENSE file.
  */
 
-use gl_context::GLContext;
-use gl_rasterization_context;
+use crate::gl_context::GLContext;
+use crate::gl_rasterization_context;
 
 use euclid::Size2D;
 use gleam::gl;
@@ -32,8 +32,8 @@ impl Drop for GLRasterizationContext {
 }
 
 impl GLRasterizationContext {
-    pub fn new(gl_context: Arc<GLContext>,
-               size: Size2D<i32>)
+    pub fn new(_gl_context: Arc<GLContext>,
+               _size: Size2D<i32>)
                -> Option<GLRasterizationContext> {
         None
     }

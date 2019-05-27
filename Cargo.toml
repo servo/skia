@@ -1,12 +1,13 @@
 [package]
 
 name = "servo-skia"
-version = "0.30000021.2"
+version = "0.30000022.0"
 authors = ["The Skia Project Developers and The Servo Project Developers"]
 description = "2D graphic library for drawing Text, Geometries, and Images"
 license = "BSD-3-Clause"
 repository ="https://github.com/servo/skia/"
 homepage = "https://skia.org/"
+edition = "2018"
 links = "skia"
 build = "build.rs"
 exclude = [
@@ -24,17 +25,21 @@ exclude = [
 [lib]
 name = "skia"
 
+[features]
+default = ["gl_backend"]
+gl_backend = ["glx", "cgl", "io-surface", "gleam", "servo-egl", "glutin"]
+
 [build-dependencies]
 cmake = "0.1"
 
 [dependencies]
 euclid = "0.19"
-gleam = "0.6"
+gleam = {version = "0.6", optional = true}
 libc = "0.2"
 expat-sys = "2.1.5"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-glutin = "0.21.0"
+glutin = {version = "0.21.0", optional = true}
 
 [target.'cfg(any(target_os = "android", target_os = "linux"))'.dependencies]
 servo-fontconfig-sys = "4.0.0"
@@ -42,11 +47,11 @@ servo-freetype-sys = "4.0.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 x11 = { version = "2.0.0", features = ["xlib"] }
-glx = "0.2.5"
+glx = { version = "0.2.5", optional = true }
 
 [target.'cfg(target_os = "android")'.dependencies]
-servo-egl = "0.2"
+servo-egl = { version = "0.2", optional = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-cgl = "0.2.3"
-io-surface = "0.11.1"
+cgl = { version = "0.2.3", optional = true }
+io-surface = { version = "0.11.1", optional = true }

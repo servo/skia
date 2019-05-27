@@ -5,20 +5,18 @@
  * found in the LICENSE file.
  */
 
-use skia;
-
 use euclid::Size2D;
 use gleam::gl;
 use std::ffi::CString;
 
 #[cfg(target_os="macos")]
-pub use gl_rasterization_context_cgl::GLRasterizationContext;
+pub use crate::gl_rasterization_context_cgl::GLRasterizationContext;
 #[cfg(target_os="linux")]
-pub use gl_rasterization_context_glx::GLRasterizationContext;
+pub use crate::gl_rasterization_context_glx::GLRasterizationContext;
 #[cfg(target_os="android")]
-pub use gl_rasterization_context_android::GLRasterizationContext;
+pub use crate::gl_rasterization_context_android::GLRasterizationContext;
 #[cfg(target_os="windows")]
-pub use gl_rasterization_context_wgl::GLRasterizationContext;
+pub use crate::gl_rasterization_context_wgl::GLRasterizationContext;
 
 fn clear_gl_errors(gl: &gl::Gl) {
     let mut error = gl.get_error();
@@ -29,16 +27,16 @@ fn clear_gl_errors(gl: &gl::Gl) {
 
 #[cfg(not(target_os = "android"))]
 fn create_and_bind_depth_stencil_buffer(gl: &gl::Gl,
-                                        gl_interface: skia::SkiaGrGLInterfaceRef,
+                                        gl_interface: crate::SkiaGrGLInterfaceRef,
                                         size: Size2D<i32>)
                                         -> gl::GLuint {
     unsafe {
         let ext_extension_string = CString::new("GL_EXT_packed_depth_stencil").unwrap();
         let arb_extension_string = CString::new("GL_ARB_framebuffer_object").unwrap();
         let supports_depth_stencil =
-            skia::SkiaGrGLInterfaceGLVersionGreaterThanOrEqualTo(gl_interface, 3, 0) ||
-                skia::SkiaGrGLInterfaceHasExtension(gl_interface, ext_extension_string.as_ptr()) ||
-                skia::SkiaGrGLInterfaceHasExtension(gl_interface, arb_extension_string.as_ptr());
+            crate::SkiaGrGLInterfaceGLVersionGreaterThanOrEqualTo(gl_interface, 3, 0) ||
+                crate::SkiaGrGLInterfaceHasExtension(gl_interface, ext_extension_string.as_ptr()) ||
+                crate::SkiaGrGLInterfaceHasExtension(gl_interface, arb_extension_string.as_ptr());
         create_and_bind_depth_stencil_buffer_with_formats(gl,
                                                           supports_depth_stencil,
                                                           gl::DEPTH_STENCIL,
@@ -49,13 +47,13 @@ fn create_and_bind_depth_stencil_buffer(gl: &gl::Gl,
 
 #[cfg(target_os = "android")]
 fn create_and_bind_depth_stencil_buffer(gl: &gl::Gl,
-                                        gl_interface: skia::SkiaGrGLInterfaceRef,
+                                        gl_interface: crate::SkiaGrGLInterfaceRef,
                                         size: Size2D<i32>)
                                         -> gl::GLuint {
     unsafe {
         let oes_extension_string = CString::new("GL_OES_packed_depth_stencil").unwrap();
         let supports_depth_stencil =
-           skia::SkiaGrGLInterfaceHasExtension(gl_interface, oes_extension_string.as_ptr());
+           crate::SkiaGrGLInterfaceHasExtension(gl_interface, oes_extension_string.as_ptr());
         const GL_DEPTH24_STENCIL8_OES: u32 = 0x88F0;
         create_and_bind_depth_stencil_buffer_with_formats(gl,
                                                           supports_depth_stencil,
@@ -98,7 +96,7 @@ fn create_and_bind_depth_stencil_buffer_with_formats(gl: &gl::Gl,
 pub fn setup_framebuffer<F>(gl: &gl::Gl,
                             texture_target: gl::GLenum,
                             size: Size2D<i32>,
-                            gl_interface: skia::SkiaGrGLInterfaceRef,
+                            gl_interface: crate::SkiaGrGLInterfaceRef,
                             set_texture_image: F)
                             -> Option<(gl::GLuint, gl::GLuint, gl::GLuint)>
                             where F: Fn() {
@@ -117,7 +115,7 @@ pub fn setup_framebuffer<F>(gl: &gl::Gl,
 pub fn start_framebuffer_setup(gl: &gl::Gl,
                                texture_target: gl::GLenum,
                                size: Size2D<i32>,
-                               gl_interface: skia::SkiaGrGLInterfaceRef)
+                               gl_interface: crate::SkiaGrGLInterfaceRef)
                                -> (gl::GLuint, gl::GLuint, gl::GLuint) {
     clear_gl_errors(gl);
 

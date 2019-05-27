@@ -12,4 +12,5 @@ install:
 build: false
 
 test_script:
+  - 'cargo test --no-default-features'
   - 'cargo test --verbose'

@@ -15,3 +15,7 @@ notifications:
   webhooks: http://build.servo.org:54856/travis
 env:
   - VERBOSE=1
+
+script:
+  - cargo build --no-default-features
+  - cargo build

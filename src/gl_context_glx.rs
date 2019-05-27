@@ -5,11 +5,9 @@
  * found in the LICENSE file.
  */
 
-use gl_rasterization_context;
-use skia;
+use crate::gl_rasterization_context;
 
 use euclid::Size2D;
-use glx;
 use std::ptr;
 use std::rc::Rc;
 use x11::xlib;
@@ -91,7 +89,7 @@ impl GLPlatformContext {
                              glx_pixmap,
                              glx_context as glx::types::GLXContext);
 
-            let gl_interface = skia::SkiaGrGLCreateNativeInterface();
+            let gl_interface = crate::SkiaGrGLCreateNativeInterface();
             if gl_interface == ptr::null_mut() {
                 glx::MakeCurrent(display as *mut glx::types::Display,
                                  0 /* None */,
@@ -110,7 +108,7 @@ impl GLPlatformContext {
                                  size.width, size.height, 0,
                                  gl::RGBA, gl::UNSIGNED_BYTE, None);
             }) {
-                skia::SkiaGrGLInterfaceRelease(gl_interface);
+                crate::SkiaGrGLInterfaceRelease(gl_interface);
                 return Some(GLPlatformContext {
                     gl: gl,
                     display: display,
@@ -122,7 +120,7 @@ impl GLPlatformContext {
                     depth_stencil_renderbuffer_id: depth_stencil_renderbuffer_id,
                 })
             }
-            skia::SkiaGrGLInterfaceRelease(gl_interface);
+            crate::SkiaGrGLInterfaceRelease(gl_interface);
             None
         }
     }
