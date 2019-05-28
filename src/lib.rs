@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#![cfg(feature = "gl_backend")]
-
 pub use crate::skia::{
     SkiaGrContextRef,
     SkiaGrGLInterfaceRef,
@@ -17,26 +15,30 @@ pub use crate::skia::{
     SkiaGrContextRelease,
 };
 
-pub mod gl_context;
-pub mod gl_rasterization_context;
 pub mod skia;
 
-#[cfg(target_os="linux")]
+#[cfg(feature = "gl_backend")]
+pub mod gl_context;
+
+#[cfg(feature = "gl_backend")]
+pub mod gl_rasterization_context;
+
+#[cfg(all(feature = "gl_backend", target_os="linux"))]
 pub mod gl_context_glx;
-#[cfg(target_os="linux")]
+#[cfg(all(feature = "gl_backend", target_os="linux"))]
 pub mod gl_rasterization_context_glx;
 
-#[cfg(target_os="macos")]
+#[cfg(all(feature = "gl_backend", target_os="macos"))]
 pub mod gl_context_cgl;
-#[cfg(target_os="macos")]
+#[cfg(all(feature = "gl_backend", target_os="macos"))]
 pub mod gl_rasterization_context_cgl;
 
-#[cfg(target_os="android")]
+#[cfg(all(feature = "gl_backend", target_os="android"))]
 pub mod gl_context_android;
-#[cfg(target_os="android")]
+#[cfg(all(feature = "gl_backend", target_os="android"))]
 pub mod gl_rasterization_context_android;
 
-#[cfg(target_os="windows")]
+#[cfg(all(feature = "gl_backend", target_os="windows"))]
 pub mod gl_context_wgl;
-#[cfg(target_os="windows")]
+#[cfg(all(feature = "gl_backend", target_os="windows"))]
 pub mod gl_rasterization_context_wgl;
