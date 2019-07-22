@@ -8,7 +8,7 @@
 use gl_rasterization_context;
 use skia;
 
-use euclid::Size2D;
+use euclid::default::Size2D;
 use glx;
 use std::ptr;
 use std::rc::Rc;
