@@ -3,6 +3,7 @@ addons:
     packages:
     - libxxf86vm-dev
     - libosmesa6-dev
+    - libglu1-mesa-dev
 language: rust
 rust:
   - stable
