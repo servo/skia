@@ -9,7 +9,7 @@ use gl_context::GLContext;
 use gl_rasterization_context;
 
 use cgl;
-use euclid::Size2D;
+use euclid::default::Size2D;
 use gleam::gl;
 use io_surface;
 use libc;

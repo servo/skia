@@ -10,7 +10,7 @@ extern crate glutin;
 use gl_rasterization_context;
 use skia;
 
-use euclid::Size2D;
+use euclid::default::Size2D;
 use gleam::gl;
 use std::cell::RefCell;
 use std::ptr;

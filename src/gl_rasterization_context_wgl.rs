@@ -8,7 +8,7 @@
 use gl_context::GLContext;
 use gl_rasterization_context;
 
-use euclid::Size2D;
+use euclid::default::Size2D;
 use gleam::gl;
 use std::sync::Arc;
 
