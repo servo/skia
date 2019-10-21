@@ -12,6 +12,7 @@ cache: cargo
 os:
   - osx
   - linux
+dist: xenial
 notifications:
   webhooks: http://build.servo.org:54856/travis
 env:
