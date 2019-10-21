@@ -10,7 +10,6 @@ endfunction()
 # Use ccache if we're told to.
 if(DEFINED ENV{CCACHE})
   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE $ENV{CCACHE})
-  set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK $ENV{CCACHE})
 endif()
 
 if("$ENV{CFG_ENABLE_DEBUG_SKIA}" STREQUAL "1")
